@@ -2,13 +2,13 @@
 
 LIBRARY=~/root/macros/myrootlib.C
 
-SOURCES_DECODE=decoder.cpp config.cpp util.cpp
-OBJS_DECODE=$(SOURCES_DECODE:.cpp=.o)
+SOURCES_DECODE=decoder.C config.C util.C ModuleDat.C 
+OBJS_DECODE=$(SOURCES_DECODE:.C=.o)
 
 SOURCES_chainpsf=chain_parsed.C
 OBJS_chainpsf=$(SOURCES_chainpsf:.C=.o)
 
-SOURCES_GETFLOODS=getfloods.C 
+SOURCES_GETFLOODS=getfloods.C ModuleDat.C 
 OBJS_GETFLOODS=$(SOURCES_GETFLOODS:.C=.o)
 
 SOURCES_ANAFLOODS=anafloods_psf_v2.C apd_sort16_v2.C findnext.C detCluster.C
@@ -17,20 +17,17 @@ OBJS_ANAFLOODS=$(SOURCES_ANAFLOODS:.C=.o)
 SOURCES_ENECAL=enecal.C
 OBJS_ENECAL=$(SOURCES_ENECAL:.C=.o)
 
-SOURCES_ENEFIT=enefit.C apd_fit.C
+SOURCES_ENEFIT=enefit.C apd_fit.C ModuleCal.C ModuleDat.C MyDict.C
 OBJS_ENEFIT=$(SOURCES_ENEFIT:.C=.o)
 
-SOURCES_MERGE_4up=merge_4up.C
+SOURCES_MERGE_4up=merge_4up.C ModuleCal.C 
 OBJS_MERGE_4up=$(SOURCES_MERGE_4up:.C=.o)
 
-SOURCES_MERGE_PANEL=merge_panel.C
+SOURCES_MERGE_PANEL=merge_panel.C ModuleCal.C 
 OBJS_MERGE_PANEL=$(SOURCES_MERGE_PANEL:.C=.o)
 
-SOURCES_MERGECOINC:=merge_coinc.C
+SOURCES_MERGECOINC:=merge_coinc.C ModuleCal.C CoincEvent.C MyDict.C 
 OBJS_MERGECOINC=$(SOURCES_MERGECOINC:.C=.o)
-
-SOURCES_MERGERAW:=mergeraw.C
-OBJS_MERGERAW=$(SOURCES_MERGERAW:.C=.o)
 
 SOURCES_FREC:=format_recon.C
 OBJS_FREC=$(SOURCES_FREC:.C=.o)
@@ -51,15 +48,25 @@ OBJS_GLFIT=$(SOURCES_GLFIT:.C=.o)
 CFLAGS =  -Wall -W -g -fPIC -I$(HOME)/root/macros
 CXXFLAGS = $(CFLAGS) $(shell root-config --cflags) -O3
 MYLIB = -L$(HOME)/root/macros -lmyrootlib -lInit_avdb
-LDFLAGS = $(shell root-config --glibs) $(shell root-config --libs) -lMinuit -lSpectrum -lHistPainter $(MYLIB)
+DICTLIB = -L. -lMyDict
+LDFLAGS = $(shell root-config --glibs) $(shell root-config --libs) -lMinuit -lSpectrum -lHistPainter $(MYLIB) $(DICTLIB)
 CC =g++
 
 .PHONY:	clean
 
 
-all: Decode chain_parsed getfloods anafloods enecal enefit get_optimal_split merge_4up merge_panel merge_coinc mergeraw chain_merged mana fom_ana glob_fit_results
+all: libMyDict.so Decode chain_parsed getfloods anafloods enecal enefit get_optimal_split merge_4up merge_panel merge_coinc chain_merged mana fom_ana glob_fit_results
 # 
 #UYORUK_toROOT_V1 resizedat resizedat_v2 getfloods anafloods enecal enefit mergecal fom_ana caltime
+
+MyDict.C: ModuleDat.h ModuleCal.h CoincEvent.h LinkDef.h
+	rootcint -f $@ -c $(CXXFLAGS) -p $^
+
+#shared library .. can be static I think.
+
+libMyDict.so: MyDict.C ModuleDat.C ModuleCal.C CoincEvent.C
+	g++ -shared -o$@ `root-config --ldflags` $(CXXFLAGS) -I$(ROOTSYS)/include $^
+
 
 Decode: $(OBJS_DECODE)
 	 $(CC) $(CXXFLAGS) $(LDFLAGS) $(OBJS_DECODE) -o $@
@@ -91,9 +98,6 @@ merge_panel: $(OBJS_MERGE_PANEL)
 merge_coinc: $(OBJS_MERGECOINC)
 	$(CC) $(CXXFLAGS) $(LDFLAGS) $(OBJS_MERGECOINC) -o $@
 
-mergeraw: $(OBJS_MERGERAW)
-	$(CC) $(CXXFLAGS) $(LDFLAGS) $(OBJS_MERGERAW) -o $@
-	
 chain_merged: $(OBJS_chainmerge)
 	$(CC) $(CXXFLAGS) $(LDFLAGS) $(OBJS_chainmerge) -o $@
 
