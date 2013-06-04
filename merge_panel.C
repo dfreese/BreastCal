@@ -18,6 +18,7 @@
 //#include "/Users/arne/root/macros/myrootlib.h"
 //#include "/home/miil/root/libInit_avdb.h"
 #include "./decoder.h"
+#include "./ModuleCal.h"
 #include "time.h"
 #include <sstream>
 
@@ -155,7 +156,14 @@ int main(int argc, Char_t *argv[])
 	//	    return 0;
 
 	TTree *panel[FOURUPBOARDS];
-        modmerge event[FOURUPBOARDS],evt,evnt;
+        ModuleCal *event[FOURUPBOARDS];
+        ModuleCal *evt = new ModuleCal();
+        ModuleCal *evnt = new ModuleCal();
+
+	for (i=0;i<FOURUPBOARDS;i++){
+	  event[i] = new ModuleCal();}
+
+
         Long64_t entries[FOURUPBOARDS];
 		stringstream fnam;
 
@@ -188,7 +196,8 @@ int main(int argc, Char_t *argv[])
 	//	} return 0;}
 
         panel[i]= (TTree *)file_left->Get("fourup");
-	//        panel[i]->SetBranchAddress("event",&event[i]);
+	panel[i]->SetBranchAddress("Time Sorted Data",&event[i]);
+	/*
 	panel[i]->SetBranchAddress("ct",&event[i].ct);
         panel[i]->SetBranchAddress("ft",&event[i].ft);
         panel[i]->SetBranchAddress("E",&event[i].E);
@@ -202,7 +211,7 @@ int main(int argc, Char_t *argv[])
         panel[i]->SetBranchAddress("apd",&event[i].apd);
         panel[i]->SetBranchAddress("id",&event[i].id);
         panel[i]->SetBranchAddress("pos",&event[i].pos);
-	
+	*/
         if (!(panel[i]))    {
 	    cout << " Problem reading Tree panel[" << i << "] from file." << endl;
             continue;
@@ -222,6 +231,8 @@ int main(int argc, Char_t *argv[])
         TTree *cartr = new TTree("cartr","Cartridge Data") ;
         cartr->SetDirectory(0); 
 	//        cartr->Branch("event",&evt.ct,"ct/L:ft/D:E/D:Ec/D:Ech/D:x/D:y/D:chip/I:m/I:apd/I:id/I");
+        cartr->Branch("TMP CalData",&evt);
+	/*
         cartr->Branch("ct",&evt.ct,"ct/L");
         cartr->Branch("ft",&evt.ft,"ft/D");
         cartr->Branch("E",&evt.E,"E/D");
@@ -236,7 +247,7 @@ int main(int argc, Char_t *argv[])
         cartr->Branch("id",&evt.id,"id/I");
         cartr->Branch("pos",&evt.pos,"pos/I");
 
-        
+        */
    
 
         Long64_t lasttime=0;
@@ -250,9 +261,9 @@ int main(int argc, Char_t *argv[])
         for (m=0;m<nb;m++){
         if(entries[m]) {
 	  panel[m]->GetEntry(entries[m]-1);
-          cout << " Last Timestamp Panel " << m  << ": " << event[m].ct << endl;
-          lasttimes[m]=event[m].ct;
-          if ( lasttime <  event[m].ct ) lasttime= event[m].ct;
+          cout << " Last Timestamp Panel " << m  << ": " << event[m]->ct << endl;
+          lasttimes[m]=event[m]->ct;
+          if ( lasttime <  event[m]->ct ) lasttime= event[m]->ct;
 	  skipfourup[m]=0;
           curevent[m]=0;
          }
@@ -290,7 +301,7 @@ int main(int argc, Char_t *argv[])
             while ((curtime<(timestep*kk))&&(stop)) {           
 	      panel[m]->GetEntry(l);
 	      //              thischiptime=UL[m*4+2].ct ;
-               curtime=event[m].ct ;
+               curtime=event[m]->ct ;
 	       evt=event[m];
                cartr->Fill();
 	      l++;
@@ -322,8 +333,8 @@ int main(int argc, Char_t *argv[])
 	    //  std::cout<<"Reading Run numbers"<<std::endl;
             for (l=0;l<N;l++)     {
                 cartr->GetEntry(l);
-                table[l] = evt.ct;
-		//             cout << " event.ct = " << event.ct <<  endl;
+                table[l] = evt->ct;
+		//             cout << " event->ct = " << event->ct <<  endl;
   }
 
            std::cout<<"Sorting Run numbers"<<std::endl;
@@ -343,6 +354,8 @@ int main(int argc, Char_t *argv[])
 	  //          cartridge->SetTitle("Sorted Cartridge Data");
 	     TTree *cartridge = new TTree("cartridge","Time Sorted Cartridge data");
 
+        cartridge->Branch("CalData",&evnt);
+	/*
         cartridge->Branch("ct",&evnt.ct,"ct/L");
         cartridge->Branch("ft",&evnt.ft,"ft/D");
         cartridge->Branch("E",&evnt.E,"E/D");
@@ -356,7 +369,7 @@ int main(int argc, Char_t *argv[])
         cartridge->Branch("apd",&evnt.apd,"apd/I");
         cartridge->Branch("id",&evnt.id,"id/I");
         cartridge->Branch("pos",&evnt.pos,"pos/I");
-
+	*/
 
 	  //   fourup->Branch("evt",&evt.ct,"ct/L:ft/D:E/D:Ec/D:Ech/D:x/D:y/D:chip/I:m/I:apd/I:id/I");
  

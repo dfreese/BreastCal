@@ -37,6 +37,7 @@ PROGRAM needs to:
 #include "Riostream.h"
 #include "TMath.h"
 #include "./decoder.h"
+#include "./ModuleDat.h"
 //#include "./convertconfig.h"
 
 
@@ -334,8 +335,8 @@ for (i = 0; i < 36; i++) {
             chipId++;
         }
         trigCode = int(packBuffer[2] & 0x0F);
-	//		        cout << "trigCode = 0x" << hex << trigCode << dec ;
-	//		cout << " chipId = " << chipId << "; fpgaId = " << fpgaId << endl;
+	//        cout << "trigCode = 0x" << hex << trigCode << dec ;
+	//	cout << " chipId = " << chipId << "; fpgaId = " << fpgaId << endl;
         //}
     }
     else {
@@ -395,7 +396,7 @@ for (i = 0; i < 36; i++) {
     
     if (!MODULE_BASED_READOUT) {
       //  packetSize = rmChip->packetSize;
-      packetSize=146; //FIXME
+      packetSize=146; //FIXME -- need to be changed for data later than 1/4/13 .. ( should be 138 )
       moduletriggers=4;
     }
     else { // MODULE_BASED_READOUT
@@ -498,9 +499,6 @@ for (i = 0; i < 36; i++) {
 
     int even=(int) chipId%2;
 
-    int nrchips=0;
-
-    for (int ii=0;ii<4;ii++) { nrchips+= (( trigCode >> ii ) & ( 0x1 ) );}
 
     // if ( chipId == 1 ){
 
@@ -512,48 +510,37 @@ for (i = 0; i < 36; i++) {
         }
         cout << endl;
  */
-#define SHIFTFACCOM 4  // 4*4
-#define SHIFTFACSPAT 12 // 4*12
+#define SHIFTFACCOM 16
+#define SHIFTFACSPAT 48
 #define BYTESPERCOMMON 12   // 4 * 3 = 12 ( 4 commons per module, 3 values per common )
 #define VALUESPERSPATIAL 4
 
-    //#define UNUSEDCHANNELOFFSET 2
-#define UNUSEDCHANNELOFFSET 0
-
-      /*
-      cout << " adcBlock.size() :: " << adcBlock.size() << " ( nrmodules :: " << nrchips << " )" << endl;
-      for (int iii=0;iii<adcBlock.size();iii++){
-	cout << " " << adcBlock[iii];
-        if (( (iii+1)%16)==0 ) cout << endl;
-      }
-      cout << endl;
-      */
     int kk=0;
     for (int iii=0;iii<4;iii++ ) {
       if ( trigCode & ( 0x1 << iii )) {
               rawevent.ct=timestamp;
               rawevent.chip= chipId;
               rawevent.module= iii;
-              rawevent.com1h = adcBlock[UNUSEDCHANNELOFFSET + kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];  //6
-              rawevent.u1h = adcBlock[UNUSEDCHANNELOFFSET+1 + kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
-              rawevent.v1h = adcBlock[UNUSEDCHANNELOFFSET+2+kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
-              rawevent.com1 = adcBlock[UNUSEDCHANNELOFFSET+3+kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
-              rawevent.u1 =adcBlock[UNUSEDCHANNELOFFSET+4+kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
-              rawevent.v1 =adcBlock[UNUSEDCHANNELOFFSET+5+kk*BYTESPERCOMMON+ even*nrchips*SHIFTFACCOM];
-              rawevent.com2h = adcBlock[UNUSEDCHANNELOFFSET+6 + kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
-              rawevent.u2h = adcBlock[UNUSEDCHANNELOFFSET+7 + kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
-              rawevent.v2h = adcBlock[UNUSEDCHANNELOFFSET+8+kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
-              rawevent.com2 = adcBlock[UNUSEDCHANNELOFFSET+9+kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
-              rawevent.u2=adcBlock[UNUSEDCHANNELOFFSET+10+kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
-              rawevent.v2=adcBlock[UNUSEDCHANNELOFFSET+11+kk*BYTESPERCOMMON+ even*nrchips*SHIFTFACCOM];
-              rawevent.a=adcBlock[UNUSEDCHANNELOFFSET+BYTESPERCOMMON*nrchips+kk*VALUESPERSPATIAL - even*nrchips*SHIFTFACSPAT];  //2
-              rawevent.b=adcBlock[UNUSEDCHANNELOFFSET+BYTESPERCOMMON*nrchips+1+kk*VALUESPERSPATIAL - even*nrchips*SHIFTFACSPAT];  //3
-              rawevent.c=adcBlock[UNUSEDCHANNELOFFSET+BYTESPERCOMMON*nrchips+2+kk*VALUESPERSPATIAL - even*nrchips*SHIFTFACSPAT];  //4
-              rawevent.d=adcBlock[UNUSEDCHANNELOFFSET+BYTESPERCOMMON*nrchips+3+kk*VALUESPERSPATIAL - even*nrchips*SHIFTFACSPAT];  //5
+              rawevent.com1h = adcBlock[2 + kk*BYTESPERCOMMON + even*SHIFTFACCOM];  //6
+              rawevent.u1h = adcBlock[3 + kk*BYTESPERCOMMON + even*SHIFTFACCOM];
+              rawevent.v1h = adcBlock[4+kk*BYTESPERCOMMON + even*SHIFTFACCOM];
+              rawevent.com1 = adcBlock[5+kk*BYTESPERCOMMON + even*SHIFTFACCOM];
+              rawevent.u1 =adcBlock[6+kk*BYTESPERCOMMON + even*SHIFTFACCOM];
+              rawevent.v1 =adcBlock[7+kk*BYTESPERCOMMON+ even*SHIFTFACCOM];
+              rawevent.com2h = adcBlock[8 + kk*BYTESPERCOMMON + even*SHIFTFACCOM];
+              rawevent.u2h = adcBlock[9 + kk*BYTESPERCOMMON + even*SHIFTFACCOM];
+              rawevent.v2h = adcBlock[10+kk*BYTESPERCOMMON + even*SHIFTFACCOM];
+              rawevent.com2 = adcBlock[11+kk*BYTESPERCOMMON + even*SHIFTFACCOM];
+              rawevent.u2=adcBlock[12+kk*BYTESPERCOMMON + even*SHIFTFACCOM];
+              rawevent.v2=adcBlock[13+kk*BYTESPERCOMMON+ even*SHIFTFACCOM];
+              rawevent.a=adcBlock[50+kk*VALUESPERSPATIAL - even*SHIFTFACSPAT];  //2
+              rawevent.b=adcBlock[51+kk*VALUESPERSPATIAL - even*SHIFTFACSPAT];  //3
+              rawevent.c=adcBlock[52+kk*VALUESPERSPATIAL - even*SHIFTFACSPAT];  //4
+              rawevent.d=adcBlock[53+kk*VALUESPERSPATIAL - even*SHIFTFACSPAT];  //5
               rawevent.pos=sourcepos;
               kk++;
               rawdata->Fill();
-	      //	      cout << " module :: " << rawevent.module << endl;
+
       } // trigcode
     } // for loop iii
 
@@ -668,7 +655,7 @@ if (verbose){
 
 if (pedfilenamespec) {
 
- moduledat event;
+  ModuleDat *event = new ModuleDat();
  TTree *mdata; 
  int doubletriggers[RENACHIPS][MODULES]={{0}};
  int totaltriggers[RENACHIPS][MODULES][2]={{{0}}};
@@ -676,6 +663,8 @@ if (pedfilenamespec) {
   sprintf(treename,"mdata");
   sprintf(treetitle,"Converted RENA data" );
   mdata =  new TTree(treename,treetitle);
+  mdata->Branch("eventdata",&event);
+  /*
   mdata->Branch("ct",&event.ct,"ct/L");
   mdata->Branch("chip",&event.chip,"chip/S");
   mdata->Branch("module",&event.module,"module/S");
@@ -693,44 +682,45 @@ if (pedfilenamespec) {
   mdata->Branch("id",&event.id,"id/S");
   mdata->Branch("pos",&event.pos,"pos/I");
   //}
+  */
 for (int  ii = 0 ; ii< rawdata->GetEntries(); ii++ ){
    rawdata->GetEntry(ii);
    chip=rawevent.chip;
    module=rawevent.module;
-   event.ct=rawevent.ct;
-   event.chip=rawevent.chip;
-   event.module=rawevent.module;
-   event.a=rawevent.a - pedestals[chip][module][0];
-   event.b=rawevent.b - pedestals[chip][module][1];
-   event.c=rawevent.c - pedestals[chip][module][2];
-   event.d=rawevent.d - pedestals[chip][module][3];
-   event.E=event.a+event.b+event.c+event.d;
-   event.x= event.a + event.d - ( event.b + event.c );
-   event.y= event.c + event.d - ( event.b + event.a );
-   event.x/=event.E;
-   event.y/=event.E;
+   event->ct=rawevent.ct;
+   event->chip=rawevent.chip;
+   event->module=rawevent.module;
+   event->a=rawevent.a - pedestals[chip][module][0];
+   event->b=rawevent.b - pedestals[chip][module][1];
+   event->c=rawevent.c - pedestals[chip][module][2];
+   event->d=rawevent.d - pedestals[chip][module][3];
+   event->E=event->a+event->b+event->c+event->d;
+   event->x= event->a + event->d - ( event->b + event->c );
+   event->y= event->c + event->d - ( event->b + event->a );
+   event->x/=event->E;
+   event->y/=event->E;
 
 
-   event.id=-1;
-   event.pos=rawevent.pos;
+   event->id=-1;
+   event->pos=rawevent.pos;
 
    if ( (rawevent.com1h - pedestals[chip][module][5]) < threshold ) { 
      if ( (rawevent.com2h - pedestals[chip][module][7]) > threshold ) { 
        totaltriggers[chip][module][0]++;
-       event.apd=0; 
-       event.ft=finecalc(rawevent.u1h,rawevent.v1h,uu_c[chip][module][0],vv_c[chip][module][0])  ;
-       event.Ec= rawevent.com1 - pedestals[chip][module][4];
-       event.Ech=rawevent.com1h - pedestals[chip][module][5];
+       event->apd=0; 
+       event->ft=finecalc(rawevent.u1h,rawevent.v1h,uu_c[chip][module][0],vv_c[chip][module][0])  ;
+       event->Ec= rawevent.com1 - pedestals[chip][module][4];
+       event->Ech=rawevent.com1h - pedestals[chip][module][5];
        mdata->Fill(); }
      else doubletriggers[chip][module]++;
    }
    else {
      if ( (rawevent.com2h - pedestals[chip][module][5]) < threshold ) {   
      totaltriggers[chip][module][1]++;
-     event.apd=1;   
-     event.ft=finecalc(rawevent.u2h,rawevent.v2h,uu_c[chip][module][1],vv_c[chip][module][1])  ;
-     event.Ec = rawevent.com2 - pedestals[chip][module][6];
-     event.Ech=rawevent.com2h- pedestals[chip][module][7];
+     event->apd=1;   
+     event->ft=finecalc(rawevent.u2h,rawevent.v2h,uu_c[chip][module][1],vv_c[chip][module][1])  ;
+     event->Ec = rawevent.com2 - pedestals[chip][module][6];
+     event->Ech=rawevent.com2h- pedestals[chip][module][7];
      mdata->Fill(); } }
  } // loop over entries ii
 

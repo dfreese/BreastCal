@@ -1,5 +1,5 @@
 #include <stdlib.h>
-
+ 
 #include "TROOT.h"
 #include "Riostream.h"
 #include "TTree.h"
@@ -9,6 +9,7 @@
 #include "TH2F.h"
 #include "TVector.h"
 #include "./decoder.h"
+#include "./ModuleDat.h"
 
 
 #define FILENAMELENGTH	120
@@ -33,7 +34,7 @@ Int_t main(int argc, Char_t *argv[])
 
 	Int_t		ix;
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-	moduledat event;
+	ModuleDat *event = 0;
 	//UNIT0,UNIT1,UNIT2,UNIT3;
 
 	//     module TESTISD
@@ -66,12 +67,14 @@ Int_t main(int argc, Char_t *argv[])
 
 
         TVector ppVals(8*RENACHIPS);
+        TVector ppVals_com(8*RENACHIPS);
 	TFile *rfile = new TFile(filename,"UPDATE");
         if (!rfile || rfile->IsZombie()) {  
          cout << "problems opening file " << filename << "\n.Exiting" << endl; 
          return -11;}
         TTree *block;
         TH1F *E[RENACHIPS][MODULES][2];
+        TH1F *E_com[RENACHIPS][MODULES][2];
         TH2F *floods[RENACHIPS][MODULES][2];
         Char_t tmpstring[60],titlestring[60];
 	//,cutstring[120],cutstring2[120];
@@ -100,6 +103,9 @@ Int_t main(int argc, Char_t *argv[])
 	 */
          if (verbose)  cout << " Ok, we got " << entries << " entries. " << endl;
 
+	 block->SetBranchAddress("eventdata",&event);
+
+	 /*
           block->SetBranchAddress("ct",&event.ct);
 	  block->SetBranchAddress("chip",&event.chip);
 	  block->SetBranchAddress("module",&event.module);
@@ -112,6 +118,7 @@ Int_t main(int argc, Char_t *argv[])
 	  //	  block->SetBranchAddress("ft",&event.ft);
 	  //	  block->SetBranchAddress("id",&event.id);
 	  //	  block->SetBranchAddress("pos",&event.pos);
+	  */
 
         strncpy(filebase,filename,strlen(filename)-5);
         filebase[strlen(filename)-5]='\0';
@@ -131,8 +138,12 @@ Int_t main(int argc, Char_t *argv[])
 	 //	 c1->Divide(2,2); 
             for (i=0;i<4;i++){
              sprintf(tmpstring,"E[%d][%d][%d]",kk,i,j);
-    	     sprintf(titlestring,"RENA %d, Module %d, PSAPD %d",kk,i,j);
+    	     sprintf(titlestring,"E RENA %d, Module %d, PSAPD %d",kk,i,j);
              E[kk][i][j]=new TH1F(tmpstring,titlestring,Ebins,E_low,E_up);
+             sprintf(tmpstring,"E_com[%d][%d][%d]",kk,i,j);
+    	     sprintf(titlestring,"ECOM RENA %d, Module %d, PSAPD %d",kk,i,j);
+             E_com[kk][i][j]=new TH1F(tmpstring,titlestring,Ebins_com,E_low_com,E_up_com);
+
 	    //   sprintf(tmpstring,"UNIT%d.E>>E[%d][%d][%d]",i,kk,i,j);
 	    //   sprintf(cutstring,"UNIT%d.com%dh<%d",i,j+1,threshold);
 	    // if (verbose){
@@ -152,13 +163,17 @@ Int_t main(int argc, Char_t *argv[])
        //       Int_t npeaks,efound;
        Double_t pp_right,pp_low,pp_up;
        Double_t ppeaks[RENACHIPS][MODULES][2];
+       Double_t pp_right_com,pp_low_com,pp_up_com;
+       Double_t ppeaks_com[RENACHIPS][MODULES][2];
+
 
        if (verbose) cout << " Filling Energy Histograms " << endl;
         
        for(l=0;l<block->GetEntries();l++){
 	 block->GetEntry(l);
          if (((l%500000)==0)&&(l>0)) cout << l/1e6 << " Million Events processed " << endl;
-         E[event.chip][event.module][event.apd]->Fill(event.E);  
+         E[event->chip][event->module][event->apd]->Fill(event->E);  
+         E_com[event->chip][event->module][event->apd]->Fill(-event->Ec);  
        } // l 
 
 
@@ -169,6 +184,9 @@ Int_t main(int argc, Char_t *argv[])
    
             pp_low= PP_LOW_EDGE;
             pp_up= PP_UP_EDGE;
+            pp_low_com= PP_LOW_EDGE_COM;
+            pp_up_com= PP_UP_EDGE_COM;
+
   
 	 if (verbose) { 
             cout << " ******************************************************* "  << endl; 
@@ -179,15 +197,27 @@ Int_t main(int argc, Char_t *argv[])
            pp_right=GetPhotopeak_v1(E[kk][i][j],pp_low,pp_up,verbose);
            pp_low=0.7*pp_right;
            pp_up=1.3*pp_right;
-        if (verbose) { 
+         if (verbose) { 
            cout << "pp_low = " << pp_low ;
-	  cout << " pp_up = " << pp_up << endl;} 
+	  cout << " pp_up = " << pp_up << endl;
+	  cout << " --------- Common ----------- " <<endl;} 
+           pp_right_com=GetPhotopeak_v1(E_com[kk][i][j],pp_low_com,pp_up_com,verbose);
+           pp_low_com=0.7*pp_right_com;
+           pp_up_com=1.3*pp_right_com;
+         if (verbose) { 
+           cout << "pp_right_com = " << pp_right_com ;
+           cout << " pp_low_com = " << pp_low_com ;
+	   cout << " pp_up_com = " << pp_up_com << endl;} 
+
+
          } // > MINHISTENTRIES
          else {
 	   if (verbose ){ cout << " Not enough entries in histogram E["<<kk<<"]["<<i<<"]["<<j<<"]. Skipping."<<endl;}
            pp_right=0;
+           pp_right_com=0;
 	 }
           ppeaks[kk][i][j]=pp_right;
+          ppeaks_com[kk][i][j]=pp_right_com;
 	   } //loop over i 
        } // loop over j
 
@@ -198,6 +228,17 @@ Int_t main(int argc, Char_t *argv[])
            c1->cd(i+1);
 	   E[kk][i][j]->Draw(); } //i
            sprintf(pngstring,"%s.RENA%d.Eapd%d",filebase,kk,j);
+           strcat(pngstring,".png");
+ 	   c1->Print(pngstring);
+       } // j
+
+       for (j=0;j<2;j++){
+         c1->Clear();
+         c1->Divide(2,2);
+	 for (i=0;i<4;i++){
+           c1->cd(i+1);
+	   E_com[kk][i][j]->Draw(); } //i
+           sprintf(pngstring,"%s.RENA%d.Eapd_com%d",filebase,kk,j);
            strcat(pngstring,".png");
  	   c1->Print(pngstring);
        } // j
@@ -231,11 +272,11 @@ Int_t main(int argc, Char_t *argv[])
        if (verbose) cout << " Obtaining Flood histograms " << endl;
         for(l=0;l<block->GetEntries();l++){
          block->GetEntry(l);
-	 if (ppeaks[event.chip][event.module][event.apd] > 0 ){
-           pp_low=.7*ppeaks[event.chip][event.module][event.apd];
-	   pp_up=1.3*ppeaks[event.chip][event.module][event.apd];
-           if ((event.E>pp_low)&&(event.E<pp_up)) {
-           floods[event.chip][event.module][event.apd]->Fill(event.y,event.x);
+	 if (ppeaks[event->chip][event->module][event->apd] > 0 ){
+           pp_low=.7*ppeaks[event->chip][event->module][event->apd];
+	   pp_up=1.3*ppeaks[event->chip][event->module][event->apd];
+           if ((event->E>pp_low)&&(event->E<pp_up)) {
+           floods[event->chip][event->module][event->apd]->Fill(event->y,event->x);
            }
          } // ppeaks[][][] > 0
 	} // loop over entries (l) 
@@ -246,6 +287,7 @@ Int_t main(int argc, Char_t *argv[])
 	         c1->Divide(2,2); 
              for (i=0;i<4;i++){
                 ppVals(kk*8+j*4+i) = ppeaks[kk][i][j];
+                ppVals_com(kk*8+j*4+i) = ppeaks_com[kk][i][j];
                 c1->cd(i+1);
                 floods[kk][i][j]->Draw("colz");
 	     } // loop i
@@ -260,11 +302,13 @@ Int_t main(int argc, Char_t *argv[])
            floods[kk][i][j]->Write();
            E[kk][i][j]->Write();
 	   ppVals(kk*8+j*4+i) = ppeaks[kk][i][j];
+	   ppVals_com(kk*8+j*4+i) = ppeaks_com[kk][i][j];
 	 } // i
        } // j
        	} //loop over kk (chips)
 
-       ppVals.Write();
+       ppVals.Write("pp_spat");
+       ppVals_com.Write("pp_com");
 	rfile->Close();
      
 

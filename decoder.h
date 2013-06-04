@@ -23,8 +23,8 @@ streampos endPos;
 vector<char> packBuffer;
 unsigned long long int byteCounter;
 #define PAULS_PANELID true
-//#define MODULE_BASED_READOUT false
-#define MODULE_BASED_READOUT true
+#define MODULE_BASED_READOUT false
+//#define MODULE_BASED_READOUT true
 //#define NUM_RENA_PER_DAQ 8
 
 #define CHANPERMODULE 8
@@ -39,8 +39,14 @@ unsigned long long int byteCounter;
 #define E_up 3000
 #define E_low -100
 #define Ebins 310
+#define E_up_com 1400
+#define E_low_com -100
+#define Ebins_com 150
 #define PP_LOW_EDGE 600
 #define PP_UP_EDGE 2800
+#define PP_LOW_EDGE_COM 350
+#define PP_UP_EDGE_COM 1200
+
 #define MINHISTENTRIES 200
 
 #define FILENAMELENGTH	120
@@ -49,6 +55,10 @@ unsigned long long int byteCounter;
 
 #define EFITMIN  0 
 #define EFITMAX  2400
+
+#define EFITMIN_COM  0 
+#define EFITMAX_COM  1200
+
 
 #define MAXHITS 5000000
 #define MAXCUTS 50
@@ -63,25 +73,8 @@ unsigned long long int byteCounter;
 //TROOT::gErrorIgnoreLevel=1001;
   //TROOT::gErrorIgnoreLevel = 1001;
 
-struct moduledat
-{ Long64_t ct;
-  Short_t chip;
-  Short_t module;
-  Short_t apd;
-  Float_t Ec;
-  Float_t Ech;
-  Float_t x;
-  Float_t y;
-  Float_t E;
-  Float_t ft;
-  Int_t pos;
-  Short_t a;
-  Short_t b;
-  Short_t c;
-  Short_t d;
-  Short_t id;
-};
 
+			     /*
 struct modulecal
 { Long64_t ct;
   Short_t chip;
@@ -119,6 +112,8 @@ struct modmerge
   Int_t id;
   Int_t pos;
  };
+
+*/
 
  /*
 struct modmerge
@@ -166,34 +161,6 @@ struct chipevent
 
 };
 
-
-struct event
-{ Long64_t dtc;
-  Double_t dtf;
-  Double_t E1;
-  Double_t Ec1;
-  Double_t Ech1;
-  Double_t ft1;
-  Double_t E2;
-  Double_t Ec2;
-  Double_t Ech2;
-  Double_t ft2;
-  Double_t x1;
-  Double_t y1;
-  Double_t x2;
-  Double_t y2;
-  Int_t chip1;
-  Int_t fin1;
-  Int_t m1;
-  Int_t apd1;
-  Int_t crystal1;
-  Int_t chip2;
-  Int_t fin2;
-  Int_t m2;
-  Int_t apd2;
-  Int_t crystal2;
-  Int_t pos;
-};
 
 /*
 #include "TCanvas.h"

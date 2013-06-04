@@ -19,10 +19,11 @@
 //##include "/home/miil/root/libInit_avdb.h"
 #include "./decoder.h"
 #include "time.h"
+#include "ModuleCal.h"
 
 int main(int argc, Char_t *argv[])
 {
-  	cout << "Welcome Test" << endl;
+  	cout << "Welcome " << endl;
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 	Char_t		filenamel[FILENAMELENGTH] = "";
@@ -33,7 +34,9 @@ int main(int argc, Char_t *argv[])
         rb=-99;
         Int_t    left=-9999;
 	//        modulecal       UL0,UL1,UL2,UL3;
-        modmerge        event,evt;
+        ModuleCal *event = new ModuleCal();
+        ModuleCal *evt = new ModuleCal(); 
+        ModuleCal *unsrt_evt=0;
         TTree*           cal;
         Long64_t lasttime=-1;
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -165,7 +168,7 @@ int main(int argc, Char_t *argv[])
         
         
 
-        modulecal unsrt_evt;
+
         Long64_t entries;
 
         Long64_t maxentries=0;
@@ -182,6 +185,8 @@ int main(int argc, Char_t *argv[])
 	    return -11; //            continue;
 	  }
 
+          cal->SetBranchAddress("Calibrated Event Data",&unsrt_evt);
+	  /*
 	  cal->SetBranchAddress("ct",&unsrt_evt.ct);
 	  cal->SetBranchAddress("chip",&unsrt_evt.chip);
 	  cal->SetBranchAddress("module",&unsrt_evt.module);
@@ -195,7 +200,7 @@ int main(int argc, Char_t *argv[])
 	  cal->SetBranchAddress("ft",&unsrt_evt.ft);
 	  cal->SetBranchAddress("pos",&unsrt_evt.pos);
 	  cal->SetBranchAddress("id",&unsrt_evt.id);
-
+	  */
 	  /*	  
         cal[m]->SetBranchAddress("U0",&UL[m*4+0]);
         cal[m]->SetBranchAddress("U1",&UL[m*4+1]);
@@ -308,6 +313,9 @@ int main(int argc, Char_t *argv[])
         TTree *panel = new TTree("panel","Sorted Panel Data") ;
         Long64_t lasteventtime=0;
         panel->SetDirectory(0); 
+
+        panel->Branch("Sorted data",&event);
+
 	//        panel->Branch("event",&event.ct,"ct/L:ft/D:E/D:Ec/D:Ech/D:x/D:y/D:chip/I:m/I:apd/I:id/I",2);
 	//        panel->Branch("event",&event.ct,"ct/L:ft/D:E/D:Ec/D:Ech/D:x/D:y/D:chip/I:m/I:apd/I:id/I");
 	/*
@@ -325,7 +333,7 @@ int main(int argc, Char_t *argv[])
         panel->Branch("id",&event.id,"id/S");
         panel->Branch("pos",&event.pos,"pos/I");
 	*/
-
+	/*
         panel->Branch("ct",&event.ct,"ct/L");
         panel->Branch("ft",&event.ft,"ft/D");
         panel->Branch("E",&event.E,"E/D");
@@ -339,7 +347,7 @@ int main(int argc, Char_t *argv[])
         panel->Branch("apd",&event.apd,"apd/I");
         panel->Branch("id",&event.id,"id/I");
         panel->Branch("pos",&event.pos,"pos/I");
-
+	*/
 
 	// this could be simple: we just split the file according to the timestamp 
 	// check whether timestamp[unsrt_evt.chip]  
@@ -355,7 +363,7 @@ int main(int argc, Char_t *argv[])
 	    //            while ((curtime<(timecut[kk]))&&(stop)) {           
 	      cal->GetEntry(l);
 	      //              thischiptime=UL[m*4+2].ct ;
-              curtime=unsrt_evt.ct ;
+              curtime=unsrt_evt->ct ;
 	      if (( curtime+1e12 ) < lasteventtime ) { 
                 // rollover occured !! 
 		// FIXME :: only one rollover supported as of now. 
@@ -369,31 +377,32 @@ int main(int argc, Char_t *argv[])
 		  //                  if (UL[m*4+j].apd == 0 ) { event.ft=UL[m*4+j].ft1 ;}// event.Ec=UL[m*4}
 		  //                  else { event.ft=UL[m*4+j].ft2 ;}
 		  //                    event.ct=unsrt_evt.ct;
-        	    event.ct=curtime;
-		    event.E=unsrt_evt.Ecal;
-                    event.ft=unsrt_evt.ft;
-		    event.Ec=unsrt_evt.Ec;
-		    event.Ech=unsrt_evt.Ech;
-		    event.x=unsrt_evt.x;
-		    event.y=unsrt_evt.y;
+        	    event->ct=curtime;
+		    event->Ecal=unsrt_evt->Ecal;
+                    event->ft=unsrt_evt->ft;
+		    event->Ec=unsrt_evt->Ec;
+                    event->E=unsrt_evt->E;
+		    event->Ech=unsrt_evt->Ech;
+		    event->x=unsrt_evt->x;
+		    event->y=unsrt_evt->y;
                     /* assigning chip number = from 0 - > 32 for each cartridge so 0->7; 8->15; 16->23; 24->32; 
                        the chip number will be more for debugging */
-                    event.chip=unsrt_evt.chip+(rb)*8;
+                    event->chip=unsrt_evt->chip+(rb)*8;
 		    //                    event.m=m*4+j+(rb)*32;
                     /* Assigning fin number */
-                    m=unsrt_evt.chip;
+                    m=unsrt_evt->chip;
                     if (left==1) { if (rb<2) finincr=0; else finincr=1;} 
                     else { if (rb<2) finincr=0; else finincr=1;}
-                    if (m<2) { event.fin = 6+finincr;} 
-                    else { if (m<4) { event.fin = 4+finincr;}
-		      else { if (m<6) { event.fin = 2+finincr;}
-			else { event.fin = finincr; }}}
+                    if (m<2) { event->fin = 6+finincr;} 
+                    else { if (m<4) { event->fin = 4+finincr;}
+		      else { if (m<6) { event->fin = 2+finincr;}
+			else { event->fin = finincr; }}}
 		    /* Assigning module number */ 
-                    event.m=unsrt_evt.module +(unsrt_evt.chip%2)*4+(rb%2)*8;
+                    event->m=unsrt_evt->m +(unsrt_evt->chip%2)*4+(rb%2)*8;
 		    /* note :: we can plot using  event.m+(event.fin)*16; */
-                    event.apd=unsrt_evt.apd;
-                    event.id=unsrt_evt.id;
-                    event.pos=unsrt_evt.pos;
+                    event->apd=unsrt_evt->apd;
+                    event->id=unsrt_evt->id;
+                    event->pos=unsrt_evt->pos;
                     if (kk > 0 ) mintime=timecut[kk-1];
                     else mintime=0;
                     if ( (curtime<=timecut[kk])&&curtime>mintime )  { panel->Fill();}
@@ -403,7 +412,7 @@ int main(int argc, Char_t *argv[])
 		      if (( curtime-timecut[kk])>10000 ) { stop=1;} }   
 		     // we stop the while loop and close the file if the timedifference is larger than 10
 
-    	      if (verbose) {cout << " filling chip " << unsrt_evt.chip << " UNIT " << event.m ;
+    	      if (verbose) {cout << " filling chip " << unsrt_evt->chip << " UNIT " << event->m ;
 	      cout << " (l="<<l<<")"<< endl;}
 		    //	    } // if mod >= 0
 	    //   } // loop over 4 modules in chip
@@ -447,8 +456,8 @@ int main(int argc, Char_t *argv[])
 	    //  std::cout<<"Reading Run numbers"<<std::endl;
             for (l=0;l<N;l++)     {
                 panel->GetEntry(l);
-                table[l] = event.ct;
-		//             cout << " event.ct = " << event.ct <<  endl;
+                table[l] = event->ct;
+		//             cout << " event->ct = " << event->ct <<  endl;
 	    } // loop over l 
 
            std::cout<<"Sorting Run numbers"<<std::endl;
@@ -468,6 +477,8 @@ int main(int argc, Char_t *argv[])
 	//  fourup->SetName("fourup");
 
         TTree *fourup = new TTree("fourup","Time Sorted data one 4-up board");
+        fourup->Branch("Time Sorted Data",&evt);
+	/*
         fourup->Branch("ct",&evt.ct,"ct/L");
         fourup->Branch("ft",&evt.ft,"ft/D");
          fourup->Branch("E",&evt.E,"E/D");
@@ -481,7 +492,7 @@ int main(int argc, Char_t *argv[])
          fourup->Branch("apd",&evt.apd,"apd/I");
         fourup->Branch("id",&evt.id,"id/I");
        fourup->Branch("pos",&evt.pos,"pos/I");
-
+	*/
 
 	  cout << " Loading Baskets ... " << endl;
   panel->LoadBaskets(2328673567232LL);
@@ -495,7 +506,7 @@ int main(int argc, Char_t *argv[])
             
             panel->GetEntry(sorted[l]);
 	    //     panel->GetEntry(l);
-	     //  cout << " event.ct = " << event.ct <<  " ( sorted[l] = " << sorted[l] << " )" << endl;
+	     //  cout << " event->ct = " << event->ct <<  " ( sorted[l] = " << sorted[l] << " )" << endl;
  	     evt=event;
              fourup->Fill();
           }

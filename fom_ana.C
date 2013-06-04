@@ -15,6 +15,7 @@
 #include "apd_fit.h"
 #include "./decoder.h"
 #include "apd_peaktovalley.h"
+#include "./ModuleCal.h"
 
 int main(int argc, Char_t *argv[])
 {
@@ -24,7 +25,7 @@ int main(int argc, Char_t *argv[])
 	Char_t		filenamel[FILENAMELENGTH] = "", curoutfile[FILENAMELENGTH];
 	Int_t		verbose = 0;
 	Int_t		ix;
-        modulecal       event;
+        ModuleCal       *event=0;
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     
@@ -145,6 +146,8 @@ int main(int argc, Char_t *argv[])
 
          cout << " Entries : " << block->GetEntries() << endl;
         
+	 block->SetBranchAddress("eventdata",&event);
+	 /*
           block->SetBranchAddress("ct",&event.ct);
           block->SetBranchAddress("chip",&event.chip);
           block->SetBranchAddress("module",&event.module);
@@ -157,7 +160,7 @@ int main(int argc, Char_t *argv[])
           block->SetBranchAddress("ft",&event.ft);
           block->SetBranchAddress("id",&event.id);
           block->SetBranchAddress("pos",&event.pos);
-
+	 */
 
 
    
@@ -175,13 +178,13 @@ int main(int argc, Char_t *argv[])
        //       cout << "UL2.mod = " << UL2.mod << "; UL2.x = "<<  UL2.x << "; UL2.id = ";
        //       cout << UL2.id << "; UL2.Ecal = " << UL2.Ecal << endl;
 
-       if ((event.id>=0)||(event.id<64)) {
-         if ((event.Ecal>EGATEMIN)&&(event.Ecal<EGATEMAX)) {
-	   if ((event.apd==1)||(event.apd==0)){
-             m=event.chip;
+       if ((event->id>=0)||(event->id<64)) {
+         if ((event->Ecal>EGATEMIN)&&(event->Ecal<EGATEMAX)) {
+	   if ((event->apd==1)||(event->apd==0)){
+             m=event->chip;
              if ((m>=0)&&(m<RENACHIPS)) {
-               if ((event.module<4)&&(event.module>=0)) {
-		 xhist[m][event.module][event.apd][event.id]->Fill(event.x); }}}}}
+               if ((event->m<4)&&(event->m>=0)) {
+		 xhist[m][event->m][event->apd][event->id]->Fill(event->x); }}}}}
     
   
        } // for loop

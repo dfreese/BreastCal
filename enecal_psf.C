@@ -18,8 +18,22 @@ This program fills the energy histograms for every crystal, needed to do energy 
 #include "TVector.h"
 #include "TMath.h"
 #include "TF1.h"
-#include "./decoder.h"
-#include "./ModuleDat.h"
+#include "/home/miil/root/macros/myrootlib.h"
+#include "/home/miil/root/libInit_avdb.h"
+#include "./convertconfig.h"
+
+#define FILENAMELENGTH	120
+#define MAXFILELENGTH	160
+#define E_up 2500
+#define E_low -100
+#define Ebins 260
+#define PEAKS 64
+#define EMIN  0 
+#define EMAX  2400
+#define EBINS 150
+//#define CHIPS 2
+
+
 
 //void usage(void);
 
@@ -35,9 +49,9 @@ int main(int argc, Char_t *argv[])
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 	Char_t		filename[FILENAMELENGTH] = "";
-	Int_t		verbose = 0;
+	Int_t		verbose = 0, threshold=-1000;
 	Int_t		ix;
-        ModuleDat *event = 0;
+        module UNIT0,UNIT1,UNIT2,UNIT3;
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 	for(ix = 1; ix < argc; ix++) {
@@ -49,6 +63,13 @@ int main(int argc, Char_t *argv[])
 			cout << "Verbose Mode " << endl;
 			verbose = 1;
 		}
+
+		if(strncmp(argv[ix], "-t", 2) == 0) {
+                  threshold = atoi( argv[ix+1]);
+		  cout << "Threshold =  " << threshold <<endl;
+                  ix++;
+		}
+
 		/* filename '-f' */
 		if(strncmp(argv[ix], "-f", 2) == 0) {
 			if(strlen(argv[ix + 1]) < FILENAMELENGTH) {
@@ -77,13 +98,10 @@ int main(int argc, Char_t *argv[])
         Double_t aa, bb;
         ifstream infile;
         TH1F *Ehist[RENACHIPS][4][2][64];
-        TH1F *Ehist_com[RENACHIPS][4][2][64];
 	//        TF1 *Efits[4][2][64];
-        TVector* ppVals = (TVector *) rfile->Get("pp_spat");
-        TVector* ppVals_com = (TVector *) rfile->Get("pp_com");
+        TVector* ppVals = (TVector *) rfile->Get("TVectorT<float>");
         TCanvas *c1 =new TCanvas();
         Char_t treename[40];
-        TDirectory *subdir[RENACHIPS];
 
         strncpy(filebase,filename,strlen(filename)-5);
         filebase[strlen(filename)-5]='\0';
@@ -146,86 +164,81 @@ int main(int argc, Char_t *argv[])
 	      for (k=0;k<64;k++){
                 sprintf(tmpname,"Ehist[%d][%d][%d][%d]",m,j,i,k);
                 sprintf(tmptitle,"RENA %d Unit %d Module %d Pixel %d",m,j,i,k);
-                Ehist[m][j][i][k] = new TH1F(tmpname,tmptitle,Ebins,E_low,E_up);
-                sprintf(tmpname,"Ehist_com[%d][%d][%d][%d]",m,j,i,k);
-                sprintf(tmptitle,"RENA %d Unit %d Module %d Pixel %d Common",m,j,i,k);
-                Ehist_com[m][j][i][k] = new TH1F(tmpname,tmptitle,Ebins_com,E_low_com,E_up_com);
+                Ehist[m][j][i][k] = new TH1F(tmpname,tmptitle,EBINS,EMIN,EMAX);
 		//                sprintf(tmpname,"Efits[%d][%d][%d]",i,j,k);
 		//                sprintf(tmptitle,"Unit %d Module %d Pixel %d",i,j,k);
 		//                Efits[i][j][k] = new TF1(tmpname,"gaus",EBINS,EMIN,EMAX);
 	      }
             }
           }
-	} // m
 
 
 	  /*
 	  if (m==0)  block = (TTree *) rfile->Get("block1");
           else  block = (TTree *) rfile->Get("block2");
 	  */
-
-	 sprintf(treename,"mdata");
-         block = (TTree *) rfile->Get(treename);
-         if (!block) {
-	   cout << " Problem reading Tree " << treename  << " from file " << filename << endl;
-           cout << " Exiting " << endl;
-           return -10;}
-	 //	 entries=block->GetEntries();
-
+	  sprintf(treename,"block[%d]",m);
+	  block = (TTree *) rfile->Get(treename);
+  
         cout << " Entries : " << block->GetEntries() << endl;
-	block->SetBranchAddress("eventdata",&event);
-	   /*
-          block->SetBranchAddress("ct",&event.ct);
-	  block->SetBranchAddress("chip",&event.chip);
-	  block->SetBranchAddress("module",&event.module);
-	  block->SetBranchAddress("apd",&event.apd);
-	  block->SetBranchAddress("Ec",&event.Ec);
-	  block->SetBranchAddress("Ech",&event.Ech);
-	  block->SetBranchAddress("x",&event.x);
-	  block->SetBranchAddress("y",&event.y);
-	  block->SetBranchAddress("E",&event.E);
-	  block->SetBranchAddress("ft",&event.ft);
-	  block->SetBranchAddress("a",&event.a);
-	  block->SetBranchAddress("b",&event.b);
-	  block->SetBranchAddress("c",&event.c);
-	  block->SetBranchAddress("d",&event.d);
-	  block->SetBranchAddress("id",&event.id);
-	  block->SetBranchAddress("pos",&event.pos);
-	   */
+	
+
+        block->SetBranchAddress("UNIT0",&UNIT0);
+        block->SetBranchAddress("UNIT1",&UNIT1);
+        block->SetBranchAddress("UNIT2",&UNIT2);
+        block->SetBranchAddress("UNIT3",&UNIT3);
+
 
          strncpy(filebase,filename,strlen(filename)-5);
          filebase[strlen(filename)-5]='\0';
   
 	 if (verbose) cout << " Cloning Tree " << endl;
           TTree *calblock = block->CloneTree(0);
-	  sprintf(treename,"calblock");// Energy calibrated event data ");
+	  sprintf(treename,"calblock[%d]",m);
 	  /*
          if (m==0) calblock->SetName("calblock1");
          else calblock->SetName("calblock2");
 	  */
           calblock->SetName(treename);
 
-          int chip;
-          int module;
-          int apd;
-
 	  for (i=0;i<block->GetEntries();i++){
 	    if ((i%100000)==0) fprintf(stdout,"%d Events Processed\r",i);
 	   //      	  for (i=0;i<1e5;i++){
 	    block->GetEntry(i);
-	    chip=event->chip;
-            module=event->module;
-            apd=event->apd;
+             if (validpeaks[m][0][0]&&UNIT0.com1h<threshold)
+	       {UNIT0.id=getcrystal(UNIT0.x,UNIT0.y,U_x[m][0][0],U_y[m][0][0],verbose);
+		if ((UNIT0.id)>=0) Ehist[m][0][0][UNIT0.id]->Fill(UNIT0.E); }
+	     else { 
+             if (validpeaks[m][0][1]&&UNIT0.com2h<threshold) 
+	       {UNIT0.id=getcrystal(UNIT0.x,UNIT0.y,U_x[m][0][1],U_y[m][0][1],verbose);
+                if ((UNIT0.id)>=0) Ehist[m][0][1][UNIT0.id]->Fill(UNIT0.E);}
+	     }
+             if (validpeaks[m][1][0]&&UNIT1.com1h<threshold)
+	       {UNIT1.id=getcrystal(UNIT1.x,UNIT1.y,U_x[m][1][0],U_y[m][1][0],verbose);
+                if ((UNIT1.id)>=0)
+       		 Ehist[m][1][0][UNIT1.id]->Fill(UNIT1.E);}
+	     else { 
+             if (validpeaks[m][1][1]&&UNIT1.com2h<threshold) 
+	       {UNIT1.id=getcrystal(UNIT1.x,UNIT1.y,U_x[m][1][1],U_y[m][1][1],verbose);
+		if ((UNIT1.id)>=0) Ehist[m][1][1][UNIT1.id]->Fill(UNIT1.E);}
+	     }
+             if (validpeaks[m][2][0]&&UNIT2.com1h<threshold)
+	       {UNIT2.id=getcrystal(UNIT2.x,UNIT2.y,U_x[m][2][0],U_y[m][2][0],verbose);
+		 if ((UNIT2.id)>=0) Ehist[m][2][0][UNIT2.id]->Fill(UNIT2.E);}
+	     else { 
+             if (validpeaks[m][2][1]&&UNIT2.com2h<threshold) 
+	       {UNIT2.id=getcrystal(UNIT2.x,UNIT2.y,U_x[m][2][1],U_y[m][2][1],verbose);
+		 if ((UNIT2.id)>=0) Ehist[m][2][1][UNIT2.id]->Fill(UNIT2.E);}
+	     }
+             if (validpeaks[m][3][0]&&UNIT3.com1h<threshold)
+	       {UNIT3.id=getcrystal(UNIT3.x,UNIT3.y,U_x[m][3][0],U_y[m][3][0],verbose);
+		 if ((UNIT3.id)>=0)  Ehist[m][3][0][UNIT3.id]->Fill(UNIT3.E);}
+	     else { 
+             if (validpeaks[m][3][1]&&UNIT3.com2h<threshold) 
+	       {UNIT3.id=getcrystal(UNIT3.x,UNIT3.y,U_x[m][3][1],U_y[m][3][1],verbose);
+		 if ((UNIT3.id)>=0) Ehist[m][3][1][UNIT3.id]->Fill(UNIT3.E);}
+	     }
 
-	    if (validpeaks[chip][module][apd]){
-               
-	      // if (validpeaks[m][0][0]&&UNIT0.com1h<threshold)
-	        event->id=getcrystal(event->x,event->y,U_x[chip][module][apd],U_y[chip][module][apd],verbose);
-		if ((event->id)>=0){  
-                    Ehist[chip][module][apd][event->id]->Fill(event->E); 
-                    Ehist_com[chip][module][apd][event->id]->Fill(-event->Ec); 
-		} // if valid crystalid 
-            } // if validpeaks
 
              calblock->Fill();
              
@@ -236,20 +249,16 @@ int main(int argc, Char_t *argv[])
 
 	  cout << " Done looping over the events " <<endl;
 
-          ppVals->Write("pp_spat");
-          ppVals_com->Write("pp_com");
+
+
+		 ppVals->Write();
 
           calblock->AutoSave();
 	  //          f->Write();     
-	  for (m=0;m<RENACHIPS;m++){
-           sprintf(tmpname,"RENA%d",m);
-           subdir[m] = f->mkdir(tmpname);
-           subdir[m]->cd();
 	  for (j=0;j<2;j++){
             for (i=0;i<4;i++){
 	      for (k=0;k<64;k++){
                 Ehist[m][i][j][k]->Write();
-                Ehist_com[m][i][j][k]->Write();
 	      }
             }
           }

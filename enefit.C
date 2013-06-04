@@ -13,6 +13,8 @@
 #include "TPaveText.h"
 #include "apd_fit.h"
 #include "./decoder.h"
+#include "ModuleDat.h"
+#include "ModuleCal.h"
 //#include "/home/miil/root/macros/myrootlib.h"
 //#include "/home/miil/root/libInit_avdb.h"
 //#include "./convertconfig.h"
@@ -41,8 +43,8 @@ int main(int argc, Char_t *argv[])
 	Char_t		filename[FILENAMELENGTH] = "";
 	Int_t		verbose = 0;//, threshold=-800;
 	Int_t		ix;
-        moduledat   event;
-        modulecal   calevent;
+        ModuleDat *event = 0;
+        ModuleCal   *calevent =  new ModuleCal();
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -85,11 +87,13 @@ int main(int argc, Char_t *argv[])
         Double_t aa, bb;
         ifstream infile;
         TH1F *Ehist[RENACHIPS][4][2][64];
+        TH1F *Ehist_com[RENACHIPS][4][2][64];
         TH1F *globhist[RENACHIPS][4][2];
         TF1 *globfits[RENACHIPS][4][2];
         TH1F *globhist_com[RENACHIPS][4][2];
-	//        TF1 *globfits_com[RENACHIPS][4][2];
+        TF1 *globfits_com[RENACHIPS][4][2];
         TF1 *Efits[RENACHIPS][4][2][64];
+        TF1 *Efits_com[RENACHIPS][4][2][64];
         TDirectory *subdir[RENACHIPS];
 
 	//        strncpy(filebase,filename,strlen(filename)-17);
@@ -106,7 +110,8 @@ int main(int argc, Char_t *argv[])
 
 
 
-        TVector* ppVals = (TVector *) enefile->Get("TVectorT<float>");
+        TVector* ppVals = (TVector *) enefile->Get("pp_spat");
+        TVector* ppVals_com = (TVector *) enefile->Get("pp_com");
 
 	//	enefile->ls() ;
 
@@ -143,19 +148,32 @@ int main(int argc, Char_t *argv[])
 	} //j 
 	  }//i
 	  }//m
+ 
+	  cout <<  " File content :: " << endl;
+          enefile->ls();
 	} //verbose
 	
+
+ 
 
 	/* Getting E hists */
       Char_t tmpstring[30];
       for (m=0;m<RENACHIPS;m++){
+	//        sprintf(tmpstring,"RENA%d",m);
+	//      	enefile->cd(tmpstring);
+	//        subdir[m]->cd();
            for (i=0;i<4;i++){
            for (j=0;j<2;j++){ 
-	   for (k=0;k<64;k++){
-	     sprintf(tmpstring,"Ehist[%d][%d][%d][%d];1",m,i,j,k);
+	   for (k=0;k<64;k++){              
+	     sprintf(tmpstring,"RENA%d/Ehist[%d][%d][%d][%d];1",m,m,i,j,k);
               Ehist[m][i][j][k]=(TH1F *) enefile->Get(tmpstring); 
               sprintf(tmpstring,"Efits[%d][%d][%d][%d];1",m,i,j,k);
               Efits[m][i][j][k]= new TF1(tmpstring,"gaus",EFITMIN,EFITMAX);
+              sprintf(tmpstring,"Efits_com[%d][%d][%d][%d];1",m,i,j,k);
+              Efits_com[m][i][j][k]= new TF1(tmpstring,"gaus",EFITMIN_COM,EFITMAX_COM);
+    	     sprintf(tmpstring,"RENA%d/Ehist_com[%d][%d][%d][%d];1",m,m,i,j,k);
+              Ehist_com[m][i][j][k]=(TH1F *) enefile->Get(tmpstring); 
+
 	   }//k
 	   }//j 
 	   } //i  
@@ -165,8 +183,9 @@ int main(int argc, Char_t *argv[])
 	
       //	  TF1 *ftmp[64];
           Float_t CRYSTALPP[RENACHIPS][4][2][64];
+          Float_t CRYSTALPP_COM[RENACHIPS][4][2][64];
 	/* Fitting E spectra */
-	  Float_t Emean,peak,Emeans[8*RENACHIPS];
+	  Float_t Emean,Emean_com,peak,Emeans[8*RENACHIPS],Emeans_com[8*RENACHIPS];
 	     /* fitting energy spectra */
 
 
@@ -178,7 +197,9 @@ int main(int argc, Char_t *argv[])
 	       if (verbose) cout << " Getting mean energy :: " << endl;
 	       Emean = (Float_t )  (*ppVals)(m*8+j*4+i);
 	       Emeans[m*8+j*4+i] = (Float_t )  (*ppVals)(m*8+j*4+i);
-	       if (verbose) cout  << Emean   << endl;
+	       Emean_com = (Float_t )  (*ppVals_com)(m*8+j*4+i);
+	       Emeans_com[m*8+j*4+i] = (Float_t )  (*ppVals_com)(m*8+j*4+i);
+	       if (verbose) cout  << Emean   << " " << Ehist[m][i][j][0]->GetEntries()   << endl;
                for (k=0;k<64;k++){
 	      //	      fitall(Ehist[i][j], ftmp, &vals[0], pixvals, E_low, E_up, c1, verbose);
 		 sprintf(tmpstring,"Efits[%d][%d][%d][%d]",m,i,j,k);
@@ -186,6 +207,7 @@ int main(int argc, Char_t *argv[])
                 cout << "===================================================================" << endl;
                 cout << "= Histogram["<<m<<"]["<<i<<"]["<<j<<"]["<<k<<"]"                             << endl;
                 cout << "===================================================================" << endl;
+                cout << " ----------- Spatials ---------------- " <<endl;
                 cout << " Hist entries : " << Ehist[m][i][j][k]->GetEntries() << " Efits mean :" ;
 		cout << Efits[m][i][j][k]->GetParameter(1) << endl;}
               peak=getpeak( Ehist[m][i][j][k], Emean*0.85,Emean*1.15,verbose);
@@ -200,7 +222,24 @@ int main(int argc, Char_t *argv[])
               if (TMath::Abs(CRYSTALPP[m][i][j][k]/Emean -1 ) > 0.3 )          {
 		if (verbose) cout << " BAD FIT to histogram ["<<m<<"]["<<i<<"]["<<j<<"]["<<k<<"]" << endl;
                 CRYSTALPP[m][i][j][k]=Emean;}
-	       }
+	      if (verbose) {
+                cout << " ------------ Common ----------------- " <<endl;
+                cout << " Hist entries : " << Ehist_com[m][i][j][k]->GetEntries() << " Efits mean :" ;
+		cout << Efits_com[m][i][j][k]->GetParameter(1) << endl;}
+              peak=getpeak( Ehist_com[m][i][j][k], Emean_com*0.85,Emean_com*1.15,verbose);
+              Efits_com[m][i][j][k]->SetParameter(1,peak);
+              Efits_com[m][i][j][k]->SetParameter(2,0.04*peak);
+              if (verbose) {
+		cout << " Peak @ " << peak <<", fitting between : " << peak*0.85 << " and " << peak*1.15 << endl;}
+              if ( (Ehist_com[m][i][j][k]->GetEntries()) >  MINEHISTENTRIES ){
+		Ehist_com[m][i][j][k]->Fit(Efits_com[m][i][j][k],"Q","",peak*0.85,peak*1.15);}
+              Efits_com[m][i][j][k]->SetLineColor(kBlue);
+	      CRYSTALPP_COM[m][i][j][k]=Efits_com[m][i][j][k]->GetParameter(1);
+              if (TMath::Abs(CRYSTALPP_COM[m][i][j][k]/Emean_com -1 ) > 0.3 )          {
+		if (verbose) cout << " BAD FIT to histogram ["<<m<<"]["<<i<<"]["<<j<<"]["<<k<<"]" << endl;
+                CRYSTALPP_COM[m][i][j][k]=Emean_com;}
+
+	       } // loop over k
 	     } // validpeaks
 	   } // i 
 	  } //j
@@ -215,7 +254,7 @@ int main(int argc, Char_t *argv[])
 	      for (k=0;k<64;k++){
               for ( i=0;i<4;i++){
                 for (j=0;j<2;j++){
-                  cout << CRYSTALPP[m][i][j][k]<<" " ; }}
+                  cout << CRYSTALPP[m][i][j][k]<<" " << CRYSTALPP_COM[m][i][j][k]; }}
               cout << endl;}
 	      cout <<endl; }
 	  }
@@ -243,6 +282,8 @@ int main(int argc, Char_t *argv[])
             sprintf(treename,"cal");
             sprintf(treetitle,"Energy calibrated LYSO-PSAPD module data ");
 	    cal = new TTree(treename,treetitle);
+            cal->Branch("Calibrated Event Data",&calevent);
+	    /*
 	    cal->Branch("ct",&calevent.ct,"ct/L");
 	    cal->Branch("chip",&calevent.chip,"chip/S");
 	    cal->Branch("module",&calevent.module,"module/S");
@@ -256,7 +297,7 @@ int main(int argc, Char_t *argv[])
 	    cal->Branch("ft",&calevent.ft,"ft/F");
 	    cal->Branch("id",&calevent.id,"id/S");
 	    cal->Branch("pos",&calevent.pos,"pos/I");
-
+	    */
 	    /*
             cal[m]->Branch("U0",&U0.ct,"ct/L:Ecal/D:E/D:Ec/D:Ech/D:x/D:y/D:ft1/D:ft2/D:id/I:mod/I:pos/I");
             cal[m]->Branch("U1",&U1.ct,"ct/L:Ecal/D:E/D:Ec/D:Ech/D:x/D:y/D:ft1/D:ft2/D:id/I:mod/I:pos/I");
@@ -272,7 +313,7 @@ int main(int argc, Char_t *argv[])
                globhist[m][i][j] = new TH1F(tmpstring,tmptitle,Ebins,E_low,E_up);
                sprintf(tmpstring,"globhist_com[%d][%d][%d]",m,i,j);
 	       sprintf(tmptitle,"Global Common Espec RENA %d Unit %d module %d",m,i,j);
-               globhist_com[m][i][j] = new TH1F(tmpstring,tmptitle,Ebins,E_low,E_up);
+               globhist_com[m][i][j] = new TH1F(tmpstring,tmptitle,Ebins_com,E_low_com,E_up_com);
 	      }//j
 	     }//i
 	    }//m
@@ -302,7 +343,8 @@ int main(int argc, Char_t *argv[])
         block->SetBranchAddress("UNIT2",&UNIT2);
         block->SetBranchAddress("UNIT3",&UNIT3);
 	*/
-
+         calblock->SetBranchAddress("eventdata",&event);
+	 /*
           calblock->SetBranchAddress("ct",&event.ct);
 	  calblock->SetBranchAddress("chip",&event.chip);
 	  calblock->SetBranchAddress("module",&event.module);
@@ -319,7 +361,7 @@ int main(int argc, Char_t *argv[])
 	  calblock->SetBranchAddress("d",&event.d);
 	  calblock->SetBranchAddress("id",&event.id);
 	  calblock->SetBranchAddress("pos",&event.pos);
-
+	 */
 
 
 	/*
@@ -353,27 +395,30 @@ int main(int argc, Char_t *argv[])
 	 //	   for (k=0;k<5e5;k++){
 
           calblock->GetEntry(k);
-          calevent.chip=event.chip;
-          calevent.module=event.module; 
-          calevent.apd=event.apd;
-          calevent.E=event.E;
-          calevent.Ecal=0;
-          calevent.x=event.x;
-          calevent.y=event.y;
-          calevent.ct=event.ct;
-          calevent.ft=event.ft;
-          calevent.id=-1;        
-          calevent.pos=event.pos;
+          calevent->chip=event->chip;
+          calevent->m=event->module; 
+          calevent->apd=event->apd;
+          calevent->fin=-1;
+          calevent->E=event->E;
+          calevent->Ecal=0;
+          calevent->x=event->x;
+          calevent->y=event->y;
+          calevent->ct=event->ct;
+          calevent->ft=event->ft;
+          calevent->id=-1;        
+          calevent->pos=event->pos;
 
-	  if (validpeaks[event.chip][event.module][event.apd]) {
-           if ((event.id)>=0) {
-	     	   calevent.E=event.E* Emeans[event.chip*8+event.apd*4+event.module]/CRYSTALPP[event.chip][event.module][event.apd][event.id];
-	           calevent.Ecal=event.E* 511/CRYSTALPP[event.chip][event.module][event.apd][event.id];
-	           globhist[event.chip][event.module][event.apd]->Fill(calevent.E); 
-           calevent.id=event.id;
-	   }  //event.id >0
+	  if (validpeaks[event->chip][event->module][event->apd]) {
+           if ((event->id)>=0) {
+	     	   calevent->E=event->E* Emeans[event->chip*8+event->apd*4+event->module]/CRYSTALPP[event->chip][event->module][event->apd][event->id];
+	           calevent->Ecal=event->E* 511/CRYSTALPP[event->chip][event->module][event->apd][event->id];
+	           calevent->Ec=-event->Ec* 511/CRYSTALPP_COM[event->chip][event->module][event->apd][event->id];
+	           globhist[event->chip][event->module][event->apd]->Fill(calevent->E); 
+	           globhist_com[event->chip][event->module][event->apd]->Fill(calevent->Ec); 
+           calevent->id=event->id;
+	   }  //event->id >0
          } // validpeaks
-         else { calevent.E=event.E; calevent.Ecal=event.E; calevent.id=72;}
+	  else { calevent->E=event->E; calevent->Ecal=event->E; calevent->id=72; calevent->Ec=event->Ec;}
   
 	    cal->Fill();
 
@@ -415,7 +460,7 @@ int main(int argc, Char_t *argv[])
             c1->Clear();
             if (globhist[m][i][j]->GetEntries() > MINHISTENTRIES){
 	    if (verbose){
-	      cout << "Fitting global energy histogram RENA " << m << " UNIT " << i << " MODULE " << j << endl;}
+	      cout << "Fitting global energy histogram RENA " << m << " UNIT " << i << " APD " << j << endl;}
       	       globfits[m][i][j]=fitapdspec(globhist[m][i][j],xlow,xhigh,1,verbose);
 	       sprintf(tmpname,"globfits[%d][%d][%d]",m,i,j);
                globfits[m][i][j]->SetName(tmpname);
@@ -427,7 +472,8 @@ int main(int argc, Char_t *argv[])
 	    else{
 	      // in case not enough entries we still want to store the globhist and draw it,
                globhist[m][i][j]->Draw();
-	      eres=0.99;d_eres=0.99;}
+	      eres=0.99;d_eres=0.99; 
+	    }  // else
                sprintf(tmpstring,"Eres = %.2f #pm %.2f FWHM",100*eres,100*d_eres);
                labeltxt->Clear();
                labeltxt->AddText(tmpstring);
@@ -443,6 +489,58 @@ int main(int argc, Char_t *argv[])
 	  }//i
 	}//j
    }//m
+
+
+   if (verbose)   cout << "Fitting Common global histogram common: " <<endl;
+
+   for (m=0;m<RENACHIPS;m++){
+     calfile->cd();
+     //     sprintf(tmpstring,"RENA%d",m);
+     //     subdir[m] = calfile->mkdir(tmpstring);
+     subdir[m]->cd();
+    for (Int_t i=0;i<4;i++){
+     for (Int_t j=0;j<2;j++){
+	    hibin=0;
+            max=0;
+	    /*
+	    xlow = Emeans_com[m*8+j*4+i]*0.85;
+	    xhigh = Emeans_com[m*8+j*4+i]*1.15;
+	    */
+            xlow=400;xhigh=600;
+            c1->Clear();
+            if (globhist_com[m][i][j]->GetEntries() > MINHISTENTRIES){
+	    if (verbose){
+	      cout << "Fitting common global energy histogram RENA " << m << " UNIT " << i << " APD " << j << endl;
+              cout << " Emeans_com = " << Emeans_com[m*8+j*4+i] << endl;}
+      	       globfits_com[m][i][j]=fitapdspec(globhist_com[m][i][j],xlow,xhigh,1,verbose);
+	       sprintf(tmpname,"globfits_com[%d][%d][%d]",m,i,j);
+               globfits_com[m][i][j]->SetName(tmpname);
+               globhist_com[m][i][j]->Draw();
+               eres=2.35*globfits_com[m][i][j]->GetParameter(5)/globfits_com[m][i][j]->GetParameter(4);
+               d_eres=2.35*errorprop_divide(globfits_com[m][i][j]->GetParameter(5),globfits_com[m][i][j]->GetParError(5),
+                                       globfits_com[m][i][j]->GetParameter(4),globfits_com[m][i][j]->GetParError(4));
+	    }
+	    else{
+	      // in case not enough entries we still want to store the globhist and draw it,
+               globhist_com[m][i][j]->Draw();
+	      eres=0.99;d_eres=0.99; 
+	    }  // else
+               sprintf(tmpstring,"Eres = %.2f #pm %.2f FWHM",100*eres,100*d_eres);
+               labeltxt->Clear();
+               labeltxt->AddText(tmpstring);
+               sprintf(peaklocationfilename,"%s.RENA%d.unit%d_apd%d_glob_com",filebase,m,i,j);
+               strcat(peaklocationfilename,".png");
+               labeltxt->Draw();
+	       c1->Print(peaklocationfilename);
+	      //            peak=getpeak
+              
+              globhist_com[m][i][j]->Write();
+		    // FIXME should create a directory on this file
+	    for(k=0;k<64;k++){ Ehist_com[m][i][j][k]->Write();Efits_com[m][i][j][k]->Write();}
+	  }//i
+	}//j
+   }//m
+
 
  
           calfile->Close();
@@ -462,6 +560,12 @@ int main(int argc, Char_t *argv[])
          if (Efits[m][i][j][k]->GetParameter(1)){
 	   ofile << "  " << 235*Efits[m][i][j][k]->GetParameter(2)/Efits[m][i][j][k]->GetParameter(1) ;}
          else { ofile << "  0    " ; } 
+         ofile << " " << CRYSTALPP_COM[m][i][j][k];
+          if (Efits_com[m][i][j][k]->GetParameter(1)){
+	   ofile << "  " << 235*Efits_com[m][i][j][k]->GetParameter(2)/Efits_com[m][i][j][k]->GetParameter(1) ;}
+         else { ofile << "  0    " ; } 
+
+
          ofile << endl;}
         ofile.close();
        }

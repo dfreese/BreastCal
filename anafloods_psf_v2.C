@@ -152,9 +152,11 @@ Int_t main(int argc, Char_t *argv[])
 	} // m-loop
 
 
-       TVector* ppVals = (TVector *) rfile->Get("TVectorT<float>");
+	TVector* ppVals = (TVector *) rfile->Get("pp_spat;1");
+	 //       TVector* ppVals_com = (TVector *) rfile->Get("pp_com;1");
 
        if (!(ppVals)) cout << "Error :: ppVals not found " <<endl;
+       //       if (!(ppVals_com)) cout << "Error :: ppVals_com not found " <<endl;
        //Get("ppVals");
 
        // cout << "ppvals :: " << (*ppVals)(1) << endl; 

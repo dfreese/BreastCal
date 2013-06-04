@@ -6,6 +6,6 @@
 while read data ped ; do 
   POS=`echo $data | cut -d u -f 1 | cut -d _ -f 5`
   echo $POS
-  echo "/home/miil/MODULE_ANA/ANA_V5/Decode -f $data.dat -pedfile $ped.ped -uv -t -800 -pos $POS; "
-  /home/miil/MODULE_ANA/ANA_V5/Decode -pedfile $ped.ped -f $data -uv -t -800 -pos $POS ; 
+  echo "/home/miil/MODULE_ANA/ANA_V5/DEV/Decode -f $data.dat -pedfile $ped.ped -uv -t -800 -pos $POS; "
+  /home/miil/MODULE_ANA/ANA_V5/DEV/Decode -pedfile $ped.ped -f $data -uv -t -800 -pos $POS ; 
  done < $1; 

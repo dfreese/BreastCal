@@ -23,6 +23,7 @@
 #include "apd_fit.h"
 //#include "apd_peaktovalley.h"
 #include "./decoder.h"
+#include "./ModuleCal.h"
 #include "time.h"
 
 
@@ -136,7 +137,7 @@ int main(int argc, Char_t *argv[])
         
         
 
-        modulecal calevent;
+        ModuleCal *calevent=0;
         Long64_t entries;
         Long64_t lasttime=0;
         Long64_t maxentries=0;
@@ -152,9 +153,9 @@ int main(int argc, Char_t *argv[])
 	    cout << " Problem reading " << treename << " from file." << endl;
 	    //          continue;
 	  }
-
-       cal->SetBranchAddress("ct",&calevent.ct);
-       cal->SetBranchAddress("chip",&calevent.chip);
+       cal->SetBranchAddress("Calibrated Event Data",&calevent);
+       // cal->SetBranchAddress("ct",&calevent.ct);
+       //       cal->SetBranchAddress("chip",&calevent.chip);
 	  /*
         cal[m]->SetBranchAddress("U0",&UL[m*4+0]);
         cal[m]->SetBranchAddress("U1",&UL[m*4+1]);
@@ -165,7 +166,7 @@ int main(int argc, Char_t *argv[])
         entries=cal->GetEntries();
         cout << " Entries " << treename << ": " << entries << endl; 
         totentries+=entries;
-        if (entries>maxentries) {maxentries=entries;maxchip=calevent.chip;}
+        if (entries>maxentries) {maxentries=entries;maxchip=calevent->chip;}
 
 	// 	} // loop m
 
@@ -177,9 +178,10 @@ int main(int argc, Char_t *argv[])
  //        for (m=0;m<RENACHIPS;m++){
         if(entries) {
 	  cal->GetEntry(entries-1);
-          cout << " Last Timestamp Chip " << calevent.chip  << ": " << calevent.ct << endl;
-          maxchip=calevent.chip;
-          lasttime=calevent.ct;
+          cout << " Last Timestamp Chip "  << calevent->chip  << ": " << calevent->ct << endl;
+          
+          maxchip=calevent->chip;
+          lasttime=calevent->ct;
 	  skipchip=0;
           curevent=0;
          }
@@ -228,7 +230,7 @@ int main(int argc, Char_t *argv[])
         Long64_t timecut[MAXCUTS];
 	for (k=0;k<cuts;k++) {
           cal->GetEntry(TMath::Min((Long64_t) (k+1)*MAXHITS,entries-1));
-          timecut[k]=calevent.ct;
+          timecut[k]=calevent->ct;
 	  cout << " Time cut " << k << ": " << timecut[k]  << endl;}
 
 

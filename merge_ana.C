@@ -12,6 +12,7 @@
 #include "TF1.h"
 #include "apd_fit.h"
 #include "./decoder.h"
+#include "./CoincEvent.h"
 
 //void usage(void);
 
@@ -96,9 +97,9 @@ int main(int argc, Char_t *argv[])
         cout << " Opening file " << filename << endl;
         TFile *file = new TFile(filename,"OPEN");
         TTree *m = (TTree *) file->Get("merged");
-        event data;
+        CoincEvent *data=0;
 
-	m->SetBranchAddress("event",&data);
+	m->SetBranchAddress("Event",&data);
 
 
 	ofstream asciiout;
@@ -117,10 +118,11 @@ int main(int argc, Char_t *argv[])
 	// OPEN YOUR OUTPUTFILE HERE ! 
      
   
-        event evt;
+        CoincEvent *evt = new CoincEvent();
 
         TTree *mana = new  TTree("mana","Merged and Calibrated LYSO-PSAPD data ");
-       mana->Branch("event",&evt.dtc,"dtc/L:dtf/D:E1/D:Ec1/D:Ech1/D:ft1/D:E2/D:Ec2/D:Ech2/D:ft2/D:x1/D:y1/D:x2/D:y2/D:chip1/I:fin1/I:m1/I:apd1/I:crystal1/I:chip2/I:fin2/I:m2/I:apd2/I:crystal2/I:pos/I");
+	//       mana->Branch("event",&evt.dtc,"dtc/L:dtf/D:E1/D:Ec1/D:Ech1/D:ft1/D:E2/D:Ec2/D:Ech2/D:ft2/D:x1/D:y1/D:x2/D:y2/D:chip1/I:fin1/I:m1/I:apd1/I:crystal1/I:chip2/I:fin2/I:m2/I:apd2/I:crystal2/I:pos/I");
+	mana->Branch("event",&evt);
 
 	/*
 	data.dtc   - Coarse time difference
@@ -168,11 +170,11 @@ int main(int argc, Char_t *argv[])
 	m->GetEntry(i);
 
 	// YOUR CODE HERE -- YOU HAVE ACCESS TO THE STRUCT DATA AND ITS MEMBERS TO DO WHATEVER CONSTRAINTS //
-        if ( TMath::Abs(data.dtc)<6) {  
-	  if ( ( data.E1<700 ) && (data.E1> 400 ) ) {
-              if ( ( data.E2<700 ) && (data.E2> 400 ) ) {
-		    if ( (data.crystal1>-1 ) && (data.crystal1<64 )) {
-           		    if ( (data.crystal2>-1 ) && (data.crystal2<64 )) {
+        if ( TMath::Abs(data->dtc)<6) {  
+	  if ( ( data->E1<700 ) && (data->E1> 400 ) ) {
+              if ( ( data->E2<700 ) && (data->E2> 400 ) ) {
+		    if ( (data->crystal1>-1 ) && (data->crystal1<64 )) {
+           		    if ( (data->crystal2>-1 ) && (data->crystal2<64 )) {
 
 			      evt=data;
                               mana->Fill();
@@ -181,28 +183,28 @@ int main(int argc, Char_t *argv[])
 
                               y1 = PANELDISTANCE/2;
                               y2 = -PANELDISTANCE/2;
-                              y1 +=   data.apd1*10;
-                              y2 -=   data.apd2*10;
-			      y1 +=  (( TMath::Floor(data.crystal1%8)- 4 )*0.5  );
-			      y2 +=  (( TMath::Floor(data.crystal1%8)- 4 )*0.5  );                              
+                              y1 +=   data->apd1*10;
+                              y2 -=   data->apd2*10;
+			      y1 +=  (( TMath::Floor(data->crystal1%8)- 4 )*0.5  );
+			      y2 +=  (( TMath::Floor(data->crystal1%8)- 4 )*0.5  );                              
 			
-			      x1 = (data.m1-8)*0.405*25.4;  
-                              x2 = (8-data.m2)*0.405*25.4;  
-			      x1 +=  (( TMath::Floor(data.crystal1/8)- 4 )*0.5  );
-                              x2 +=  (( 4 - TMath::Floor(data.crystal1/8))*0.5  );
+			      x1 = (data->m1-8)*0.405*25.4;  
+                              x2 = (8-data->m2)*0.405*25.4;  
+			      x1 +=  (( TMath::Floor(data->crystal1/8)- 4 )*0.5  );
+                              x2 +=  (( 4 - TMath::Floor(data->crystal1/8))*0.5  );
                               
-                              z1 = data.fin1*0.056*25.4;
-          		      z2 = data.fin2*0.056*25.4;
+                              z1 = data->fin1*0.056*25.4;
+          		      z2 = data->fin2*0.056*25.4;
               
 			      if (ascii) {
 	     if (ascii){
-	       asciiout << evt.dtc << " " <<evt.dtf << " ";
-               asciiout << evt.chip1 << " " << evt.m1 << " " << evt.apd1 << " " << evt.crystal1 << " ";
-               asciiout << evt.E1 << " " << evt.Ec1 << " " << evt.Ech1 << " " << evt.ft1 << " ";
-               asciiout << evt.chip2 << " " << evt.m2 << " " << evt.apd2 << " " << evt.crystal2 << " ";
-               asciiout << evt.E2 << " " << evt.Ec2 << " " << evt.Ech2 << " " << evt.ft2 << " ";
-               asciiout << evt.x1 << " " << evt.y1  << " " << evt.x2 << "  " << evt.y2 << "  " << evt.pos << "  ";
-               asciiout << evt.fin1 << "  " << evt.fin2  << endl;
+	       asciiout << evt->dtc << " " <<evt->dtf << " ";
+               asciiout << evt->chip1 << " " << evt->m1 << " " << evt->apd1 << " " << evt->crystal1 << " ";
+               asciiout << evt->E1 << " " << evt->Ec1 << " " << evt->Ech1 << " " << evt->ft1 << " ";
+               asciiout << evt->chip2 << " " << evt->m2 << " " << evt->apd2 << " " << evt->crystal2 << " ";
+               asciiout << evt->E2 << " " << evt->Ec2 << " " << evt->Ech2 << " " << evt->ft2 << " ";
+               asciiout << evt->x1 << " " << evt->y1  << " " << evt->x2 << "  " << evt->y2 << "  " << evt->pos << "  ";
+               asciiout << evt->fin1 << "  " << evt->fin2  << endl;
 
 			   // FLAU edited this to print out position.
 			   // FLAU edited this to print out fin number (Dec2,2012)

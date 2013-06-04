@@ -12,6 +12,8 @@
 #include "TF1.h"
 #include "apd_fit.h"
 #include "./decoder.h"
+#include "./ModuleCal.h"
+#include "./CoincEvent.h"
 
 //void usage(void);
 Int_t  getmintime(Double_t a,Double_t b,Double_t c, Double_t d);
@@ -29,7 +31,7 @@ int main(int argc, Char_t *argv[])
 	Int_t		verbose = 0, threshold=-1000;
 	Int_t		ix,ascii;
 	//module UNIT0,UNIT1,UNIT2,UNIT3;
-        event           evt;
+        CoincEvent       *evt = new CoincEvent();
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -108,10 +110,13 @@ int main(int argc, Char_t *argv[])
         TFile *file_left = new TFile(filenamel,"OPEN");
         if (!file_left || file_left->IsZombie()) {  cout << "problems opening file " << filenamel << "\n.Exiting" << endl; return -11;} 
         TTree *car_l = (TTree *) file_left->Get("cartridge");
-        modmerge EL,ER;
+        ModuleCal *EL=0;
+        ModuleCal *ER=0;
 
 	//        car_l->SetBranchAddress("event",&EL);
 	//        car_l->SetBranchAddress("event",&EL);
+        car_l->SetBranchAddress("CalData",&EL);
+	/*
 	car_l->SetBranchAddress("ct",&EL.ct);
         car_l->SetBranchAddress("ft",&EL.ft);
           car_l->SetBranchAddress("E",&EL.E);
@@ -126,7 +131,7 @@ int main(int argc, Char_t *argv[])
         car_l->SetBranchAddress("id",&EL.id);
         car_l->SetBranchAddress("pos",&EL.pos);
 
-
+	*/
 
         cout << " Opening file " << filenamer <<endl;
         TFile *file_right = new TFile(filenamer,"OPEN");
@@ -136,6 +141,8 @@ int main(int argc, Char_t *argv[])
 
 	//        car_r->SetBranchAddress("event",&ER);
 	//        car_r->SetBranchAddress("event",&ER);
+        car_r->SetBranchAddress("CalData",&ER);
+	/*
 	car_r->SetBranchAddress("ct",&ER.ct);
         car_r->SetBranchAddress("ft",&ER.ft);
           car_r->SetBranchAddress("E",&ER.E);
@@ -149,7 +156,7 @@ int main(int argc, Char_t *argv[])
         car_r->SetBranchAddress("apd",&ER.apd);
         car_r->SetBranchAddress("id",&ER.id);
         car_r->SetBranchAddress("pos",&ER.pos);
-
+	*/
 
 	  // Open Calfile //
         strncpy(filebase,filenamel,strlen(filenamel)-13);
@@ -169,7 +176,8 @@ int main(int argc, Char_t *argv[])
 
        TTree *merged = new  TTree("merged","Merged and Calibrated LYSO-PSAPD data ");
        //       merged->Branch("event",&evt.dtc,"dtc/L:dtf/D:chip1/I:fin1/I:m1/I:apd1/I:crystal1/I:E1/D:Ec1/D:Ech1/D:ft1/D:chip2/I:fin2/I:m2/I:apd2/I:crystal2/I:E2/D:Ec2/D:Ech2/D:ft2/D:x1/D:y1/D:x2/D:y2/D:pos/I");
-       merged->Branch("event",&evt.dtc,"dtc/L:dtf/D:E1/D:Ec1/D:Ech1/D:ft1/D:E2/D:Ec2/D:Ech2/D:ft2/D:x1/D:y1/D:x2/D:y2/D:chip1/I:fin1/I:m1/I:apd1/I:crystal1/I:chip2/I:fin2/I:m2/I:apd2/I:crystal2/I:pos/I");
+       //       merged->Branch("event",&evt.dtc,"dtc/L:dtf/D:E1/D:Ec1/D:Ech1/D:ft1/D:E2/D:Ec2/D:Ech2/D:ft2/D:x1/D:y1/D:x2/D:y2/D:chip1/I:fin1/I:m1/I:apd1/I:crystal1/I:chip2/I:fin2/I:m2/I:apd2/I:crystal2/I:pos/I");
+       merged->Branch("Event",&evt);
 
        Long64_t entries_car_r = car_r->GetEntries();
        Long64_t entries_car_l = car_l->GetEntries();
@@ -229,8 +237,8 @@ int main(int argc, Char_t *argv[])
        //       if ((!(dontaugmentmask&=0x8))&&(!(skipevt))) prev_righttime_2=righttime_2;
 
 
-       lefttime=EL.ct;
-       righttime=ER.ct;
+       lefttime=EL->ct;
+       righttime=ER->ct;
 
 #ifdef DEBUG2
        cout << " This event::  left: " << car_li ;
@@ -279,60 +287,60 @@ int main(int argc, Char_t *argv[])
      
 
        if ((TMath::Abs(lefttime-righttime) < COARSEDIFF ) && (!(skipevt))){
-	 evt.dtc= lefttime-righttime;
-         evt.dtf= EL.ft-ER.ft;
+	 evt->dtc= lefttime-righttime;
+         evt->dtf= EL->ft-ER->ft;
 #ifdef DEBUG2
-           cout << " ::::  COARSE COINCIDENCE :::: Delta T = " << evt.dtc << endl;
+           cout << " ::::  COARSE COINCIDENCE :::: Delta T = " << evt->dtc << endl;
 #endif
-               evt.chip1=EL.chip;
-               evt.fin1=EL.fin;
-               evt.m1=EL.m;
-               evt.apd1=EL.apd;
-               evt.crystal1=EL.id;
-               evt.E1=EL.E;
-               evt.Ec1=EL.Ec;
-               evt.Ech1=EL.Ech;
-               evt.ft1=EL.ft;
-               evt.x1=EL.x;
-               evt.y1=EL.y;
-               evt.chip2=ER.chip;
-               evt.fin2=ER.fin;
-               evt.m2=ER.m;
-               evt.apd2=ER.apd;
-               evt.crystal2=ER.id;
-               evt.E2=ER.E;
-               evt.Ec2=ER.Ec;
-               evt.Ech2=ER.Ech;
-               evt.ft2=ER.ft;
-               evt.x2=ER.x;
-               evt.y2=ER.y;
+               evt->chip1=EL->chip;
+               evt->fin1=EL->fin;
+               evt->m1=EL->m;
+               evt->apd1=EL->apd;
+               evt->crystal1=EL->id;
+               evt->E1=EL->Ecal;
+               evt->Ec1=EL->Ec;
+               evt->Ech1=EL->Ech;
+               evt->ft1=EL->ft;
+               evt->x1=EL->x;
+               evt->y1=EL->y;
+               evt->chip2=ER->chip;
+               evt->fin2=ER->fin;
+               evt->m2=ER->m;
+               evt->apd2=ER->apd;
+               evt->crystal2=ER->id;
+               evt->E2=ER->Ecal;
+               evt->Ec2=ER->Ec;
+               evt->Ech2=ER->Ech;
+               evt->ft2=ER->ft;
+               evt->x2=ER->x;
+               evt->y2=ER->y;
 
-               evt.pos = ER.pos;
+               evt->pos = ER->pos;
 
-           if (evt.dtf < -TMath::Pi() ) evt.dtf+=2*TMath::Pi();
-           if (evt.dtf >  TMath::Pi() ) evt.dtf-=2*TMath::Pi();
-           evt.dtf*=1e9;
-           evt.dtf/=(2*TMath::Pi()*980e3);
+           if (evt->dtf < -TMath::Pi() ) evt->dtf+=2*TMath::Pi();
+           if (evt->dtf >  TMath::Pi() ) evt->dtf-=2*TMath::Pi();
+           evt->dtf*=1e9;
+           evt->dtf/=(2*TMath::Pi()*980e3);
 	   //	   cout << "Filling Tree : (rightfine=" << rightfine << ",leftfine=" << leftfine << ")" << endl;
-           if  (((EL.ft>-1)&&(ER.ft>-1))&& (ER.pos == EL.pos ) )  { evts++; merged->Fill();
+           if  (((EL->ft>-1)&&(ER->ft>-1))&& (ER->pos == EL->pos ) )  { evts++; merged->Fill();
 
 	     if (ascii){
-	       asciiout << evt.dtc << " " <<evt.dtf << " ";
-               asciiout << evt.chip1 << " " << evt.m1 << " " << evt.apd1 << " " << evt.crystal1 << " ";
-               asciiout << evt.E1 << " " << evt.Ec1 << " " << evt.Ech1 << " " << evt.ft1 << " ";
-               asciiout << evt.chip2 << " " << evt.m2 << " " << evt.apd2 << " " << evt.crystal2 << " ";
-               asciiout << evt.E2 << " " << evt.Ec2 << " " << evt.Ech2 << " " << evt.ft2 << " ";
-               asciiout << evt.x1 << " " << evt.y1  << " " << evt.x2 << "  " << evt.y2 << "  " << evt.pos << "  ";
-               asciiout << evt.fin1 << "  " << evt.fin2  << endl;
+	       asciiout << evt->dtc << " " <<evt->dtf << " ";
+               asciiout << evt->chip1 << " " << evt->m1 << " " << evt->apd1 << " " << evt->crystal1 << " ";
+               asciiout << evt->E1 << " " << evt->Ec1 << " " << evt->Ech1 << " " << evt->ft1 << " ";
+               asciiout << evt->chip2 << " " << evt->m2 << " " << evt->apd2 << " " << evt->crystal2 << " ";
+               asciiout << evt->E2 << " " << evt->Ec2 << " " << evt->Ech2 << " " << evt->ft2 << " ";
+               asciiout << evt->x1 << " " << evt->y1  << " " << evt->x2 << "  " << evt->y2 << "  " << evt->pos << "  ";
+               asciiout << evt->fin1 << "  " << evt->fin2  << endl;
 
 			   // FLAU edited this to print out position.
 			   // FLAU edited this to print out fin number (Dec2,2012)
 	     }
 
 #ifdef DEBUG2
-	     cout << "  Filling tree :: " << endlessloop << " " << evt.dtc << " " << evt.dtf << " " << evt.chip1 << " " << evt.m1 << " " << evt.apd1;
-             cout << " " << evt.crystal1 << " " << evt.E1 << " " << evt.chip2 << " "<<evt.m2 << " "<< evt.apd2 << " ";
-             cout << evt.crystal2 << " " <<evt.E2 << endl;
+	     cout << "  Filling tree :: " << endlessloop << " " << evt->dtc << " " << evt->dtf << " " << evt->chip1 << " " << evt->m1 << " " << evt->apd1;
+             cout << " " << evt->crystal1 << " " << evt->E1 << " " << evt->chip2 << " "<<evt->m2 << " "<< evt->apd2 << " ";
+             cout << evt->crystal2 << " " <<evt->E2 << endl;
 #endif
 	   }
            // overlap :: 
