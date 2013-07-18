@@ -314,6 +314,15 @@ for (i = 0; i < 36; i++) {
             byteCounter++;
           if ((unsigned char)c==0x81) {
 
+
+
+#ifdef DEBUG
+            cout << " lastPos :: " << lastPos ;
+	    cout << " packBuffer[0] :: " << hex << int(packBuffer[0]);
+	    cout << " packBuffer[1] :: " << int(packBuffer[1]);
+	    cout << " packBuffer[2] :: " << int(packBuffer[2]);
+            cout << dec;
+#endif
 	    
 
                 // end of package (start processing)
@@ -322,6 +331,12 @@ for (i = 0; i < 36; i++) {
 		 //   if (totalPckCnt%100==0) {
 	    //          cout << totalPckCnt << " (" << droppedPckCnt << ")" << endl;    }
 
+  if ( (int(packBuffer[0] & 0xFF )) != 0x80 ) {
+              // first packet needs to be 0x80
+              droppedPckCnt++;
+              packBuffer.clear();
+              continue;
+	    }           
 
     if (PAULS_PANELID) {
         //if (USB_VER == USB_2_0) {
@@ -402,6 +417,7 @@ for (i = 0; i < 36; i++) {
     else { // MODULE_BASED_READOUT
         if (trigCode == 0) {
             droppedPckCnt++;
+            packBuffer.clear();
             continue;
         }
         if (PAULS_PANELID) { packetSize =10; }
@@ -498,7 +514,9 @@ for (i = 0; i < 36; i++) {
     //END_DEBUG
 
     int even=(int) chipId%2;
+    int nrchips=0;
 
+    for (int ii=0;ii<4;ii++) { nrchips+= (( trigCode >> ii ) & ( 0x1 ) );}
 
     // if ( chipId == 1 ){
 
@@ -510,10 +528,12 @@ for (i = 0; i < 36; i++) {
         }
         cout << endl;
  */
-#define SHIFTFACCOM 16
-#define SHIFTFACSPAT 48
+#define SHIFTFACCOM 4
+#define SHIFTFACSPAT 12
 #define BYTESPERCOMMON 12   // 4 * 3 = 12 ( 4 commons per module, 3 values per common )
 #define VALUESPERSPATIAL 4
+
+#define UNUSEDCHANNELOFFSET 0
 
     int kk=0;
     for (int iii=0;iii<4;iii++ ) {
@@ -521,26 +541,25 @@ for (i = 0; i < 36; i++) {
               rawevent.ct=timestamp;
               rawevent.chip= chipId;
               rawevent.module= iii;
-              rawevent.com1h = adcBlock[2 + kk*BYTESPERCOMMON + even*SHIFTFACCOM];  //6
-              rawevent.u1h = adcBlock[3 + kk*BYTESPERCOMMON + even*SHIFTFACCOM];
-              rawevent.v1h = adcBlock[4+kk*BYTESPERCOMMON + even*SHIFTFACCOM];
-              rawevent.com1 = adcBlock[5+kk*BYTESPERCOMMON + even*SHIFTFACCOM];
-              rawevent.u1 =adcBlock[6+kk*BYTESPERCOMMON + even*SHIFTFACCOM];
-              rawevent.v1 =adcBlock[7+kk*BYTESPERCOMMON+ even*SHIFTFACCOM];
-              rawevent.com2h = adcBlock[8 + kk*BYTESPERCOMMON + even*SHIFTFACCOM];
-              rawevent.u2h = adcBlock[9 + kk*BYTESPERCOMMON + even*SHIFTFACCOM];
-              rawevent.v2h = adcBlock[10+kk*BYTESPERCOMMON + even*SHIFTFACCOM];
-              rawevent.com2 = adcBlock[11+kk*BYTESPERCOMMON + even*SHIFTFACCOM];
-              rawevent.u2=adcBlock[12+kk*BYTESPERCOMMON + even*SHIFTFACCOM];
-              rawevent.v2=adcBlock[13+kk*BYTESPERCOMMON+ even*SHIFTFACCOM];
-              rawevent.a=adcBlock[50+kk*VALUESPERSPATIAL - even*SHIFTFACSPAT];  //2
-              rawevent.b=adcBlock[51+kk*VALUESPERSPATIAL - even*SHIFTFACSPAT];  //3
-              rawevent.c=adcBlock[52+kk*VALUESPERSPATIAL - even*SHIFTFACSPAT];  //4
-              rawevent.d=adcBlock[53+kk*VALUESPERSPATIAL - even*SHIFTFACSPAT];  //5
-              rawevent.pos=sourcepos;
+              rawevent.com1h = adcBlock[UNUSEDCHANNELOFFSET + kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];  //6
+              rawevent.u1h = adcBlock[UNUSEDCHANNELOFFSET+1 + kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
+              rawevent.v1h = adcBlock[UNUSEDCHANNELOFFSET+2+kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
+              rawevent.com1 = adcBlock[UNUSEDCHANNELOFFSET+3+kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
+              rawevent.u1 =adcBlock[UNUSEDCHANNELOFFSET+4+kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
+              rawevent.v1 =adcBlock[UNUSEDCHANNELOFFSET+5+kk*BYTESPERCOMMON+ even*nrchips*SHIFTFACCOM];
+              rawevent.com2h = adcBlock[UNUSEDCHANNELOFFSET+6 + kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
+              rawevent.u2h = adcBlock[UNUSEDCHANNELOFFSET+7 + kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
+              rawevent.v2h = adcBlock[UNUSEDCHANNELOFFSET+8+kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
+              rawevent.com2 = adcBlock[UNUSEDCHANNELOFFSET+9+kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
+              rawevent.u2=adcBlock[UNUSEDCHANNELOFFSET+10+kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
+              rawevent.v2=adcBlock[UNUSEDCHANNELOFFSET+11+kk*BYTESPERCOMMON+ even*nrchips*SHIFTFACCOM];
+              rawevent.a=adcBlock[UNUSEDCHANNELOFFSET+BYTESPERCOMMON*nrchips+kk*VALUESPERSPATIAL - even*nrchips*SHIFTFACSPAT];  //2
+              rawevent.b=adcBlock[UNUSEDCHANNELOFFSET+BYTESPERCOMMON*nrchips+1+kk*VALUESPERSPATIAL - even*nrchips*SHIFTFACSPAT];  //3
+              rawevent.c=adcBlock[UNUSEDCHANNELOFFSET+BYTESPERCOMMON*nrchips+2+kk*VALUESPERSPATIAL - even*nrchips*SHIFTFACSPAT];  //4
+              rawevent.d=adcBlock[UNUSEDCHANNELOFFSET+BYTESPERCOMMON*nrchips+3+kk*VALUESPERSPATIAL - even*nrchips*SHIFTFACSPAT];  //5
+               rawevent.pos=sourcepos;
               kk++;
               rawdata->Fill();
-
       } // trigcode
     } // for loop iii
 
@@ -548,7 +567,7 @@ for (i = 0; i < 36; i++) {
 
 	    //                parsePack(packBuffer);
                 packBuffer.clear();
-            }
+	  }
  } // loop over ii
 
  // Calculate pedestal

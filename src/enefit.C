@@ -15,6 +15,7 @@
 #include "./decoder.h"
 #include "ModuleDat.h"
 #include "ModuleCal.h"
+#include "TError.h"
 //#include "/home/miil/root/macros/myrootlib.h"
 //#include "/home/miil/root/libInit_avdb.h"
 //#include "./convertconfig.h"
@@ -49,7 +50,7 @@ int main(int argc, Char_t *argv[])
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 	//see eg http://root.cern.ch/phpBB3/viewtopic.php?f=14&t=3498
-	TROOT:gErrorIgnoreLevel=1001;
+	gErrorIgnoreLevel=1001;
 	for(ix = 1; ix < argc; ix++) {
 
 		/*
@@ -604,8 +605,9 @@ Int_t getcrystal(Double_t x, Double_t y, Double_t xpos[64], Double_t ypos[64], I
 	}
      
   
-     else { cout << "No associated histogram found !" << endl;
-      cout << " Entry :  x = " << x << " y = " << y <<endl;
+     else {if (verbose) {
+      cout << "No associated histogram found !" << endl;
+      cout << " Entry :  x = " << x << " y = " << y <<endl; }
      }
     min=10000;
     histnr=9999;

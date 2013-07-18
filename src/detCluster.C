@@ -7,19 +7,16 @@ This algorithm is not 100 % accurate, but I intend to use it as a minimum, the i
 */
 
 
-bin ClusterSize(TH2F *hist, Int_t xbin, Int_t ybin){
-  bin maxbin;
-  Int_t size=0;
+// 07182013 :: change maxbin to pointer 
+
+Int_t ClusterSize(TH2F *hist, Int_t xbin, Int_t ybin, bin *maxbin){
+
   Int_t pixels=0;
-  Int_t totsum=0;
   Int_t neighbour=0;
-  Int_t i,j;
   Int_t origx=xbin;
-  Float_t thismax=0;
-  Float_t tmpmax;
-  maxbin.x = xbin;
-  maxbin.y = ybin;
-  maxbin.val = 0;
+  maxbin->x = xbin;
+  maxbin->y = ybin;
+  maxbin->val = 0;
 
 #ifdef DEBUG
   cout << "Welcome to clustersize xbin = " << xbin << "; ybin = " << ybin <<endl;
@@ -37,22 +34,22 @@ bin ClusterSize(TH2F *hist, Int_t xbin, Int_t ybin){
 #endif 
 
   if ( hist->GetBinContent(xbin,ybin) < 1e-10) {
-    maxbin.pixels=0;
-    return maxbin;}
+    maxbin->pixels=0;
+    return maxbin->pixels;}
  
 
-  maxbin.val= hist->GetBinContent(xbin,ybin);
+  maxbin->val= hist->GetBinContent(xbin,ybin);
 
   pixels=1;
-  pixels+=countcolumn(hist,xbin,ybin,1,&maxbin);
-  if(ybin>1)  pixels+=countcolumn(hist,xbin,ybin,-1,&maxbin);
+  pixels+=countcolumn(hist,xbin,ybin,1,maxbin);
+  if(ybin>1)  pixels+=countcolumn(hist,xbin,ybin,-1,maxbin);
 
 
   Int_t thisflight=0;
   Int_t above,below;
 
 #ifdef DEBUG
-  cout << " Maximum pixel value : " << maxbin.val << endl;
+  cout << " Maximum pixel value : " << maxbin->val << endl;
   cout << " ========================== Looking Left ===================== " << endl;
 #endif
 
@@ -63,17 +60,17 @@ bin ClusterSize(TH2F *hist, Int_t xbin, Int_t ybin){
          pixels++;  
          thisflight++;
     }
-    below=countcolumn(hist,xbin,neighbour,1,&maxbin);
+    below=countcolumn(hist,xbin,neighbour,1,maxbin);
         pixels+=below;
         thisflight+=below;
-        above=countcolumn(hist,xbin,neighbour,-1,&maxbin);
+        above=countcolumn(hist,xbin,neighbour,-1,maxbin);
         pixels+=above;
         thisflight+=above;
 	if (thisflight==0) break; // no pixels in column -> stop searching 
 
         // if only pixels above or below we go one pixels down or up in xbin
 #ifdef DEBUG
-        cout << " Maximum pixel value : " << maxbin.val << endl;
+        cout << " Maximum pixel value : " << maxbin->val << endl;
         cout << " Found " << thisflight << " pixels in column around " << xbin;
         cout << "," << neighbour << "(above="<< above <<", below="<< below <<")"<<endl;
 #endif
@@ -107,7 +104,7 @@ bin ClusterSize(TH2F *hist, Int_t xbin, Int_t ybin){
   
 
 #ifdef DEBUG
-        cout << " Maximum pixel value : " << maxbin.val  << endl;
+        cout << " Maximum pixel value : " << maxbin->val  << endl;
         cout << " Found " << thisflight << " pixels in column around " << xbin;
         cout << "," << neighbour << endl;
 #endif
@@ -131,10 +128,10 @@ bin ClusterSize(TH2F *hist, Int_t xbin, Int_t ybin){
       { pixels++;
         thisflight++;
       }
-    below=countcolumn(hist,xbin,neighbour,1,&maxbin);
+    below=countcolumn(hist,xbin,neighbour,1,maxbin);
         pixels+=below;
         thisflight+=below;
-        above=countcolumn(hist,xbin,neighbour,-1,&maxbin);
+        above=countcolumn(hist,xbin,neighbour,-1,maxbin);
         pixels+=above;
         thisflight+=above;
 	if (thisflight==0) break; // no pixels in column -> stop searching 
@@ -172,16 +169,16 @@ bin ClusterSize(TH2F *hist, Int_t xbin, Int_t ybin){
         thisflight=0;
     }
 
-  maxbin.pixels=pixels;
+  maxbin->pixels=pixels;
 #ifdef DEBUG  
   cout << endl;
-  cout << " Maximum pixel value : " << maxbin.val  ;
-  cout << " at position : " << maxbin.x << "," << maxbin.y <<endl;
+  cout << " Maximum pixel value : " << maxbin->val  ;
+  cout << " at position : " << maxbin->x << "," << maxbin->y <<endl;
   cout << " Found " << pixels << " pixels in the cluster " << endl;
   cout << " ---------------- END DETCLUSTER ---------------- " << endl;
 #endif
 
-  return maxbin;}
+  return maxbin->pixels;}
 
 Int_t countcolumn(TH2F *hist, Int_t binx,Int_t biny, Int_t order, bin *max){
   Int_t count=0;

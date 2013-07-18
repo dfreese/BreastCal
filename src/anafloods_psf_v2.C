@@ -108,7 +108,7 @@ Int_t main(int argc, Char_t *argv[])
         Char_t peaklocationfilename[FILENAMELENGTH];
         Int_t k,i,j,m;
         TCanvas *c1;
-        TSpectrum2 *s = new TSpectrum2(); 
+	//        TSpectrum2 *s = new TSpectrum2(); 
         Int_t chipevents[RENACHIPS];
         Bool_t modevents[RENACHIPS][MODULES][2];
 
@@ -655,7 +655,7 @@ if (npeaks_q[k] != 16 ) {
         
        //        xcorner=0; ycorner=0;
        if (verbose) cout << " Flood corner :: " << xcorner << " " << ycorner << endl;
-       sort16(16,xpeaks_q[k],ypeaks_q[k],&ysort_q[k],&xsort_q[k],peaks_remapped[k],xcorner,ycorner,verbose);
+       sort16(xpeaks_q[k],ypeaks_q[k],&ysort_q[k],&xsort_q[k],peaks_remapped[k],xcorner,ycorner,verbose);
        if ( ! validate_sort(peaks_remapped[k],verbose) ) validflag |= ( 1 << k) ;
    } // if (npeaks == 16 )
    else { cout << " not enough peaks found in histogram " << k << endl;  } //invalid=1;}
@@ -665,6 +665,7 @@ if (npeaks_q[k] != 16 ) {
 
 #ifdef sortps
    Double_t oria,a,b;
+   oria=0;
    Int_t stepback=0;
    Int_t forcepoint=0;
    Int_t alloops=0;
@@ -710,7 +711,9 @@ if (npeaks_q[k] != 16 ) {
               break; }}  
 	if ( verbose) cout << endl;
               j++;} 
-    cluster[k] = &ClusterSize(inp[k], binx,biny);
+    cluster[k] = new bin;
+    //    cluster[k] = &
+    ClusterSize(inp[k], binx,biny, cluster[k]);
     if (cluster[k]->pixels<0) nosegupdate=1;
     if (verbose){
     cout << " Size of the cluster : " << cluster[k]->pixels << " @ " << cluster[k]->x <<","<<cluster[k]->y;
@@ -1362,17 +1365,17 @@ Int_t updatesegmentation(TH2F *hist, Double_t x[16], Double_t y[16], TGraph *upd
   Float_t thresholds[THRESHOLDS]={0.1,0.2,0.3};
   Int_t maxcluster[THRESHOLDS]={75,35,30};
   Int_t xbin,ybin,zbin;
-  bin clusr;
+  bin *clusr = new bin;
   for (i=0;i<16;i++) updated[i]=0;
   for (j=0;j<THRESHOLDS;j++){
     if (verbose){    cout << " Iteration " << j << endl;}
   hist_threshold(hist,thresholds[j]);
    for (i=0;i<16;i++) {
       hist->GetBinXYZ(hist->FindBin(x[i],y[i]),xbin,ybin,zbin);  
-      clusr = ClusterSize(hist,xbin,ybin); 
-      if ((clusr.pixels<maxcluster[j])&&(updated[i]==0)&&(clusr.pixels>5)) {  
-       xxx[i]=hist->GetXaxis()->GetBinCenter(clusr.x); 
-       yyy[i]=hist->GetYaxis()->GetBinCenter(clusr.y); 
+      ClusterSize(hist,xbin,ybin,clusr); 
+      if ((clusr->pixels<maxcluster[j])&&(updated[i]==0)&&(clusr->pixels>5)) {  
+       xxx[i]=hist->GetXaxis()->GetBinCenter(clusr->x); 
+       yyy[i]=hist->GetYaxis()->GetBinCenter(clusr->y); 
        if (verbose)  {
 	 cout << " candidate point:  (" << xxx[i] << "," << yyy[i] << ")"; 
          cout << " distance to original : (" << x[i] << "," << y[i] << ") :";
@@ -1381,7 +1384,7 @@ Int_t updatesegmentation(TH2F *hist, Double_t x[16], Double_t y[16], TGraph *upd
         updated[i]=1;
 	if (verbose){
         cout << " updating point " << i << " to (" << xxx[i] << "," << yyy[i] << ")" ;
-        cout << " cluster size :  " << clusr.pixels  << endl;}
+        cout << " cluster size :  " << clusr->pixels  << endl;}
 	}
 	}
    }}
@@ -1411,20 +1414,20 @@ Int_t updatesegpoint(TH2F *hist, Double_t x, Double_t y, Double_t &xxx, Double_t
   Float_t thresholds[THRESHOLDS2]={0.1,0.2,0.3,0.35};
   Int_t maxcluster[THRESHOLDS2]={65,90,65,25};
   Int_t xbin,ybin,zbin;
-  bin clusr;
+  bin *clusr = new bin;
 		  updated=0;
   for (j=0;j<THRESHOLDS2;j++){
     if (verbose)    cout << " Iteration " << j << " : ";
   hist_threshold(hist,thresholds[j]);
   //   for (i=0;i<16;i++) {
   hist->GetBinXYZ(hist->FindBin(x,y),xbin,ybin,zbin);  
-      clusr = ClusterSize(hist,xbin,ybin); 
-      if (verbose)      {  cout << " cluster size :  " << clusr.pixels ;
-      cout << " center at (" << hist->GetXaxis()->GetBinCenter(clusr.x) << "," ;
-      cout <<  hist->GetYaxis()->GetBinCenter(clusr.y) << ")."  << endl;}
-      if ((clusr.pixels<maxcluster[j])&&(updated==0)&&(clusr.pixels>2)) {  
-       xxx=hist->GetXaxis()->GetBinCenter(clusr.x); 
-       yyy=hist->GetYaxis()->GetBinCenter(clusr.y); 
+  ClusterSize(hist,xbin,ybin,clusr); 
+      if (verbose)      {  cout << " cluster size :  " << clusr->pixels ;
+      cout << " center at (" << hist->GetXaxis()->GetBinCenter(clusr->x) << "," ;
+      cout <<  hist->GetYaxis()->GetBinCenter(clusr->y) << ")."  << endl;}
+      if ((clusr->pixels<maxcluster[j])&&(updated==0)&&(clusr->pixels>2)) {  
+       xxx=hist->GetXaxis()->GetBinCenter(clusr->x); 
+       yyy=hist->GetYaxis()->GetBinCenter(clusr->y); 
        if (verbose)  {
 	 cout << " candidate point:  (" << xxx << "," << yyy << ")"; 
          cout << " distance to original : (" << x << "," << y << ") :";

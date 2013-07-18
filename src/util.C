@@ -51,7 +51,7 @@ string Util::int2BinaryString(int input, unsigned int numBits)
 {
     string output = "";
     vector<bool> boolVec = int2BoolVec(input, numBits);
-    for (int ii=0; ii<boolVec.size(); ii++) {
+    for (unsigned int ii=0; ii<boolVec.size(); ii++) {
         if (boolVec[ii]) {
             output += '1';
         }
@@ -65,7 +65,7 @@ string Util::int2BinaryString(int input, unsigned int numBits)
 int Util::binaryString2int(string input)
 {
     vector<bool> boolVec;
-    for (int ii=0; ii<input.size(); ii++) {
+    for (unsigned int ii=0; ii<input.size(); ii++) {
         if (input[ii] == '0') {
             boolVec.push_back(false);
         }

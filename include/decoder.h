@@ -23,8 +23,8 @@ streampos endPos;
 vector<char> packBuffer;
 unsigned long long int byteCounter;
 #define PAULS_PANELID true
-#define MODULE_BASED_READOUT false
-//#define MODULE_BASED_READOUT true
+//#define MODULE_BASED_READOUT false
+#define MODULE_BASED_READOUT true
 //#define NUM_RENA_PER_DAQ 8
 
 #define CHANPERMODULE 8

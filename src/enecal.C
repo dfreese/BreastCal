@@ -20,7 +20,7 @@ This program fills the energy histograms for every crystal, needed to do energy 
 #include "TF1.h"
 #include "./decoder.h"
 #include "./ModuleDat.h"
-
+ 
 //void usage(void);
 
 //void usage(void){
@@ -81,7 +81,7 @@ int main(int argc, Char_t *argv[])
 	//        TF1 *Efits[4][2][64];
         TVector* ppVals = (TVector *) rfile->Get("pp_spat");
         TVector* ppVals_com = (TVector *) rfile->Get("pp_com");
-        TCanvas *c1 =new TCanvas();
+	//        TCanvas *c1 =new TCanvas();
         Char_t treename[40];
         TDirectory *subdir[RENACHIPS];
 
@@ -293,8 +293,9 @@ Int_t getcrystal(Double_t x, Double_t y, Double_t xpos[64], Double_t ypos[64], I
 	}
      
   
-     else { cout << "No associated histogram found !" << endl;
-      cout << " Entry :  x = " << x << " y = " << y <<endl;
+     else { if (verbose) 
+	 {cout << "No associated histogram found !" << endl;
+	   cout << " Entry :  x = " << x << " y = " << y <<endl;}
      }
     min=10000;
     histnr=9999;

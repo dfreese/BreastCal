@@ -9,7 +9,7 @@
 /* This version deals with the more pincushioned floods with the capacitor in between channels */
 /* July 2012 AVDB */
 
-Int_t sort16(Int_t npeaks, Float_t *xpeaks, Float_t *ypeaks, Double_t **sortedxpeaks, Double_t **sortedypeaks, TGraph *peaks_remapped, Float_t xcorner, Float_t ycorner,Int_t verbose){
+Int_t sort16(Float_t *xpeaks, Float_t *ypeaks, Double_t **sortedxpeaks, Double_t **sortedypeaks, TGraph *peaks_remapped, Float_t xcorner, Float_t ycorner,Int_t verbose){
   //  verbose=0;
   if (verbose) cout << "Welcome to the peak sorting algorithm " << endl;
 
@@ -34,8 +34,7 @@ Int_t sort16(Int_t npeaks, Float_t *xpeaks, Float_t *ypeaks, Double_t **sortedxp
   xmap = new Int_t[SPEAKS];
   ymap = new Int_t[SPEAKS];
   flagged = new Int_t[SPEAKS];
-  xcorner;
-  ycorner;
+
 
 
 

@@ -10,5 +10,5 @@ struct bin {
   Int_t pixels;
 };
 
-bin ClusterSize(TH2F *hist, Int_t xbin, Int_t ybin);
+Int_t ClusterSize(TH2F *hist, Int_t xbin, Int_t ybin, bin *maxbin);
 Int_t countcolumn(TH2F *hist, Int_t binx,Int_t biny, Int_t order, bin *max);

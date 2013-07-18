@@ -114,7 +114,7 @@ int main(int argc, Char_t *argv[])
 
 
         Char_t filebase[FILENAMELENGTH];
-        Int_t m;
+	//        Int_t m;
         ifstream infile;
         strncpy(filebase,filenamel,strlen(filenamel)-9);
         filebase[strlen(filenamel)-9]='\0';
@@ -170,10 +170,11 @@ int main(int argc, Char_t *argv[])
 
 	// 	} // loop m
 
- Long64_t lasttimes;
+	// Long64_t lasttimes;
  bool rollover;
  Int_t skipchip;
- Long64_t l,curevent;
+ // Long64_t l;
+ Long64_t curevent;
 
  //        for (m=0;m<RENACHIPS;m++){
         if(entries) {

@@ -13,7 +13,7 @@
 #include "TPaveText.h"
 #include "apd_fit.h"
 #include "./decoder.h"
-
+#include "TError.h"
 
 int main(int argc, Char_t *argv[])
 {
@@ -27,7 +27,7 @@ int main(int argc, Char_t *argv[])
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 	//see eg http://root.cern.ch/phpBB3/viewtopic.php?f=14&t=3498
-	TROOT:gErrorIgnoreLevel=1001;
+	gErrorIgnoreLevel=1001;
 	for(ix = 1; ix < argc; ix++) {
 
 		/*
@@ -106,7 +106,7 @@ int main(int argc, Char_t *argv[])
 
 
 	
-      Float_t Emean,peak,Emeans[8*RENACHIPS];
+      Float_t Emean,Emeans[8*RENACHIPS];
 	     /* fitting energy spectra */
 
 

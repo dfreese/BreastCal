@@ -144,7 +144,7 @@ int main(int argc, Char_t *argv[])
 
 
         Char_t filebase[FILENAMELENGTH],rootfile[FILENAMELENGTH]; 
-        Int_t j,m;
+        Int_t m;
         ifstream infile;
         strncpy(filebase,filenamel,strlen(filenamel)-9);
         filebase[strlen(filenamel)-9]='\0';
@@ -171,8 +171,8 @@ int main(int argc, Char_t *argv[])
 
         Long64_t entries;
 
-        Long64_t maxentries=0;
-        Int_t maxchip=0;
+	// Long64_t maxentries=0;
+	//        Int_t maxchip=0;
 
         Char_t treename[40];
 
@@ -221,8 +221,8 @@ int main(int argc, Char_t *argv[])
 
         if (verbose) cout << " Last timestamp = " << lasttime << endl;
 
-        Long64_t lasttimes[RENACHIPS];
-        Int_t skipchip[RENACHIPS];
+	//        Long64_t lasttimes[RENACHIPS];
+	//   Int_t skipchip[RENACHIPS];
         Long64_t l,curevent=0;
 
 /*

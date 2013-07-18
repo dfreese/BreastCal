@@ -637,7 +637,7 @@ Int_t fitpos(TH1F *xpos[PEAKS], TF1 *posgausfits[PEAKS],Int_t verbose = 0)
 /*
 Double_t TotalPTV(Double_t *x, Double_t *par)
 
-/* Combined background + signal */
+// Combined background + signal 
 //{ 
   //	/*~~~~~~~~~~~~~~~~*/
   //	Double_t	tot = 0;

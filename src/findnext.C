@@ -207,7 +207,7 @@ lengs_rms[14] = 0.0436819;
 */
  Int_t i;
  Char_t title[50];
- Double_t mean,a,b,c;
+ Double_t mean,a,b;
 
  for (i=0;i<15;i++){
     sprintf(title,"cf_angle[%d]",i);
