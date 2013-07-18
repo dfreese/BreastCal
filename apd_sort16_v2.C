@@ -88,12 +88,15 @@ Int_t sort16(Int_t npeaks, Float_t *xpeaks, Float_t *ypeaks, Double_t **sortedxp
                        cout <<  "(x,y)_prev = (" << remapped_x[prevpoint] << "," << remapped_y[prevpoint] <<"); (x,y)_cur = (";
                        cout << xpeaks[xmap[j]] << "," << ypeaks[xmap[j]] << ")";
                        cout <<endl;  } 
+	    //	    cout << " Let's continue " << endl;
         if (l!=(2-k)){
 	  /* check next unused point */
 	  // late night fix: sometimes the next point along $x$ is taken first ( a point with higher $x$ value ) ,
           // that results in an error, which will appear from the angle between the current candidate point and 
 	  // the next point to be around -90 degrees, smaller than 0  which we check for. 
-	  jj=j+1;
+	  if (verbose) cout << " late night fix ( jj = " << jj << " ) " << endl;
+          if (jj<SPEAKS ) jj=j+1;
+	  else break;
           while (jj<16) { if (flagged[xmap[jj]]) jj++;
 			  else break;}
         	       angle=atan2(ypeaks[xmap[jj]]-ypeaks[xmap[j]],xpeaks[xmap[jj]]-xpeaks[xmap[j]]);
@@ -102,7 +105,7 @@ Int_t sort16(Int_t npeaks, Float_t *xpeaks, Float_t *ypeaks, Double_t **sortedxp
 		       if (verbose){
                          cout << " Angle with next point :: " ;
 	                 cout << angle << ", length = " << length;
-                         cout << " (x,y)_next = (" << xpeaks[xmap[jj]] << "," << ypeaks[xmap[jj]] <<")" << endl;}
+                         if (jj < SPEAKS) {cout << " (x,y)_next = (" << xpeaks[xmap[jj]] << "," << ypeaks[xmap[jj]] <<")" << endl;} else cout << endl;}
 	               if ((length<0.075 )&&(angle < 0.)) { if (verbose) cout << " ----> Negative, increasing j !  (cur j=" << j <<")"<<endl;
 			   j++; }
 			 //     else { // 
@@ -113,8 +116,11 @@ Int_t sort16(Int_t npeaks, Float_t *xpeaks, Float_t *ypeaks, Double_t **sortedxp
 	}// we need this break statement for the case that l == (2-k)
 	else break;
 	  } // first angle check passed
+	  //	  cout << "Angle check passed " << endl;
       } // unused point
     } // while loop
+
+    //    cout << " while loop done " << endl;
 
     if (verbose) { if (j<16) cout << " setting point : " << curcorner+l+1 << " (j=" << j << "); x=" << xpeaks[xmap[j]] << ", y=" << ypeaks[xmap[j]]<<endl; }
     if (j>15) j=curcorner+l+1;

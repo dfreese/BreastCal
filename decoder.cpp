@@ -298,7 +298,10 @@ for (i = 0; i < 36; i++) {
    if (verbose){
    cout << " endPos :: " << endPos << endl;
    cout << " lastPos :: " << lastPos << endl;
+   endPos = 500;
    }
+
+  
 
     int chipId = 0;
     int trigCode = 0;
@@ -308,18 +311,32 @@ for (i = 0; i < 36; i++) {
    //      if (i>=(endPos-lastPos))
     //           break;
  for (int i=0; i<(endPos-lastPos-1); i++) { //slow return
-            dataFile.get(c);
+            dataFile.get(c) ;
             packBuffer.push_back(c);
             byteCounter++;
           if ((unsigned char)c==0x81) {
-
-	    
-
+              
                 // end of package (start processing)
-                 totalPckCnt++;
- 
-		 //   if (totalPckCnt%100==0) {
-	    //          cout << totalPckCnt << " (" << droppedPckCnt << ")" << endl;    }
+
+
+
+#ifdef DEBUG
+            cout << " lastPos :: " << lastPos ;
+	    cout << " packBuffer[0] :: " << hex << int(packBuffer[0]);
+	    cout << " packBuffer[1] :: " << int(packBuffer[1]);
+	    cout << " packBuffer[2] :: " << int(packBuffer[2]);
+            cout << dec;
+#endif
+
+
+           totalPckCnt++;
+
+	    if ( (int(packBuffer[0] & 0xFF )) != 0x80 ) {
+              // first packet needs to be 0x80
+              droppedPckCnt++;
+              packBuffer.clear();
+              continue;
+	    }           
 
 
     if (PAULS_PANELID) {
@@ -334,8 +351,14 @@ for (i = 0; i < 36; i++) {
             chipId++;
         }
         trigCode = int(packBuffer[2] & 0x0F);
-	//		        cout << "trigCode = 0x" << hex << trigCode << dec ;
-	//		cout << " chipId = " << chipId << "; fpgaId = " << fpgaId << endl;
+#ifdef DEBUG
+			        cout << " trigCode = 0x" << hex << trigCode << dec ;
+				cout << " chipId = " << chipId << "; fpgaId = " << fpgaId  << dec<<endl;
+
+		      if (totalPckCnt%1==0) {
+			cout << "i = " << i << " TotalPckCnt :: " << totalPckCnt << " ( Dropped: " << droppedPckCnt << ")" << endl;   }
+
+#endif
         //}
     }
     else {
@@ -401,6 +424,7 @@ for (i = 0; i < 36; i++) {
     else { // MODULE_BASED_READOUT
         if (trigCode == 0) {
             droppedPckCnt++;
+            packBuffer.clear();
             continue;
         }
         if (PAULS_PANELID) { packetSize =10; }
@@ -411,9 +435,11 @@ for (i = 0; i < 36; i++) {
         	moduletriggers +=  ( ( trigCode >> ii ) & 0x1) ;}
         // packetSize = rmChip->packetSizeMap[trigCode];
     } // else module based readout
-    //        cout << " packetSize :: " << packetSize  << "; packBuffer.size() = " << packBuffer.size() << endl;
     
+
+    //   cout << " packetSize :: " << packetSize  << "; packBuffer.size() = " << packBuffer.size() << endl;
     
+	  
 
     // FIXME  BAD HARDCODED VALUE 
     
@@ -488,8 +514,7 @@ for (i = 0; i < 36; i++) {
     // Now we have all values in adcBlock vector.
 
 
-    //DEBUG
-    //cout << "Dropped = " << droppedPckCnt << endl;
+    //DEBUG    //cout << "Dropped = " << droppedPckCnt << endl;
     //    for (int i=0; i<adcBlock.size(); i++) {
     //        cout << adcBlock[i] << " | ";
     //    }
