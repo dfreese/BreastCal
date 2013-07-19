@@ -31,12 +31,13 @@ Int_t getcrystal(Double_t x, Double_t y, Double_t xpos[64], Double_t ypos[64], I
 
 int main(int argc, Char_t *argv[])
 {
- 	cout << "Welcome " << endl;
+ 	cout << " Welcome to EneCal. Performs Crystal Binning." << endl;
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 	Char_t		filename[FILENAMELENGTH] = "";
 	Int_t		verbose = 0;
 	Int_t		ix;
+        Bool_t          fileset=0;
         ModuleDat *event = 0;
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -53,6 +54,7 @@ int main(int argc, Char_t *argv[])
 		if(strncmp(argv[ix], "-f", 2) == 0) {
 			if(strlen(argv[ix + 1]) < FILENAMELENGTH) {
 				sprintf(filename, "%s", argv[ix + 1]);
+				fileset=1;
 			}
 			else {
 				cout << "Filename " << argv[ix + 1] << " too long !" << endl;
@@ -65,7 +67,7 @@ int main(int argc, Char_t *argv[])
         rootlogon(verbose);
 
 
-
+	if (!fileset) { cout << " Please specify Filename. Exiting. " << endl; return -99;}
 	TFile *rfile = new TFile(filename,"OPEN");
        
         Char_t filebase[FILENAMELENGTH],peaklocationfilename[FILENAMELENGTH],newrootfile[FILENAMELENGTH]; 
@@ -87,7 +89,7 @@ int main(int argc, Char_t *argv[])
 
         strncpy(filebase,filename,strlen(filename)-5);
         filebase[strlen(filename)-5]='\0';
-        cout << " filebase = " << filebase << endl;
+        if (verbose) cout << " filebase = " << filebase << endl;
 
 	for (m=0;m<RENACHIPS;m++){
         for (j=0;j<4;j++){
@@ -104,9 +106,9 @@ int main(int argc, Char_t *argv[])
        //       cout << k << ", " << U_x[i][j][k]<< ", " << U_y[i][j][k] << endl;
                lines++;      
                 }
-       cout << "Found " << lines-1 << " peaks in  file " << peaklocationfilename << endl;
+	      if (verbose) cout << "Found " << lines-1 << " peaks in  file " << peaklocationfilename << endl;
        infile.close();
-       if (lines==65){ cout << "Setting Validpeaks " << endl; validpeaks[m][j][i]=1; }
+       if (lines==65){ if (verbose) cout << "Setting Validpeaks " << endl; validpeaks[m][j][i]=1; }
 	}
 	}
 	}
@@ -172,7 +174,7 @@ int main(int argc, Char_t *argv[])
            return -10;}
 	 //	 entries=block->GetEntries();
 
-        cout << " Entries : " << block->GetEntries() << endl;
+	 cout << " Looping over " << block->GetEntries() << " entries." ;
 	block->SetBranchAddress("eventdata",&event);
 	   /*
           block->SetBranchAddress("ct",&event.ct);
@@ -196,7 +198,7 @@ int main(int argc, Char_t *argv[])
          strncpy(filebase,filename,strlen(filename)-5);
          filebase[strlen(filename)-5]='\0';
   
-	 if (verbose) cout << " Cloning Tree " << endl;
+	 if (verbose) cout << "\n. Cloning Tree " << endl;
           TTree *calblock = block->CloneTree(0);
 	  sprintf(treename,"calblock");// Energy calibrated event data ");
 	  /*
@@ -209,8 +211,9 @@ int main(int argc, Char_t *argv[])
           int module;
           int apd;
 
+          cout << " Looping over data .. ";
 	  for (i=0;i<block->GetEntries();i++){
-	    if ((i%100000)==0) fprintf(stdout,"%d Events Processed\r",i);
+	    //	    if ((i%100000)==0) fprintf(stdout,"%d Events Processed\r",i);
 	   //      	  for (i=0;i<1e5;i++){
 	    block->GetEntry(i);
 	    chip=event->chip;
@@ -234,7 +237,7 @@ int main(int argc, Char_t *argv[])
 	  }
 
 
-	  cout << " Done looping over the events " <<endl;
+	  cout << " .... Done looping over the events " <<endl;
 
           ppVals->Write("pp_spat");
           ppVals_com->Write("pp_com");

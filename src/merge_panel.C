@@ -57,7 +57,7 @@ int main(int argc, Char_t *argv[])
 
 		if(strncmp(argv[ix], "-nb", 3) == 0) {
 			nb = atoi(argv[ix+1]);
-			cout << nb << " 4up boards " << endl;
+			if (verbose) cout << nb << " 4up boards " << endl;
                         ix++;
 		}
 

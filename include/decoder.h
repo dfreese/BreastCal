@@ -1,5 +1,5 @@
-#ifndef ROOTPLOTTER_H
-#define ROOTPLOTTER_H
+#ifndef DECODER_H
+#define DECODER_H
 
 #include <fstream>
 #include <string>

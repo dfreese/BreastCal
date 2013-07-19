@@ -1,44 +1,7 @@
-
-#include "TROOT.h"
-#include "Riostream.h"
-#include "TTree.h"
-#include "TFile.h"
-#include "TCanvas.h"
-#include "TSpectrum.h"
-#include "TSpectrum2.h"
-#include "TH2F.h"
-#include "TVector.h"
-#include "TMath.h"
-#include "TF1.h"
-#include "TPaveText.h"
-#include "apd_fit.h"
-#include "./decoder.h"
-#include "ModuleDat.h"
-#include "ModuleCal.h"
-#include "TError.h"
-//#include "/home/miil/root/macros/myrootlib.h"
-//#include "/home/miil/root/libInit_avdb.h"
-//#include "./convertconfig.h"
-
-//#define FILENAMELENGTH	120
-//#define MAXFILELENGTH	160
-//#define E_up 2500
-//#define E_low -100
-//#define Ebins 260
-//#define PEAKS 64
-//#define EBINS 150
-//#define CHIPS 2
-
-//void usage(void);
-//void usage(void){
-// cout << " Parsetomodule -f [filename] [-p [pedfile] -v -o [outputfilename]] -n [nrfiles in loop] -t [threshold]" <<endl;
-//  return;}
-Float_t getpeak(TH1F *hist, Float_t xlow, Float_t xhigh, Int_t verbose);
-Int_t getcrystal(Double_t x, Double_t y, Double_t xpos[64], Double_t ypos[64], Int_t verbose );
-
+#include "enefit.h"
 int main(int argc, Char_t *argv[])
 {
- 	cout << "Welcome to enefit " << endl;
+ 	cout << " Welcome to enefit. Calibrate every pixel & Fill calibrated Tree " << endl;
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 	Char_t		filename[FILENAMELENGTH] = "";
@@ -50,7 +13,7 @@ int main(int argc, Char_t *argv[])
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 	//see eg http://root.cern.ch/phpBB3/viewtopic.php?f=14&t=3498
-	gErrorIgnoreLevel=1001;
+	gErrorIgnoreLevel=kWarning;
 	for(ix = 1; ix < argc; ix++) {
 
 		/*

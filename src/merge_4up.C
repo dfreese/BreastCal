@@ -23,7 +23,7 @@
 
 int main(int argc, Char_t *argv[])
 {
-  	cout << "Welcome " << endl;
+  	cout << "Welcome to Merge_4up. Sorting data from each 4up. " << endl;
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 	Char_t		filenamel[FILENAMELENGTH] = "";
@@ -64,26 +64,26 @@ int main(int argc, Char_t *argv[])
 
 		if(strncmp(argv[ix], "-rb", 3) == 0) {
 			rb = atoi(argv[ix+1]);
-                        cout << "Rena board : " << rb <<endl;
+                        if (verbose) cout << "Rena board : " << rb <<endl;
                          ix++;
 		}
 
 
 		if(strncmp(argv[ix], "-nc", 3) == 0) {
 			ncuts = atoi(argv[ix+1]);
-                        cout << "Number of splits : " << ncuts <<endl;
+                        if (verbose) cout << "Number of splits : " << ncuts <<endl;
                          ix++;
 		}
 
 		if(strncmp(argv[ix], "-ts", 3) == 0) {
 		  timeinterval = (Long64_t) atol(argv[ix+1]);
-                        cout << "Split at time : " << timeinterval <<endl;
+                        if (verbose) cout << "Split at time : " << timeinterval <<endl;
                          ix++;
 		}
 
 		if(strncmp(argv[ix], "-lt", 3) == 0) {
 		  lasttime = (Long64_t) atol(argv[ix+1]);
-                        cout << "Last time : " << lasttime <<endl;
+                         if (verbose) cout << "Last time : " << lasttime <<endl;
                          ix++;
 		}
 
@@ -104,13 +104,13 @@ int main(int argc, Char_t *argv[])
 		
 
                 if (strncmp(argv[ix],"--L",3) ==0 ){
-		  cout << " Left panel used " << endl;
+                  if (verbose) cout << " Left panel used " << endl;
                   left=1;
 		}
 
                 if (strncmp(argv[ix],"--R",3) ==0 ){
                   if (left==1) { cout << "Please specify --l OR --r not both !\n Exiting.\n"; return -99;}
-		  cout << " Right panel used " << endl;
+                  if (verbose) cout << " Right panel used " << endl;
                   left=0;
 
 		}
@@ -152,9 +152,8 @@ int main(int argc, Char_t *argv[])
 
         if (verbose){
 	cout << " filename = " << filenamel << endl;
-	cout << " filebase = " << filebase << endl;
-	}   
-        cout << " Opening file " << filenamel << endl;
+	cout << " filebase = " << filebase << endl; 
+        cout << " Opening file " << filenamel << endl;}
         TFile *file_left = new TFile(filenamel,"OPEN");
 
         if (!file_left->IsOpen()) 
@@ -422,7 +421,7 @@ int main(int argc, Char_t *argv[])
 	      //              l-=extra;
               if (l<0 ) l=0; // safety
 	      //              if ( l >= entries[m] ) { skipchip[m]=1; stop=0; continue;}
-              if ((l>0)&&((l%5000000)==0)) cout << " Processed " << l << " events " << endl;
+              if ((l>0)&&((l%5000000)==0)) cout << " Processed " << l/10e6 << " million events " << endl;
               lasteventtime=curtime;  
 			 	 }  // while !stop
 
@@ -460,17 +459,17 @@ int main(int argc, Char_t *argv[])
 		//             cout << " event->ct = " << event->ct <<  endl;
 	    } // loop over l 
 
-           std::cout<<"Sorting Run numbers"<<std::endl;
+	    std::cout<<"Sorting Run numbers :: " ; //<<std::endl;
 
            TMath::Sort(N,table,sorted,kFALSE);
 
           time_after_sorting=clock();
         
 
-          printf("Time to merge  8 chips (sec): %f\n",(double)(time_before_sorting-time_before_filling)/(CLOCKS_PER_SEC));
+          printf("Time to merge  8 chips (sec): %f",(double)(time_before_sorting-time_before_filling)/(CLOCKS_PER_SEC));
           printf("Time to sort the merged chips (sec): %f\n",(double)(time_after_sorting-time_before_sorting)/(CLOCKS_PER_SEC));
 
-	  cout << N << " entries in tree; cloning tree :: " << endl;
+	  if (verbose) cout << N << " entries in tree; cloning tree :: " << endl;
 
 	//  TTree *fourup = panel->CloneTree(0); 
 	//  cout << " Cloning Successfull !! " << endl;
@@ -494,7 +493,7 @@ int main(int argc, Char_t *argv[])
        fourup->Branch("pos",&evt.pos,"pos/I");
 	*/
 
-	  cout << " Loading Baskets ... " << endl;
+        if (verbose)	  cout << " Loading Baskets ... " << endl;
   panel->LoadBaskets(2328673567232LL);
 	  thistime=clock();  
 

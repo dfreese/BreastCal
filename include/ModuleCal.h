@@ -1,5 +1,5 @@
-#ifndef MY_MODULECAL
-#define MY_MODULECAL
+#ifndef MODULECAL_H
+#define MODULECAL_H
 
 #ifndef ROOT_TObjest
 #include "TObject.h"

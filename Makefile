@@ -21,13 +21,16 @@ OBJS_ENECAL=$(SOURCES_ENECAL:.C=.o)
 SOURCES_ENEFIT=./src/enefit.C ./src/apd_fit.C ./src/ModuleCal.C ./src/ModuleDat.C ModuleDatDict.C
 OBJS_ENEFIT=$(SOURCES_ENEFIT:.C=.o)
 
-SOURCES_MERGE_4up=./src/merge_4up.C ./src/ModuleCal.C 
+#SOURCES_MERGE_4up=./src/merge_4up.C ./src/ModuleCal.C 
+SOURCES_MERGE_4up=./src/merge_4up.C 
 OBJS_MERGE_4up=$(SOURCES_MERGE_4up:.C=.o)
 
-SOURCES_MERGE_PANEL=./src/merge_panel.C ./src/ModuleCal.C 
+#SOURCES_MERGE_PANEL=./src/merge_panel.C ./src/ModuleCal.C 
+SOURCES_MERGE_PANEL=./src/merge_panel.C 
 OBJS_MERGE_PANEL=$(SOURCES_MERGE_PANEL:.C=.o)
 
-SOURCES_MERGECOINC:=./src/merge_coinc.C ./src/ModuleCal.C ./src/CoincEvent.C ./ModuleDatDict.C
+#SOURCES_MERGECOINC:=./src/merge_coinc.C ./src/ModuleCal.C ./src/CoincEvent.C ./ModuleDatDict.C
+SOURCES_MERGECOINC:=./src/merge_coinc.C ./src/ModuleCal.C ./src/CoincEvent.C 
 OBJS_MERGECOINC=$(SOURCES_MERGECOINC:.C=.o)
 
 SOURCES_FREC:=./src/format_recon.C

@@ -54,7 +54,7 @@ Int_t main(int argc, Char_t *argv[])
 {
 
 
- // cout << "Welcome " << endl;
+  cout << " Welcome to anafloods. Program performs Segmentation." << endl;
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 	Char_t		filename[FILENAMELENGTH] = "";
@@ -87,6 +87,12 @@ Int_t main(int argc, Char_t *argv[])
         rootlogon(verbose);
         set2dcolor(4);
 
+
+
+	if (!verbose) {
+	gErrorIgnoreLevel = kBreak;
+		}
+       
 
 	TFile *rfile = new TFile(filename,"OPEN");
          if (!rfile || rfile->IsZombie()) {
@@ -658,7 +664,7 @@ if (npeaks_q[k] != 16 ) {
        sort16(xpeaks_q[k],ypeaks_q[k],&ysort_q[k],&xsort_q[k],peaks_remapped[k],xcorner,ycorner,verbose);
        if ( ! validate_sort(peaks_remapped[k],verbose) ) validflag |= ( 1 << k) ;
    } // if (npeaks == 16 )
-   else { cout << " not enough peaks found in histogram " << k << endl;  } //invalid=1;}
+   else { if (verbose) cout << " not enough peaks found in histogram " << k << endl;  } //invalid=1;}
 
  
 #endif 

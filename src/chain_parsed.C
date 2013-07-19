@@ -57,13 +57,15 @@ int main(int argc, char *argv[]){
     }
       if (strncmp(argv[i],"-o",2)==0) { 
       sprintf(outfilename,"%s",argv[i+1]);
-      cout << " outputfile = " << outfilename << endl;        
+      //      cout << " outputfile = " << outfilename << endl;        
       i++;
       }
 
    }
 
  
+  cout << " Chaining ROOT files; output file generated will be : " << outfilename << endl;
+
   ifstream f,rootfile;
   f.open(filelist);
 

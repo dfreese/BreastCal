@@ -1,33 +1,4 @@
-
-#include "TROOT.h"
-#include "Riostream.h"
-#include "TTree.h"
-#include "TFile.h"
-#include "TCanvas.h"
-#include "TSpectrum.h"
-#include "TSpectrum2.h"
-#include "TH2F.h"
-#include "TVector.h"
-#include "TMath.h"
-#include "TF1.h"
-#include "apd_fit.h"
-#include "/home/miil/root/macros/myrootlib.h"
-#include "/home/miil/root/libInit_avdb.h"
-//#include "./convertconfig.h"
-
-#define FILENAMELENGTH	120
-#define MAXFILELENGTH	160
-#define E_up 2500
-#define E_low -100
-#define Ebins 260
-#define PEAKS 64
-#define EMIN  0 
-#define EMAX  2400
-#define EBINS 150
-//#define CHIPS 2
-//#define DEBUG2
-#define INFTY 1e99
-
+#include "format_recon.h"
 //void usage(void);
 
 //void usage(void){
@@ -110,7 +81,7 @@ int main(int argc, Char_t *argv[])
         cout << " Opening file " << filename << endl;
         TFile *file = new TFile(filename,"OPEN");
         TTree *m = (TTree *) file->Get("merged");
-        event data;
+        CoincEvent *data;
 
 	m->SetBranchAddress("event",&data);
 	/*
@@ -172,28 +143,28 @@ int main(int argc, Char_t *argv[])
 	m->GetEntry(i);
 
 	// YOUR CODE HERE -- YOU HAVE ACCESS TO THE STRUCT DATA AND ITS MEMBERS TO DO WHATEVER CONSTRAINTS //
-        if ( TMath::Abs(data.dtc)<6) {  
-	  if ( ( data.E1<700 ) && (data.E1> 400 ) ) {
-        	  if ( ( data.E2<700 ) && (data.E2> 400 ) ) {
-		    if ( (data.crystal1>0 ) && (data.crystal1<64 )) {
-           		    if ( (data.crystal2>0 ) && (data.crystal2<64 )) {
+        if ( TMath::Abs(data->dtc)<6) {  
+	  if ( ( data->E1<700 ) && (data->E1> 400 ) ) {
+        	  if ( ( data->E2<700 ) && (data->E2> 400 ) ) {
+		    if ( (data->crystal1>0 ) && (data->crystal1<64 )) {
+           		    if ( (data->crystal2>0 ) && (data->crystal2<64 )) {
 
 #define PANELDISTANCE 60 // mm
 
                               y1 = PANELDISTANCE/2;
                               y2 = -PANELDISTANCE/2;
-                              y1 +=   data.apd1*10;
-                              y2 -=   data.apd2*10;
-			      y1 +=  (( TMath::Floor(data.crystal1%8)- 4 )*0.5  );
-			      y2 +=  (( TMath::Floor(data.crystal1%8)- 4 )*0.5  );                              
+                              y1 +=   data->apd1*10;
+                              y2 -=   data->apd2*10;
+			      y1 +=  (( TMath::Floor(data->crystal1%8)- 4 )*0.5  );
+			      y2 +=  (( TMath::Floor(data->crystal1%8)- 4 )*0.5  );                              
 			
-			      x1 = (data.m1-8)*0.405*25.4;  
-                              x2 = (8-data.m2)*0.405*25.4;  
-			      x1 +=  (( TMath::Floor(data.crystal1/8)- 4 )*0.5  );
-                              x2 +=  (( 4 - TMath::Floor(data.crystal1/8))*0.5  );
+			      x1 = (data->m1-8)*0.405*25.4;  
+                              x2 = (8-data->m2)*0.405*25.4;  
+			      x1 +=  (( TMath::Floor(data->crystal1/8)- 4 )*0.5  );
+                              x2 +=  (( 4 - TMath::Floor(data->crystal1/8))*0.5  );
                               
-                              z1 = data.fin1*0.056*25.4;
-          		      z2 = data.fin2*0.056*25.4;
+                              z1 = data->fin1*0.056*25.4;
+          		      z2 = data->fin2*0.056*25.4;
                              
  
              // this is a good data now ..

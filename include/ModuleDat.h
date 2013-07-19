@@ -1,5 +1,5 @@
-#ifndef MY_MODULEDAT
-#define MY_MODULEDAT
+#ifndef MODULEDAT_H
+#define MODULEDAT_H
 
 #ifndef ROOT_TObject
 #include "TObject.h"

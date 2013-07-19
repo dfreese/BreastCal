@@ -438,7 +438,7 @@ for (i = 0; i < 36; i++) {
 
     if (packBuffer.size()!=packetSize) {
         droppedPckCnt++;
-        cout << "Dropped = " << packBuffer.size() << endl;
+        if (verbose) cout << "Dropped = " << packBuffer.size() << endl;
         packBuffer.clear();
         continue;
     }

@@ -6,7 +6,7 @@
 while read data ped ; do 
 #  POS=`echo $data | cut -d u -f 1 | cut -d _ -f 5`
 #  echo $POS
-  echo "/home/miil/MODULE_ANA/ANA_V5/Decode -f $data -pedfile $ped.ped -uv -t -400 ; "
-  /home/miil/MODULE_ANA/ANA_V5/Decode -pedfile $ped.ped -f $data -uv -t -400  ; 
+  echo "${CODEVERSION}Decode -f $data -pedfile $ped.ped -uv -t -400 ; "
+  ${CODEVERSION}Decode -pedfile $ped.ped -f $data -uv -t -400  ; 
  done < $1; 
  

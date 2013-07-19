@@ -1,5 +1,6 @@
 #include <stdlib.h>
- 
+
+#include "TError.h" 
 #include "TROOT.h"
 #include "Riostream.h"
 #include "TTree.h"
@@ -8,6 +9,7 @@
 #include "TSpectrum.h"
 #include "TH2F.h"
 #include "TVector.h"
+#include "TMath.h"
 #include "./decoder.h"
 #include "./ModuleDat.h"
 
@@ -24,8 +26,7 @@ Double_t GetPhotopeak_v2(TH1F *hist,Double_t pp_low,Double_t pp_up,Int_t verbose
 
 Int_t main(int argc, Char_t *argv[])
 {
-
-  	cout << "Welcome to getfloods. Program obtains Energy and flood histograms " << endl;
+  	cout << " Welcome to Getfloods. Program obtains Energy and flood histograms " << endl;
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 	Char_t		filename[FILENAMELENGTH] = "";
@@ -56,15 +57,27 @@ Int_t main(int argc, Char_t *argv[])
 			}
 			else {
 				cout << "Filename " << argv[ix + 1] << " too long !" << endl;
-				cout << "Exiting.." << endl;
+		 		cout << "Exiting.." << endl;
 				return -99;
-			}
+			} 
 		}
 	}
 
-        rootlogon(verbose);
+	//    rootlogon(verbose);
         set2dcolor(4);
 
+
+	if (!verbose) {
+   //  Setting "gErrorIgnoreLevel = kWarning;" results in  Warnings being shown, Info being shown 
+   //  Setting "gErrorIgnoreLevel = kError;" results in  Warnings being shown, Info being shown 
+   //  Setting "gErrorIgnoreLevel = kFatal;" results in  Warnings being shown, Info being shown 
+   //  Setting "gErrorIgnoreLevel = 1001;" results in  Warnings being shown, Info being shown 
+   //  Setting "gErrorIgnoreLevel = kPrint;" results in  Warnings being shown, Info being shown 
+   //  Setting "gErrorIgnoreLevel = kInfo;" results in  Warnings being shown, Info being shown 
+	gErrorIgnoreLevel = kError;
+	  //	  gErrorIgnoreLevel = kError; //, kWarning, kError, kBreak, kSysError, kFatal;
+		}
+       
 
         TVector ppVals(8*RENACHIPS);
         TVector ppVals_com(8*RENACHIPS);
@@ -171,7 +184,8 @@ Int_t main(int argc, Char_t *argv[])
         
        for(l=0;l<block->GetEntries();l++){
 	 block->GetEntry(l);
-         if (((l%500000)==0)&&(l>0)) cout << l/1e6 << " Million Events processed " << endl;
+         if ( ((l%(entries/5))==0)&&(l>0)) {
+           cout << l/1e6 << " Million Events processed ( = " <<  (double) 100*(l)/entries  << " %)"<<endl;}
          E[event->chip][event->module][event->apd]->Fill(event->E);  
          E_com[event->chip][event->module][event->apd]->Fill(-event->Ec);  
        } // l 
@@ -321,6 +335,7 @@ Double_t  GetPhotopeak_v1(TH1F *hist,Double_t pp_low,Double_t pp_up,Int_t verbos
    Int_t npeaks,efound;
    
 
+
     kkk=0;
     efound=0;
 
@@ -360,7 +375,8 @@ Double_t  GetPhotopeak_v2(TH1F *hist,Double_t pp_low,Double_t pp_up,Int_t verbos
    Int_t kkk,l;
    TSpectrum *sp = new TSpectrum();
    Int_t npeaks,efound;
-   
+
+
 
     kkk=0;
     efound=0;

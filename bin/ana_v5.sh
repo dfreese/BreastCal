@@ -1,6 +1,7 @@
  
 #!/bin/bash
 
+CODEVERSION=/home/miil/MODULE_ANA/ANA_V5/ModuleClass/bin/
 
 function check ()
 {
@@ -14,6 +15,12 @@ function check ()
       exit
    fi
    
+}
+
+function mkfolder ()
+{
+  FOLDER=$1;
+  if [ ! -d ${FOLDER} ] ;then  mkdir ${FOLDER}; fi
 }
 
 
@@ -75,7 +82,7 @@ stop=0;
  if [ -e pedconv.out ] ; then 
    rm pedconv.out
  fi;
- for i in `cat pedfiles`; do ~/MODULE_ANA/ANA_V5/Decode -p -f $i >> pedconv.out ;  check ${?} "converting pedfile ${i}"; done;
+ for i in `cat pedfiles`; do ${CODEVERSION}Decode -p -f $i >> pedconv.out ;  check ${?} "converting pedfile ${i}"; done;
 # for i in `cat daqfiles`; do ~/MODULE_ANA/PSF_V4/UYORUK_toROOT_V3 -f $i;  check ${?} "converting daqfile ${i}";done;
 
 # pedestal correction, parsing and fine time calculation
@@ -93,9 +100,9 @@ if [ "$MODE" == "LN" ] ; then
   done;
 else
  if [ "$MODE" == "PT" ] ; then
-  sh ~/MODULE_ANA/ANA_V5/runall.sh files 
+  sh ${CODEVERSION}runall.sh files 
  else
-  sh ~/MODULE_ANA/ANA_V5/runall_si.sh files
+  sh ${CODEVERSION}runall_si.sh files
  fi; #MODE =PT
 fi; # MODE=LN
  
@@ -112,7 +119,7 @@ fi;
 
 fi;  # ARG != SHORT
 
-#check -1 STOP
+
 
 ### TODO:  MAKE SURE THE CLEANUP WORKS !!
 TIMECHECK=0
@@ -123,8 +130,7 @@ j=0;
 for i in 0 1 2 3; do
 #for i in 1; do
 THISDIR=${s}${i};
-mkdir ${THISDIR};
-
+mkfolder ${THISDIR}
 cd ./${THISDIR};
 #if [  "$ARG" != 'SHORT' ]; then
 ls ../Tech/*.root | grep DAQ | grep ${s}${i} > parselist_${s}${i};
@@ -133,7 +139,7 @@ if [ "$MODE" == "LN" ] ; then
  data=`ls -1 ../DATA/${MODE}_DAQ_BinaryData*${s}${i}*out.parse.root | head -n 1`
  ln -s $data ./${MODE}_DAQ_${DATE}_${s}${i}.root;
 else
-~/MODULE_ANA/ANA_V5/chain_parsed -f parselist_${s}${i} -o ${MODE}_DAQ_${DATE}_${s}${i}.root;
+${CODEVERSION}chain_parsed -f parselist_${s}${i} -o ${MODE}_DAQ_${DATE}_${s}${i}.root;
      check ${?} "chain_psf panel ${s}${i}";
 fi;
 
@@ -141,38 +147,37 @@ fi;
 #fi;
 # get floods
 # mv ../DATA/${MODE}_DAQ_${DATE}_${s}${i}.root .
-~/MODULE_ANA/ANA_V5/getfloods -f ${MODE}_DAQ_${DATE}_${s}${i}.root;
-check ${?} "getfloods_psf panel ${s}${i}";
-mkdir CHIPDATA;
+${CODEVERSION}getfloods -f ${MODE}_DAQ_${DATE}_${s}${i}.root;
+check ${?} "getfloods panel ${s}${i}";
+mkfolder CHIPDATA;
 mv ${MODE}_DAQ_${DATE}_${s}${i}.RENA?.floodsapd?.png ./CHIPDATA/
 mv ${MODE}_DAQ_${DATE}_${s}${i}.RENA?.Eapd?.png ./CHIPDATA/
+
 # crystal segmentation
+${CODEVERSION}anafloods -f ${MODE}_DAQ_${DATE}_${s}${i}.root; 
+check ${?} "anafloods_psf panel ${s}${i}";
+mkfolder ./FLOODS;
+mv ${MODE}_DAQ*${s}${i}*flood.png ./FLOODS
+mkfolder ./QUADRANTS;
+mv ${MODE}_DAQ*${s}${i}*quadrants.png ./QUADRANTS
 
-
-
-#~/MODULE_ANA/ANA_V5/anafloods -f ${MODE}_DAQ_${DATE}_${s}${i}.root; 
-#check ${?} "anafloods_psf panel ${s}${i}";
-# mkdir ./FLOODS;
-# mv ${MODE}_DAQ*${s}${i}*flood.png ./FLOODS
-# mkdir ./QUADRANTS;
-# mv ${MODE}_DAQ*${s}${i}*quadrants.png ./QUADRANTS
 # determine energy calibration parameters
-#~/MODULE_ANA/ANA_V5/enecal -f ${MODE}_DAQ_${DATE}_${s}${i}.root;
-#check ${?} "enecal_psf panel ${s}${i}";
+${CODEVERSION}enecal -f ${MODE}_DAQ_${DATE}_${s}${i}.root;
+check ${?} "enecal_psf panel ${s}${i}";
 ## rm ${MODE}_DAQ_${DATE}_${s}${i}.root;
 # perform energy calibration
-#~/MODULE_ANA/ANA_V5/enefit -f ${MODE}_DAQ_${DATE}_${s}${i}.enecal.root;
-#check ${?} "enefit_psf panel ${s}${i}";
-# mkdir ./ERES
-# mv ${MODE}_DAQ_${DATE}_${s}${i}*glob.png ./ERES/
-# rm ${MODE}_DAQ_${DATE}_${s}${i}.enecal.root;
-# mv ../${MODE}_DAQ_${DATE}_${s}${i}.RENA* ./CHIPDATA
+${CODEVERSION}enefit -f ${MODE}_DAQ_${DATE}_${s}${i}.enecal.root;
+check ${?} "enefit_psf panel ${s}${i}";
+ mkfolder ./ERES;
+ mv ${MODE}_DAQ_${DATE}_${s}${i}*glob.png ./ERES/
+ rm ${MODE}_DAQ_${DATE}_${s}${i}.enecal.root;
+ mv ${MODE}_DAQ_${DATE}_${s}${i}.RENA* ./CHIPDATA
 ##  rm *PED_BinaryData_*_${s}${i}*out.ped.RENA?; 
  cd ..;
 done;
 done;
 
-check -1 "WIP"
+
 
 SPLITS=0;
 
@@ -182,8 +187,8 @@ for s in L R; do
 j=0;
 for i in 0 1 2 3; do
 #for i in 0; do
-echo "Estimating split level"
-~/MODULE_ANA/ANA_V5/get_optimal_split -f ./${s}${i}/${MODE}_DAQ_${DATE}_${s}${i}.cal.root --${s} -rb ${j} > events${s}${i}.txt
+echo "Estimating split level ${s}${i}"
+${CODEVERSION}get_optimal_split -f ./${s}${i}/${MODE}_DAQ_${DATE}_${s}${i}.cal.root --${s} -rb ${j} > events${s}${i}.txt
 check ${?} "get_optimal_split panel ${s}${i}";
 #fi
 THISSPLITS=`grep FINDME events${s}${i}.txt | awk '{print $5}'`
@@ -204,7 +209,7 @@ j=0;
 for i in 0 1 2 3; do
 # merge all entries in a 4-up board
 cd ${s}${i}
-~/MODULE_ANA/ANA_V5/merge_4up -f ${MODE}_DAQ_${DATE}_${s}${i}.cal.root -rb ${j} --${s} -nc ${SPLITS} -ts ${TIME} -lt ${SPLITTIME};   
+${CODEVERSION}merge_4up -f ${MODE}_DAQ_${DATE}_${s}${i}.cal.root -rb ${j} --${s} -nc ${SPLITS} -ts ${TIME} -lt ${SPLITTIME};   
 check $? "merge_4up panel ${s}${j}"
 ((j++)) ; 
 cd ..;
@@ -218,21 +223,21 @@ done;
 #combining 4-up boards into cartridge:
 ((SPLITS--))
 for k in `seq 1 ${SPLITS}`; do
-~/MODULE_ANA/ANA_V5/merge_panel -f ${MODE}_DAQ_${DATE}_R0.4up0_part${k}.root -nb 4
+${CODEVERSION}merge_panel -f ${MODE}_DAQ_${DATE}_R0.4up0_part${k}.root -nb 4
 check ${?} "merge panel R part ${k}"
-~/MODULE_ANA/ANA_V5/merge_panel -f ${MODE}_DAQ_${DATE}_L0.4up0_part${k}.root -nb 4
+${CODEVERSION}merge_panel -f ${MODE}_DAQ_${DATE}_L0.4up0_part${k}.root -nb 4
 check ${?} "merge panel L part ${k}"
 #combining both sides:
-~/MODULE_ANA/ANA_V5/merge_coinc -a -fl ${MODE}_DAQ_${DATE}_part${k}_L.panel.root -fr ${MODE}_DAQ_${DATE}_part${k}_R.panel.root
+${CODEVERSION}merge_coinc -a -fl ${MODE}_DAQ_${DATE}_part${k}_L.panel.root -fr ${MODE}_DAQ_${DATE}_part${k}_R.panel.root
 check $? "mergecal part ${k}"
 done;
 
 
 
- ~/MODULE_ANA/ANA_V5/chain_merged -f ${MODE}_DAQ_${DATE}  -n $SPLITS
+${CODEVERSION}chain_merged -f ${MODE}_DAQ_${DATE}  -n $SPLITS
 check ${?} "chain_merged"
 
-~/MODULE_ANA/ANA_V5/mana -f ${MODE}_DAQ_${DATE}_all.merged.root
+${CODEVERSION}mana -f ${MODE}_DAQ_${DATE}_all.merged.root
 check ${?} "mana"
 
 fi; # if stop
