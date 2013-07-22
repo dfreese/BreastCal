@@ -22,6 +22,7 @@
 #include <iostream>
 
 #include "TROOT.h"
+#include "TKey.h"
 #include "TFile.h"
 #include "TNetFile.h"
 #include "TRandom.h"
@@ -83,6 +84,15 @@ int main(int argc, char *argv[]){
   mdata = new TChain(treename,chainname);
   //}
 
+  Int_t  filesread=0;
+  TH1F *E[RENACHIPS][MODULES][2];
+  TH1F *E_com[RENACHIPS][MODULES][2];
+  
+  TH1F *ETMP[RENACHIPS][MODULES][2];
+  TH1F *ETMP_com[RENACHIPS][MODULES][2];
+  TFile *decodedfile;
+  Char_t filename[50];
+  Char_t tmpstring[50];
 
   while (f >> curfilename) {   // FLAU edited, see note below
 
@@ -100,22 +110,77 @@ int main(int argc, char *argv[]){
 	  //f >> curfilename;  // FLAU commented out
     // -------------------------------------------------------	  
 
-	 //	 rootfile.open(curfilename) ;
-	 //         if !(rootfile.valid()) {
-	 //	     cout << curfilename << " invalid file name ! " << endl;
-	 //             continuel;
-	 //	   }
-    //	 for (i=0;i<RENACHIPS;i++){
-	   mdata->Add(curfilename);
+        filesread++;
+        cout << " Files read :: " << filesread << ". Current file : " << curfilename << endl; 
+
+	//  cout << " ListOfKeys :: "  <<  gDirectory->GetListOfKeys()  <<endl;
+
+
+        mdata->Add(curfilename);
+
+	
+       	decodedfile = new TFile(curfilename,"UPDATE");
+
+        if (!decodedfile || decodedfile->IsZombie()) {  
+         cout << "problems opening file " << filename << "\n.Exiting" << endl; 
+         return -11;}
+
+	//    decodedfile->ls();        
+        for (int kk=0;kk<RENACHIPS;kk++){
+          for (int j=0;j<2;j++){
+            for (i=0;i<4;i++){
+	      sprintf(tmpstring,"E[%d][%d][%d]",kk,i,j);  cout <<  tmpstring  ;
+             if (filesread==1) { 
+                E[kk][i][j]= (TH1F *) decodedfile->Get(tmpstring); 
+                E[kk][i][j]->SetDirectory(0);
+                   }
+             else { 
+	       //   TKey *key2 = (TKey*)gDirectory->GetListOfKeys()->FindObject(E[kk][i][j]->GetName());
+	       //     if (key2) { cout << "key found" << endl;
+		 	       ETMP[kk][i][j]= (TH1F *) decodedfile->Get(tmpstring); 
+	       //	 ETMP[kk][i][j]= (TH1F *) key2->ReadObj();
+			       cout << " " << ETMP[kk][i][j]->GetEntries() << " " << E[kk][i][j]->GetEntries() ;
+			       E[kk][i][j]->Add(ETMP[kk][i][j],1);
+			       cout << " " << E[kk][i][j]->GetEntries() <<endl;
+	       delete ETMP[kk][i][j]; //}
+               }
+             sprintf(tmpstring,"E_com[%d][%d][%d]",kk,i,j);
+             if (filesread==1) { 
+                 E_com[kk][i][j]= (TH1F *) decodedfile->Get(tmpstring); 
+                 E_com[kk][i][j]->SetDirectory(0); }
+             else { 
+	       ETMP_com[kk][i][j]= (TH1F *) decodedfile->Get(tmpstring);  
+	       E_com[kk][i][j]->Add(ETMP_com[kk][i][j]);
+	        delete ETMP_com[kk][i][j];
+               }
+     	      }
+            } // j
+	 }//kk
+
+        decodedfile->Close();
+
 	   //	 }
- }
+	   }
 
-f.close();
-
+  f.close();
+ TDirectory *subdir[RENACHIPS];
  rfile->cd();
 
  //	 for (i=0;i<RENACHIPS;i++){
 	   mdata->Write();
+	   
+            for (int kk=0;kk<RENACHIPS;kk++){
+             sprintf(tmpstring,"RENA%d",kk);
+             subdir[kk] = rfile->mkdir(tmpstring);
+             subdir[kk]->cd();
+             for (int j=0;j<2;j++){
+               for (int i=0;i<4;i++){
+	         E[kk][i][j]->Write();
+	         E_com[kk][i][j]->Write();
+                 }
+	        } // j
+          }//kk     
+	   
 	   //	 }
 
 

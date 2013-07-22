@@ -674,34 +674,38 @@ if (verbose){
 
 if (pedfilenamespec) {
 
-  ModuleDat *event = new ModuleDat();
+ ModuleDat *event = new ModuleDat();
  TTree *mdata; 
  int doubletriggers[RENACHIPS][MODULES]={{0}};
  int totaltriggers[RENACHIPS][MODULES][2]={{{0}}};
+ // Energy histograms ::
+ TH1F *E[RENACHIPS][MODULES][2];
+ TH1F *E_com[RENACHIPS][MODULES][2];
+ Char_t tmpstring[30];
+ Char_t titlestring[50];
+
+ if (verbose) cout << " Creating energy histograms " << endl;
+      for (int kk=0;kk<RENACHIPS;kk++){
+          for (int j=0;j<2;j++){
+            for (int i=0;i<4;i++){
+             sprintf(tmpstring,"E[%d][%d][%d]",kk,i,j);
+    	     sprintf(titlestring,"E RENA %d, Module %d, PSAPD %d",kk,i,j);
+             E[kk][i][j]=new TH1F(tmpstring,titlestring,Ebins,E_low,E_up);
+             sprintf(tmpstring,"E_com[%d][%d][%d]",kk,i,j);
+    	     sprintf(titlestring,"ECOM RENA %d, Module %d, PSAPD %d",kk,i,j);
+             E_com[kk][i][j]=new TH1F(tmpstring,titlestring,Ebins_com,E_low_com,E_up_com);
+            }
+            } // j
+	 }//kk
+
+      if (verbose) cout << " Creating tree " << endl;
+
  // for ( i=0; i < RENACHIPS; i++ ){
   sprintf(treename,"mdata");
   sprintf(treetitle,"Converted RENA data" );
   mdata =  new TTree(treename,treetitle);
   mdata->Branch("eventdata",&event);
-  /*
-  mdata->Branch("ct",&event.ct,"ct/L");
-  mdata->Branch("chip",&event.chip,"chip/S");
-  mdata->Branch("module",&event.module,"module/S");
-  mdata->Branch("apd",&event.apd,"apd/S");
-  mdata->Branch("Ec",&event.Ec,"Ec/F");
-  mdata->Branch("Ech",&event.Ech,"Ech/F");
-  mdata->Branch("x",&event.x,"x/F");
-  mdata->Branch("y",&event.y,"y/F");
-  mdata->Branch("E",&event.E,"E/F");
-  mdata->Branch("ft",&event.ft,"ft/F");
-  mdata->Branch("a",&event.a,"a/S");
-  mdata->Branch("b",&event.b,"b/S");
-  mdata->Branch("c",&event.c,"c/S");
-  mdata->Branch("d",&event.d,"d/S");
-  mdata->Branch("id",&event.id,"id/S");
-  mdata->Branch("pos",&event.pos,"pos/I");
-  //}
-  */
+ 
 for (int  ii = 0 ; ii< rawdata->GetEntries(); ii++ ){
    rawdata->GetEntry(ii);
    chip=rawevent.chip;
@@ -741,8 +745,25 @@ for (int  ii = 0 ; ii< rawdata->GetEntries(); ii++ ){
      event->Ec = rawevent.com2 - pedestals[chip][module][6];
      event->Ech=rawevent.com2h- pedestals[chip][module][7];
      mdata->Fill(); } }
+   // fill energy histogram
+   if (( event->module > MODULES ) || ( event->apd > 1 ) || (event->chip > RENACHIPS ) )  { cout << "ERROR !!" <<endl;
+     cout << " MODULE : " << event->module << ", APD : " << event->apd << ", CHIP : " << event->chip << endl; }
+   if (!( event->apd > 1 )){ 
+  E[event->chip][event->module][event->apd]->Fill(event->E);
+  E_com[event->chip][event->module][event->apd]->Fill(-event->Ec);  }
  } // loop over entries ii
 
+
+// need to write histograms to disk ::
+
+   for (int kk=0;kk<RENACHIPS;kk++){
+          for (int j=0;j<2;j++){
+            for (int i=0;i<4;i++){
+	      E[kk][i][j]->Write();
+              E_com[kk][i][j]->Write();
+            }
+            } // j
+	 }//kk
 
  cout << "========== Double Triggers =============== " << endl;
  for (int ii = 0 ;ii < RENACHIPS; ii++ ){

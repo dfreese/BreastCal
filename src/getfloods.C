@@ -145,17 +145,17 @@ Int_t main(int argc, Char_t *argv[])
 
 
       for (int kk=0;kk<RENACHIPS;kk++){
+           if (verbose) cout << " Obtaining histograms RENA " << kk << endl;
           for (j=0;j<2;j++){
-	    //            if (verbose) cout << " Creating histograms module " << j << endl;
 	 //
 	 //	 c1->Divide(2,2); 
             for (i=0;i<4;i++){
-             sprintf(tmpstring,"E[%d][%d][%d]",kk,i,j);
-    	     sprintf(titlestring,"E RENA %d, Module %d, PSAPD %d",kk,i,j);
-             E[kk][i][j]=new TH1F(tmpstring,titlestring,Ebins,E_low,E_up);
-             sprintf(tmpstring,"E_com[%d][%d][%d]",kk,i,j);
-    	     sprintf(titlestring,"ECOM RENA %d, Module %d, PSAPD %d",kk,i,j);
-             E_com[kk][i][j]=new TH1F(tmpstring,titlestring,Ebins_com,E_low_com,E_up_com);
+	      sprintf(tmpstring,"RENA%d/E[%d][%d][%d]",kk,kk,i,j);
+	     //    	     sprintf(titlestring,"E RENA %d, Module %d, PSAPD %d",kk,i,j);
+             E[kk][i][j]= (TH1F *) rfile->Get(tmpstring); //new TH1F(tmpstring,titlestring,Ebins,E_low,E_up);
+             sprintf(tmpstring,"RENA%d/E_com[%d][%d][%d]",kk,kk,i,j);
+	     //    	     sprintf(titlestring,"ECOM RENA %d, Module %d, PSAPD %d",kk,i,j);
+             E_com[kk][i][j]= (TH1F *) rfile->Get(tmpstring); //new TH1F(tmpstring,titlestring,Ebins_com,E_low_com,E_up_com);
 
 	    //   sprintf(tmpstring,"UNIT%d.E>>E[%d][%d][%d]",i,kk,i,j);
 	    //   sprintf(cutstring,"UNIT%d.com%dh<%d",i,j+1,threshold);
@@ -171,6 +171,9 @@ Int_t main(int argc, Char_t *argv[])
             } // j
 	 }//kk
 
+      //    cout << " E[3][0][1]->GetEntries() :: " <<       E[3][0][1]->GetEntries()  << endl;
+
+
 
        //       TSpectrum *sp = new TSpectrum();
        //       Int_t npeaks,efound;
@@ -181,7 +184,7 @@ Int_t main(int argc, Char_t *argv[])
 
 
        if (verbose) cout << " Filling Energy Histograms " << endl;
-        
+       /*
        for(l=0;l<block->GetEntries();l++){
 	 block->GetEntry(l);
          if ( ((l%(entries/5))==0)&&(l>0)) {
@@ -190,6 +193,7 @@ Int_t main(int argc, Char_t *argv[])
          E_com[event->chip][event->module][event->apd]->Fill(-event->Ec);  
        } // l 
 
+       */
 
        for (int kk=0;kk<RENACHIPS;kk++){
         for (j=0;j<2;j++){
