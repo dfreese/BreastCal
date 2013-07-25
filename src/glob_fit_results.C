@@ -11,7 +11,7 @@
 #include "TMath.h"
 #include "TF1.h"
 #include "TPaveText.h"
-#include "apd_fit.h"
+#include "Apd_Fit.h"
 #include "./decoder.h"
 #include "TError.h"
 

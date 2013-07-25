@@ -129,7 +129,7 @@ int main(int argc, char *argv[]){
         for (int kk=0;kk<RENACHIPS;kk++){
           for (int j=0;j<2;j++){
             for (i=0;i<4;i++){
-	      sprintf(tmpstring,"E[%d][%d][%d]",kk,i,j);  cout <<  tmpstring  ;
+	      sprintf(tmpstring,"E[%d][%d][%d]",kk,i,j); //  cout <<  tmpstring  ;
              if (filesread==1) { 
                 E[kk][i][j]= (TH1F *) decodedfile->Get(tmpstring); 
                 E[kk][i][j]->SetDirectory(0);
@@ -139,9 +139,9 @@ int main(int argc, char *argv[]){
 	       //     if (key2) { cout << "key found" << endl;
 		 	       ETMP[kk][i][j]= (TH1F *) decodedfile->Get(tmpstring); 
 	       //	 ETMP[kk][i][j]= (TH1F *) key2->ReadObj();
-			       cout << " " << ETMP[kk][i][j]->GetEntries() << " " << E[kk][i][j]->GetEntries() ;
+			       //		       cout << " " << ETMP[kk][i][j]->GetEntries() << " " << E[kk][i][j]->GetEntries() ;
 			       E[kk][i][j]->Add(ETMP[kk][i][j],1);
-			       cout << " " << E[kk][i][j]->GetEntries() <<endl;
+			       //   cout << " " << E[kk][i][j]->GetEntries() <<endl;
 	       delete ETMP[kk][i][j]; //}
                }
              sprintf(tmpstring,"E_com[%d][%d][%d]",kk,i,j);

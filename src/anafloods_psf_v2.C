@@ -14,12 +14,12 @@
 #include "TMath.h"
 
 #include "./decoder.h"
-#include "./detCluster.h"
-#include "./findnext.h"
+#include "./DetCluster.h"
+#include "./FindNext.h"
 
 //#include "./convertconfig.h"
 
-#include "apd_sort16.h"
+#include "Apd_Sort16_v2.h"
  
 //#define CHIPS 2
 //#define DEVELOP

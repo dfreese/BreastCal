@@ -12,9 +12,9 @@
 #include "TVector.h"
 #include "TMath.h"
 #include "TF1.h"
-#include "apd_fit.h"
+#include "Apd_Fit.h"
 #include "./decoder.h"
-#include "apd_peaktovalley.h"
+#include "Apd_Peaktovalley.h"
 #include "./ModuleCal.h"
 
 int main(int argc, Char_t *argv[])

@@ -9,8 +9,8 @@
 
 #define INFO
 
-#include "apd_fit.h"
-#include "apd_peaktovalley.h"
+#include "Apd_Fit.h"
+#include "Apd_Peaktovalley.h"
 #include "libInit_avdb.h"
 #include "myrootlib.h"
 
@@ -634,14 +634,14 @@ Int_t fitpos(TH1F *xpos[PEAKS], TF1 *posgausfits[PEAKS],Int_t verbose = 0)
  =======================================================================================================================
  =======================================================================================================================
  */
-/*
-Double_t TotalPTV(Double_t *x, Double_t *par)
+
+//Double_t TotalPTV(Double_t *x, Double_t *par)
 
 // Combined background + signal 
 //{ 
-  //	/*~~~~~~~~~~~~~~~~*/
+	/*~~~~~~~~~~~~~~~~*/
   //	Double_t	tot = 0;
-	//	/*~~~~~~~~~~~~~~~~*/
+		/*~~~~~~~~~~~~~~~~*/
 	/*
 	for(Int_t i = 0; i < 8; i++) {
 		tot += Signal(x, &par[3 * i]);

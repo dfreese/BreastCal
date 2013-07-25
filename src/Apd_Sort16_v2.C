@@ -3,7 +3,7 @@
 #include "TMath.h"
 #include "TGraph.h"
 
-#include "apd_sort16.h"
+#include "Apd_Sort16_v2.h"
 #define SPEAKS 16
 
 /* This version deals with the more pincushioned floods with the capacitor in between channels */

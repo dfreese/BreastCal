@@ -6,7 +6,7 @@
 
 
 #include "config.h"
-#include "util.h"
+#include "Util.h"
 //#define _HOMEDIR=/Users/arne
 //FIXME :: need something more robust
 //#include "/Users/arne/root/libInit_avdb.h"

@@ -13,7 +13,7 @@
 #define BINS_PER_COM_PHOTOPEAK 38*5
 //FIXME :: This should link to a global setting
 #define PP_UP_EDGE 2800
-#include "apd_fit.h"
+#include "Apd_Fit.h"
 //#include "decoder.h"
 
 
