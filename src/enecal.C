@@ -90,7 +90,7 @@ int main(int argc, Char_t *argv[])
 	     cout << " M" << i << ":: " ;
               for (j=0;j<2;j++){
 		cout << "A" << j << "- " ;
-                cout << (*uu_c)(kk+i*RENACHIPS+j*MODULES) << " " << (*vv_c)(kk+i*RENACHIPS+j*MODULES) << " ";
+                cout << (*uu_c)(kk+i*RENACHIPS+j*MODULES*RENACHIPS) << " " << (*vv_c)(kk+i*RENACHIPS+j*MODULES*RENACHIPS) << " ";
 	      }
 	   }
 	   cout << endl;
@@ -225,10 +225,10 @@ int main(int argc, Char_t *argv[])
 	    block->GetEntry(i);
 	    chip=event->chip;
             module=event->module;
-            apd=event->apd;
+            apd=event->apd; 
 
 	   // perform time calibration
-            if ((event->apd==0) || (event->apd==1) ) event->ft=finecalc(event->ft,(*uu_c)(event->chip+RENACHIPS*event->module+event->apd*MODULES),(*vv_c)(event->chip+RENACHIPS*event->module+event->apd*MODULES) );
+            if ((event->apd==0) || (event->apd==1) ) event->ft=finecalc(event->ft,(*uu_c)(event->chip+RENACHIPS*event->module+event->apd*MODULES*RENACHIPS),(*vv_c)(event->chip+RENACHIPS*event->module+event->apd*MODULES*RENACHIPS) );
 
 
 	    if (validpeaks[chip][module][apd]){
@@ -324,9 +324,9 @@ Double_t finecalc(Double_t uv, Float_t u_cent, Float_t v_cent){
   Int_t UV = (Int_t) uv;
   Int_t u = (( UV & 0xFFFF0000 ) >> 16 );
   Int_t v = ( UV & 0xFFFF );
-  cout << " finecalc : u = " << u << " v = " << v ;
+  cout << " finecalc : u = " << u << " v = " << v  << " ( center :: " << u_cent << ","<< v_cent << ")";
   tmp=TMath::ATan2(u-u_cent,v-v_cent);
-  cout << " tmp = " << tmp << endl;
+    cout << " tmp = " << tmp << endl;
   if (tmp < 0. ) { tmp+=2*3.141592;}
   return tmp;///(2*3.141592*CIRCLEFREQUENCY);
 }

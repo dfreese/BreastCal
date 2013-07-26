@@ -651,7 +651,7 @@ if (pedfilenamespec) {
      event->apd=1;   
      // FIXME :: need to find solution for ft. 
      //     event->ft=finecalc(rawevent.u2h,rawevent.v2h,uu_c[chipId][module][1],vv_c[chipId][module][1])  ;
-     event->ft= (  ( ( rawevent.u2h & 0xFF ) << 0xF  )  | (  rawevent.v2h & 0xFF ) ) ;
+     event->ft= (  ( ( rawevent.u2h & 0xFFFF ) << 16  )  | (  rawevent.v2h & 0xFFFF ) ) ;
      //  ,rawevent.v2h,uu_c[chipId][module][1],vv_c[chipId][module][1])  ;
      event->Ec = rawevent.com2 - pedestals[chipId][module][6];
      event->Ech=rawevent.com2h- pedestals[chipId][module][7];
