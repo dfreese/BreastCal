@@ -320,7 +320,7 @@ int main(int argc, Char_t *argv[])
            if (evt->dtf < -TMath::Pi() ) evt->dtf+=2*TMath::Pi();
            if (evt->dtf >  TMath::Pi() ) evt->dtf-=2*TMath::Pi();
            evt->dtf*=1e9;
-           evt->dtf/=(2*TMath::Pi()*980e3);
+           evt->dtf/=(2*TMath::Pi()*UVFREQUENCY);
 	   //	   cout << "Filling Tree : (rightfine=" << rightfine << ",leftfine=" << leftfine << ")" << endl;
            if  (((EL->ft>-1)&&(ER->ft>-1))&& (ER->pos == EL->pos ) )  { evts++; merged->Fill();
 

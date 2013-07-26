@@ -17,7 +17,8 @@ class ModuleDat : public TObject {
   Float_t x;
   Float_t y;
   Float_t E;
-  Float_t ft;
+  // this is double because I store u and v in it during decoding
+  Double_t ft;
   Int_t pos;
   Short_t a;
   Short_t b;

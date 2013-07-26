@@ -32,6 +32,7 @@
 #include "TNtuple.h"
 #include "TH2F.h"
 #include "TChain.h"
+#include "TVector.h"
 #include "./decoder.h"
 
 //#include "./convertconfig.h"
@@ -94,6 +95,10 @@ int main(int argc, char *argv[]){
   Char_t filename[50];
   Char_t tmpstring[50];
 
+  TVector* uu_c=0;
+  TVector* vv_c=0;
+
+
   while (f >> curfilename) {   // FLAU edited, see note below
 
     // -------------------------------------------------------	  
@@ -124,6 +129,13 @@ int main(int argc, char *argv[]){
         if (!decodedfile || decodedfile->IsZombie()) {  
          cout << "problems opening file " << filename << "\n.Exiting" << endl; 
          return -11;}
+ 
+	// FIXME:: Read circle centers from first file - should have a way to check if there are enough entries to have reliable centers. 
+
+	if ( filesread == 1 ) {
+         uu_c = (TVector *) decodedfile->Get("uu_c");
+         vv_c = (TVector *) decodedfile->Get("vv_c");
+	}
 
 	//    decodedfile->ls();        
         for (int kk=0;kk<RENACHIPS;kk++){
@@ -180,7 +192,11 @@ int main(int argc, char *argv[]){
                  }
 	        } // j
           }//kk     
-	   
+                
+	    subdir[0]->cd("../");
+            
+	    if (uu_c) uu_c->Write("uu_c");
+            if (vv_c) vv_c->Write("vv_c");
 	   //	 }
 
 

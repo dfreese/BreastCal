@@ -1,28 +1,5 @@
 #include <stdlib.h>
-
-#include "TError.h" 
-#include "TROOT.h"
-#include "Riostream.h"
-#include "TTree.h"
-#include "TFile.h"
-#include "TCanvas.h"
-#include "TSpectrum.h"
-#include "TH2F.h"
-#include "TVector.h"
-#include "TMath.h"
-#include "./decoder.h"
-#include "./ModuleDat.h"
-
-
-#define FILENAMELENGTH	120
-#define MAXFILELENGTH	160
-
-//#define CHIPS 2
-
-
-
-Double_t GetPhotopeak_v1(TH1F *hist,Double_t pp_low,Double_t pp_up,Int_t verbose);
-Double_t GetPhotopeak_v2(TH1F *hist,Double_t pp_low,Double_t pp_up,Int_t verbose);
+#include "getfloods.h"
 
 Int_t main(int argc, Char_t *argv[])
 {
@@ -171,8 +148,9 @@ Int_t main(int argc, Char_t *argv[])
             } // j
 	 }//kk
 
-      //    cout << " E[3][0][1]->GetEntries() :: " <<       E[3][0][1]->GetEntries()  << endl;
 
+
+      //    cout << " E[3][0][1]->GetEntries() :: " <<       E[3][0][1]->GetEntries()  << endl;
 
 
        //       TSpectrum *sp = new TSpectrum();
@@ -327,7 +305,8 @@ Int_t main(int argc, Char_t *argv[])
 
        ppVals.Write("pp_spat");
        ppVals_com.Write("pp_com");
-	rfile->Close();
+       block->Write();
+       rfile->Close();
      
 
 	return 0;}

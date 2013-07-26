@@ -24,8 +24,17 @@ function mkfolder ()
 }
 
 
+function timing ()
+ { START=$1;
+   TIME=$(( `date +%s` - $START ));
+   echo $TIME;
+}
+
  MODE=$1;
  ARG=$2;
+ STARTTIME=`date +%s`
+
+ 
 
  # specifiy SHORT on the command line to only do analysis 
  # for example: sh ~/MODULE_ANA/PSF_V4/cart_ana.sh PT SHORT
@@ -82,10 +91,17 @@ stop=0;
  if [ -e pedconv.out ] ; then 
    rm pedconv.out
  fi;
- for i in `cat pedfiles`; do ${CODEVERSION}Decode -p -f $i >> pedconv.out ;  check ${?} "converting pedfile ${i}"; done;
+
+echo -n " Converting pedfiles @ "
+timing $STARTTIME
+
+ for i in `cat pedfiles`; do ${CODEVERSION}decoder -p -f $i >> pedconv.out ;  check ${?} "converting pedfile ${i}"; done;
 # for i in `cat daqfiles`; do ~/MODULE_ANA/PSF_V4/UYORUK_toROOT_V3 -f $i;  check ${?} "converting daqfile ${i}";done;
 
 # pedestal correction, parsing and fine time calculation
+
+echo -n " pedestal decoding done @ "
+timing $STARTTIME
 
 if [ "$MODE" == "LN" ] ; then
   for i in L R; do
@@ -105,6 +121,9 @@ else
   sh ${CODEVERSION}runall_si.sh files
  fi; #MODE =PT
 fi; # MODE=LN
+
+echo -n " decoding done @ "
+timing $STARTTIME
  
 
 if [ ! -d DATA ] ;then 
@@ -154,7 +173,7 @@ mv ${MODE}_DAQ_${DATE}_${s}${i}.RENA?.floodsapd?.png ./CHIPDATA/
 mv ${MODE}_DAQ_${DATE}_${s}${i}.RENA?.Eapd?.png ./CHIPDATA/
 
 # crystal segmentation
-${CODEVERSION}anafloods -f ${MODE}_DAQ_${DATE}_${s}${i}.root; 
+${CODEVERSION}anafloods_psf_v2 -f ${MODE}_DAQ_${DATE}_${s}${i}.root; 
 check ${?} "anafloods_psf panel ${s}${i}";
 mkfolder ./FLOODS;
 mv ${MODE}_DAQ*${s}${i}*flood.png ./FLOODS

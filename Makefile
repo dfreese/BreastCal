@@ -11,7 +11,7 @@
 LIBRARY=~/root/macros/myrootlib.C
 
 #
-CFLAGS =  -Wall -W -g -fPIC -I$(HOME)/root/macros -I./include -I$(ROOTSYS)/include
+CFLAGS =  -Wall -Wno-deprecated -W -g -fPIC -I$(HOME)/root/macros -I./include -I$(ROOTSYS)/include
 CXXFLAGS = $(CFLAGS) $(shell root-config --cflags) -O3
 MYLIB = -L$(HOME)/root/macros -lmyrootlib -lInit_avdb
 DICTLIB = -L./lib -lModuleDatDict
@@ -36,8 +36,8 @@ BINS := $(shell  echo $(BINNS) |  sed  's/\(\.\/bin\/[A-Z]\+[A-Za-z_0-9]\+\)\b//
 SOLIBS := ./lib/libModuleDatDict.so
 
 
-depend: .depend .rules
-	@echo "Done with dependencies"
+#depend: .depend .rules
+#	@echo "Done with dependencies"
 
 default: ./ModuleDatDict.C ./lib/libModuleDatDict.so  $(BINS)
 	@echo "Done making ANA CODE"

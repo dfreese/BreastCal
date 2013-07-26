@@ -5,7 +5,7 @@
 #include <string>
 
 
-#include "config.h"
+//#include "config.h"
 #include "Util.h"
 //#define _HOMEDIR=/Users/arne
 //FIXME :: need something more robust
@@ -23,8 +23,8 @@ streampos endPos;
 vector<char> packBuffer;
 unsigned long long int byteCounter;
 #define PAULS_PANELID true
-//#define MODULE_BASED_READOUT false
-#define MODULE_BASED_READOUT true
+#define MODULE_BASED_READOUT false
+//#define MODULE_BASED_READOUT true
 //#define NUM_RENA_PER_DAQ 8
 
 #define CHANPERMODULE 8
@@ -69,6 +69,9 @@ unsigned long long int byteCounter;
 #define EGATEMAX 650
 // rollovertime = 2^42 
 #define ROLLOVERTIME 4398046511104 
+
+#define UVFREQUENCY 980e3
+
 
 //TROOT::gErrorIgnoreLevel=1001;
   //TROOT::gErrorIgnoreLevel = 1001;

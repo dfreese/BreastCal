@@ -7,27 +7,13 @@ This program fills the energy histograms for every crystal, needed to do energy 
  */
 
 
-#include "TROOT.h"
-#include "Riostream.h"
-#include "TTree.h"
-#include "TFile.h"
-#include "TCanvas.h"
-#include "TSpectrum.h"
-#include "TSpectrum2.h"
-#include "TH2F.h"
-#include "TVector.h"
-#include "TMath.h"
-#include "TF1.h"
-#include "./decoder.h"
-#include "./ModuleDat.h"
- 
+#include "enecal.h" 
 //void usage(void);
 
 //void usage(void){
 // cout << " Parsetomodule -f [filename] [-p [pedfile] -v -o [outputfilename]] -n [nrfiles in loop] -t [threshold]" <<endl;
 //  return;}
 
-Int_t getcrystal(Double_t x, Double_t y, Double_t xpos[64], Double_t ypos[64], Int_t verbose );
 
 int main(int argc, Char_t *argv[])
 {
@@ -83,6 +69,9 @@ int main(int argc, Char_t *argv[])
 	//        TF1 *Efits[4][2][64];
         TVector* ppVals = (TVector *) rfile->Get("pp_spat");
         TVector* ppVals_com = (TVector *) rfile->Get("pp_com");
+        TVector* uu_c = (TVector *) rfile->Get("uu_c");
+        TVector* vv_c = (TVector *) rfile->Get("vv_c");
+
 	//        TCanvas *c1 =new TCanvas();
         Char_t treename[40];
         TDirectory *subdir[RENACHIPS];
@@ -90,6 +79,24 @@ int main(int argc, Char_t *argv[])
         strncpy(filebase,filename,strlen(filename)-5);
         filebase[strlen(filename)-5]='\0';
         if (verbose) cout << " filebase = " << filebase << endl;
+
+
+      if (verbose) { 
+        cout << " Circle centers :: " << endl;
+     
+       for (int kk=0;kk<RENACHIPS;kk++){
+         cout << " Chip " << kk << " : " ;
+           for (i=0;i<4;i++){
+	     cout << " M" << i << ":: " ;
+              for (j=0;j<2;j++){
+		cout << "A" << j << "- " ;
+                cout << (*uu_c)(kk+i*RENACHIPS+j*MODULES) << " " << (*vv_c)(kk+i*RENACHIPS+j*MODULES) << " ";
+	      }
+	   }
+	   cout << endl;
+       }
+      } // verbose
+
 
 	for (m=0;m<RENACHIPS;m++){
         for (j=0;j<4;j++){
@@ -220,6 +227,10 @@ int main(int argc, Char_t *argv[])
             module=event->module;
             apd=event->apd;
 
+	   // perform time calibration
+            if ((event->apd==0) || (event->apd==1) ) event->ft=finecalc(event->ft,(*uu_c)(event->chip+RENACHIPS*event->module+event->apd*MODULES),(*vv_c)(event->chip+RENACHIPS*event->module+event->apd*MODULES) );
+
+
 	    if (validpeaks[chip][module][apd]){
                
 	      // if (validpeaks[m][0][0]&&UNIT0.com1h<threshold)
@@ -304,3 +315,19 @@ Int_t getcrystal(Double_t x, Double_t y, Double_t xpos[64], Double_t ypos[64], I
     histnr=9999;
     
   return -2;}
+
+
+
+
+Double_t finecalc(Double_t uv, Float_t u_cent, Float_t v_cent){
+  Double_t tmp;
+  Int_t UV = (Int_t) uv;
+  Int_t u = (( UV & 0xFFFF0000 ) >> 16 );
+  Int_t v = ( UV & 0xFFFF );
+  cout << " finecalc : u = " << u << " v = " << v ;
+  tmp=TMath::ATan2(u-u_cent,v-v_cent);
+  cout << " tmp = " << tmp << endl;
+  if (tmp < 0. ) { tmp+=2*3.141592;}
+  return tmp;///(2*3.141592*CIRCLEFREQUENCY);
+}
+

@@ -36,6 +36,7 @@ PROGRAM needs to:
 #include "TTree.h"
 #include "Riostream.h"
 #include "TMath.h"
+#include "TVector.h"
 #include "./decoder.h"
 #include "./ModuleDat.h"
 //#include "./convertconfig.h"
@@ -233,6 +234,53 @@ for (i = 0; i < 36; i++) {
      sprintf(ascifilename,"%s.ascii",filename);}
 
 
+ Char_t treename[10],treetitle[40];
+
+  ModuleDat *event = new ModuleDat();
+ int doubletriggers[RENACHIPS][MODULES]={{0}};
+ int totaltriggers[RENACHIPS][MODULES][2]={{{0}}};
+ // Energy histograms ::
+ TH1F *E[RENACHIPS][MODULES][2];
+ TH1F *E_com[RENACHIPS][MODULES][2];
+ TTree *mdata=0; 
+
+
+ TVector uu_c(RENACHIPS*MODULES*2);
+   TVector vv_c(RENACHIPS*MODULES*2);
+  Long64_t uventries[RENACHIPS][MODULES][2]={{{0}}};
+  //  int pedestal[RENACHIPS][MODULES][8];
+
+
+
+if (pedfilenamespec) {
+
+ Char_t tmpstring[30];
+ Char_t titlestring[50];
+
+ if (verbose) cout << " Creating energy histograms " << endl;
+      for (int kk=0;kk<RENACHIPS;kk++){
+          for (int j=0;j<2;j++){
+            for (int i=0;i<4;i++){
+             sprintf(tmpstring,"E[%d][%d][%d]",kk,i,j);
+    	     sprintf(titlestring,"E RENA %d, Module %d, PSAPD %d",kk,i,j);
+             E[kk][i][j]=new TH1F(tmpstring,titlestring,Ebins,E_low,E_up);
+             sprintf(tmpstring,"E_com[%d][%d][%d]",kk,i,j);
+    	     sprintf(titlestring,"ECOM RENA %d, Module %d, PSAPD %d",kk,i,j);
+             E_com[kk][i][j]=new TH1F(tmpstring,titlestring,Ebins_com,E_low_com,E_up_com);
+            }
+            } // j
+	 }//kk
+
+      if (verbose) cout << " Creating tree " << endl;
+
+ // for ( i=0; i < RENACHIPS; i++ ){
+  sprintf(treename,"mdata");
+  sprintf(treetitle,"Converted RENA data" );
+  mdata =  new TTree(treename,treetitle);
+  mdata->Branch("eventdata",&event);
+ } 
+
+
   if (genascifile){ ascifile.open(ascifilename);}
   /*
  printf("Conversion program for Rena Data\n");
@@ -243,7 +291,7 @@ for (i = 0; i < 36; i++) {
   */
  hfile = new TFile(outfilename,"RECREATE"); 
 
- Char_t treename[10],treetitle[40];
+
  chipevent rawevent;
  TTree *rawdata; 
 
@@ -350,8 +398,10 @@ for (i = 0; i < 36; i++) {
             chipId++;
         }
         trigCode = int(packBuffer[2] & 0x0F);
-	//        cout << "trigCode = 0x" << hex << trigCode << dec ;
-	//	cout << " chipId = " << chipId << "; fpgaId = " << fpgaId << endl;
+#ifdef DEBUG
+	      cout << " trigCode = 0x" << hex << trigCode << dec ;
+	      cout << " chipId = " << chipId << "; fpgaId = " << fpgaId << endl;
+#endif
         //}
     }
     else {
@@ -384,10 +434,6 @@ for (i = 0; i < 36; i++) {
 
     //cout << "coin = " << coin << " " << "chipId = " << chipId << endl;
 
-    //  RMChip* rmChip = device->readoutMap->getChipById(chipId);
-
-    //RENAChip *currentChip = device->getRENAChipPtr(chipId);
-
     //if (packBuffer.size()!=device->getPackSize()) {
     //    droppedPckCnt++;
     //    return;
@@ -413,6 +459,7 @@ for (i = 0; i < 36; i++) {
       //  packetSize = rmChip->packetSize;
       packetSize=146; //FIXME -- need to be changed for data later than 1/4/13 .. ( should be 138 )
       moduletriggers=4;
+      trigCode = 0xF;
     }
     else { // MODULE_BASED_READOUT
         if (trigCode == 0) {
@@ -500,10 +547,9 @@ for (i = 0; i < 36; i++) {
         }
     }
 
-    //    cout << " Size ADCBLOCK :: " << adcBlock.size() << endl; 
+    //        cout << " Size ADCBLOCK :: " << adcBlock.size() << endl; 
 
     // Now we have all values in adcBlock vector.
-
 
     //DEBUG
     //cout << "Dropped = " << droppedPckCnt << endl;
@@ -518,22 +564,24 @@ for (i = 0; i < 36; i++) {
 
     for (int ii=0;ii<4;ii++) { nrchips+= (( trigCode >> ii ) & ( 0x1 ) );}
 
-    // if ( chipId == 1 ){
 
-/*
-   cout << "Dropped = " << droppedPckCnt << endl;
+
+    /*
+    cout << "Dropped = " << droppedPckCnt << " ( nrchips =  " << nrchips << " , even = " << even << " ) " << endl;
         for (int iii=0; iii<adcBlock.size(); iii++) {
 	  cout << iii << " = " << adcBlock[iii] << " | ";
           if ( (( iii+1 )%12 )==0 ) cout << endl;
         }
         cout << endl;
- */
+    */
+
 #define SHIFTFACCOM 4
 #define SHIFTFACSPAT 12
 #define BYTESPERCOMMON 12   // 4 * 3 = 12 ( 4 commons per module, 3 values per common )
 #define VALUESPERSPATIAL 4
 
-#define UNUSEDCHANNELOFFSET 0
+    // should be 2 for data obtained before 1/4/2013
+#define UNUSEDCHANNELOFFSET 2
 
     int kk=0;
     for (int iii=0;iii<4;iii++ ) {
@@ -560,19 +608,126 @@ for (i = 0; i < 36; i++) {
                rawevent.pos=sourcepos;
               kk++;
               rawdata->Fill();
-      } // trigcode
-    } // for loop iii
 
+
+if (pedfilenamespec) {
+
+             module=iii;
+             event->ct=timestamp; 
+             event->chip=rawevent.chip;
+	     event->module=iii;
+	     event->a=rawevent.a - pedestals[chipId][module][0];
+	     event->b=rawevent.b - pedestals[chipId][module][1];
+	     event->c=rawevent.c - pedestals[chipId][module][2];
+	     event->d=rawevent.d - pedestals[chipId][module][3];
+	     event->E=event->a+event->b+event->c+event->d;
+	     event->x= event->a + event->d - ( event->b + event->c );
+	     event->y= event->c + event->d - ( event->b + event->a );
+	     event->x/=event->E;
+	     event->y/=event->E;
+
+             event->apd=-1;
+	     event->id=-1;
+	     event->pos=rawevent.pos;
+#ifdef DEBUG
+	     cout << " chipId = " << chipId << " module = " << module << endl;
+#endif 
+
+   if ( (rawevent.com1h - pedestals[chipId][module][5]) < threshold ) { 
+     if ( (rawevent.com2h - pedestals[chipId][module][7]) > threshold ) { 
+       totaltriggers[chipId][module][0]++;
+       event->apd=0; 
+       // FIXME
+       //       event->ft=finecalc(rawevent.u1h,rawevent.v1h,uu_c[chipId][module][0],vv_c[chipId][module][0])  ;
+       event->ft= (  ( ( rawevent.u1h & 0xFFFF ) << 16  )  | (  rawevent.v1h & 0xFFFF ) ) ;
+       event->Ec= rawevent.com1 - pedestals[chipId][module][4];
+       event->Ech=rawevent.com1h - pedestals[chipId][module][5];
+       mdata->Fill(); }
+     else doubletriggers[chipId][module]++;
+   }
+   else {
+     if ( (rawevent.com2h - pedestals[chipId][module][5]) < threshold ) {   
+     totaltriggers[chipId][module][1]++;
+     event->apd=1;   
+     // FIXME :: need to find solution for ft. 
+     //     event->ft=finecalc(rawevent.u2h,rawevent.v2h,uu_c[chipId][module][1],vv_c[chipId][module][1])  ;
+     event->ft= (  ( ( rawevent.u2h & 0xFF ) << 0xF  )  | (  rawevent.v2h & 0xFF ) ) ;
+     //  ,rawevent.v2h,uu_c[chipId][module][1],vv_c[chipId][module][1])  ;
+     event->Ec = rawevent.com2 - pedestals[chipId][module][6];
+     event->Ech=rawevent.com2h- pedestals[chipId][module][7];
+     mdata->Fill(); } }
+   // fill energy histogram
+#ifdef DEBUG
+   if (( event->module > MODULES ) || ( event->apd > 1 ) || ( event->apd < 0) || (event->chip > RENACHIPS ) )  { cout << "ERROR !!" ;
+     cout << " MODULE : " << event->module << ", APD : " << event->apd << ", CHIP : " << event->chip << endl; }
+#endif
+   if (( event->apd == 1 )||(event->apd ==0 )){ 
+  E[event->chip][event->module][event->apd]->Fill(event->E);
+  E_com[event->chip][event->module][event->apd]->Fill(-event->Ec);  }
+
+
+ } // pedfilenamespec
+
+
+  if (uvcalc){
+
+    // to calculate circle centers we need to make sure the module triggered, so we use a high threshold
+    int uvthreshold = -1000;
+   
+
+    // if (verbose)    cout << " Calculating UV " << " entries :: " << rawdata->GetEntries() << endl;
+    //    for (int  ii = 0 ; ii< rawdata->GetEntries(); ii++ ){
+    //   rawdata->GetEntry(ii);
+    //   chip = rawevent.chip;
+    //   module = rawevent.module;
+    //   if (( ii < 20 )&&(verbose)) {
+    //     cout << " Com1h : " << rawevent.com1h << " pedestal: " << pedestals[chip][module][5] ;
+    //     cout << " Com1h-ped: " << rawevent.com1h - pedestals[chip][module][5]  << " valid: ";
+    //     cout <<  ((rawevent.com1h - pedestals[chip][module][5]) < uvthreshold) << endl ;
+    //   }
+   if (  ( rawevent.com1h - pedestals[chipId][module][5] ) < uvthreshold ) {
+     uventries[chipId][module][0]++;
+     uu_c(chipId+module*RENACHIPS+0)+=(Float_t)(rawevent.u1h-uu_c(chipId+module*RENACHIPS+0))/uventries[chipId][module][0]; 
+     vv_c(chipId+module*RENACHIPS+0)+=(Float_t)(rawevent.v1h-vv_c(chipId+module*RENACHIPS+0))/uventries[chipId][module][0]; 
+    }
+   if (( rawevent.com2h - pedestals[chipId][module][7] ) < uvthreshold ) {
+      uventries[chipId][module][1]++;
+      uu_c(chipId+RENACHIPS*module+1*MODULES*RENACHIPS)+=(Float_t)(rawevent.u2h-uu_c(chipId+module*RENACHIPS+1*MODULES*RENACHIPS))/uventries[chipId][module][1]; 
+      vv_c(chipId+RENACHIPS*module+1*MODULES*RENACHIPS)+=(Float_t)(rawevent.v2h-vv_c(chipId+module*RENACHIPS+1*MODULES*RENACHIPS))/uventries[chipId][module][1]; 
+   }
+  } // if uvcalc
+
+     } // trigcode
+    } // for loop iii
+	  
     //  } // chipID
 
 	    //                parsePack(packBuffer);
                 packBuffer.clear();
 	  }
- } // loop over ii
+	  //	  cout << " Packet Processed " << endl;
+ } // loop over i
 
+ cout << " File Processed " << endl;
+
+ if (uvcalc){
+ if (verbose)   cout <<  " Averaging the circle Centers " << endl;
+
+if (verbose){
+ for (int jj=0;jj<RENACHIPS;jj++){
+   for (int ii=0;ii<MODULES;ii++) {
+     for (int mm=0;mm<2;mm++) {
+       cout << " Circle Center Chip " << jj << " Module " << ii << " APD " << mm << ": "  ;
+       cout << "uu_c = " << uu_c(jj+RENACHIPS*ii+mm*MODULES*RENACHIPS) << " vv_c = " << vv_c(jj+RENACHIPS*ii+mm*MODULES*RENACHIPS) << " nn_entries = ";
+       cout << uventries[jj][ii][mm] << endl;   }
+   }
+ }
+ } // verbose
+
+  } // uvcalc
+
+ 
  // Calculate pedestal
-
-
 
   //pedestal analysis
   if (calcpedestal==1){
@@ -623,138 +778,12 @@ for (i = 0; i < 36; i++) {
 
 
   
-  Float_t uu_c[RENACHIPS][MODULES][2]={{{0}}};
-  Float_t vv_c[RENACHIPS][MODULES][2]={{{0}}};
-  Long64_t uventries[RENACHIPS][MODULES][2]={{{0}}};
-  //  int pedestal[RENACHIPS][MODULES][8];
 
-  if (uvcalc){
-
-    // to calculate circle centers we need to make sure the module triggered, so we use a high threshold
-    int uvthreshold = -1000;
-   
-
-    if (verbose)    cout << " Calculating UV " << " entries :: " << rawdata->GetEntries() << endl;
- for (int  ii = 0 ; ii< rawdata->GetEntries(); ii++ ){
-   rawdata->GetEntry(ii);
-   chip = rawevent.chip;
-   module = rawevent.module;
-   if (( ii < 20 )&&(verbose)) {
-     cout << " Com1h : " << rawevent.com1h << " pedestal: " << pedestals[chip][module][5] ;
-     cout << " Com1h-ped: " << rawevent.com1h - pedestals[chip][module][5]  << " valid: ";
-     cout <<  ((rawevent.com1h - pedestals[chip][module][5]) < uvthreshold) << endl ;
-   }
-   if (  ( rawevent.com1h - pedestals[chip][module][5] ) < uvthreshold ) {
-     uventries[chip][module][0]++;
-     uu_c[chip][module][0]+=(Float_t)(rawevent.u1h-uu_c[chip][module][0])/uventries[chip][module][0]; 
-     vv_c[chip][module][0]+=(Float_t)(rawevent.v1h-vv_c[chip][module][0])/uventries[chip][module][0]; 
-    }
-   if (( rawevent.com2h - pedestals[chip][module][7] ) < uvthreshold ) {
-      uventries[chip][module][1]++;
-     uu_c[chip][module][1]+=(Float_t)(rawevent.u2h-uu_c[chip][module][1])/uventries[chip][module][1]; 
-     vv_c[chip][module][1]+=(Float_t)(rawevent.v2h-vv_c[chip][module][1])/uventries[chip][module][1]; 
-   }
- } // loop over Entries ( ii) 
-
- if (verbose)   cout <<  " Averaging the circle Centers " << endl;
-
-if (verbose){
- for (int jj=0;jj<RENACHIPS;jj++){
-   for (int ii=0;ii<MODULES;ii++) {
-     for (int mm=0;mm<2;mm++) {
-       cout << " Circle Center Chip " << jj << " Module " << ii << " APD " << mm << ": "  ;
-       cout << "uu_c = " << uu_c[jj][ii][mm] << " vv_c = " << vv_c[jj][ii][mm] << " nn_entries = ";
-       cout << uventries[jj][ii][mm] << endl;   }
-   }
- }
- } // verbose
-
-  } // uvcalc
-
-
-if (pedfilenamespec) {
-
- ModuleDat *event = new ModuleDat();
- TTree *mdata; 
- int doubletriggers[RENACHIPS][MODULES]={{0}};
- int totaltriggers[RENACHIPS][MODULES][2]={{{0}}};
- // Energy histograms ::
- TH1F *E[RENACHIPS][MODULES][2];
- TH1F *E_com[RENACHIPS][MODULES][2];
- Char_t tmpstring[30];
- Char_t titlestring[50];
-
- if (verbose) cout << " Creating energy histograms " << endl;
-      for (int kk=0;kk<RENACHIPS;kk++){
-          for (int j=0;j<2;j++){
-            for (int i=0;i<4;i++){
-             sprintf(tmpstring,"E[%d][%d][%d]",kk,i,j);
-    	     sprintf(titlestring,"E RENA %d, Module %d, PSAPD %d",kk,i,j);
-             E[kk][i][j]=new TH1F(tmpstring,titlestring,Ebins,E_low,E_up);
-             sprintf(tmpstring,"E_com[%d][%d][%d]",kk,i,j);
-    	     sprintf(titlestring,"ECOM RENA %d, Module %d, PSAPD %d",kk,i,j);
-             E_com[kk][i][j]=new TH1F(tmpstring,titlestring,Ebins_com,E_low_com,E_up_com);
-            }
-            } // j
-	 }//kk
-
-      if (verbose) cout << " Creating tree " << endl;
-
- // for ( i=0; i < RENACHIPS; i++ ){
-  sprintf(treename,"mdata");
-  sprintf(treetitle,"Converted RENA data" );
-  mdata =  new TTree(treename,treetitle);
-  mdata->Branch("eventdata",&event);
- 
-for (int  ii = 0 ; ii< rawdata->GetEntries(); ii++ ){
-   rawdata->GetEntry(ii);
-   chip=rawevent.chip;
-   module=rawevent.module;
-   event->ct=rawevent.ct;
-   event->chip=rawevent.chip;
-   event->module=rawevent.module;
-   event->a=rawevent.a - pedestals[chip][module][0];
-   event->b=rawevent.b - pedestals[chip][module][1];
-   event->c=rawevent.c - pedestals[chip][module][2];
-   event->d=rawevent.d - pedestals[chip][module][3];
-   event->E=event->a+event->b+event->c+event->d;
-   event->x= event->a + event->d - ( event->b + event->c );
-   event->y= event->c + event->d - ( event->b + event->a );
-   event->x/=event->E;
-   event->y/=event->E;
-
-
-   event->id=-1;
-   event->pos=rawevent.pos;
-
-   if ( (rawevent.com1h - pedestals[chip][module][5]) < threshold ) { 
-     if ( (rawevent.com2h - pedestals[chip][module][7]) > threshold ) { 
-       totaltriggers[chip][module][0]++;
-       event->apd=0; 
-       event->ft=finecalc(rawevent.u1h,rawevent.v1h,uu_c[chip][module][0],vv_c[chip][module][0])  ;
-       event->Ec= rawevent.com1 - pedestals[chip][module][4];
-       event->Ech=rawevent.com1h - pedestals[chip][module][5];
-       mdata->Fill(); }
-     else doubletriggers[chip][module]++;
-   }
-   else {
-     if ( (rawevent.com2h - pedestals[chip][module][5]) < threshold ) {   
-     totaltriggers[chip][module][1]++;
-     event->apd=1;   
-     event->ft=finecalc(rawevent.u2h,rawevent.v2h,uu_c[chip][module][1],vv_c[chip][module][1])  ;
-     event->Ec = rawevent.com2 - pedestals[chip][module][6];
-     event->Ech=rawevent.com2h- pedestals[chip][module][7];
-     mdata->Fill(); } }
-   // fill energy histogram
-   if (( event->module > MODULES ) || ( event->apd > 1 ) || (event->chip > RENACHIPS ) )  { cout << "ERROR !!" <<endl;
-     cout << " MODULE : " << event->module << ", APD : " << event->apd << ", CHIP : " << event->chip << endl; }
-   if (!( event->apd > 1 )){ 
-  E[event->chip][event->module][event->apd]->Fill(event->E);
-  E_com[event->chip][event->module][event->apd]->Fill(-event->Ec);  }
- } // loop over entries ii
 
 
 // need to write histograms to disk ::
+// FIXME :: in principle we could fill histograms even without pedestal subtraction
+  if (pedfilenamespec ) {
 
    for (int kk=0;kk<RENACHIPS;kk++){
           for (int j=0;j<2;j++){
@@ -791,7 +820,19 @@ for (int  ii = 0 ; ii< rawdata->GetEntries(); ii++ ){
  cout << " ( = " << 100* (float) totalacceptedtriggers/rawdata->GetEntries() << " %) " << endl;
  mdata->Write();
 
-  } // pedestal correction 
+
+  } // pedfilenamespec
+
+  if (uvcalc) {
+
+   // need to store uvcenters ::
+       uu_c.Write("uu_c");
+       vv_c.Write("vv_c");
+  }
+
+
+ 
+
 
 
   if (debugmode) rawdata->Write();
@@ -802,7 +843,7 @@ for (int  ii = 0 ; ii< rawdata->GetEntries(); ii++ ){
  cout << " droppedPckCnt = " << droppedPckCnt << endl;
  }
 
-  }
+} // should match if (datafile)
  else 
   {
     cout << "Error opening File " << filename << endl;
