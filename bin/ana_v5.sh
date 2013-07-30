@@ -2,6 +2,49 @@
 #!/bin/bash
 
 CODEVERSION=/home/miil/MODULE_ANA/ANA_V5/ModuleClass/bin/
+CORES=4
+
+function waitsome ()
+{
+ # waits untill all jobs are done from a list submitted as $1;
+ if [ -z "$2" ] ; then
+  jobs=0;
+ else
+  jobs=$2;
+ fi
+
+ echo " JOBS TO WAIT FOR :: " $jobs
+ pids=$1;
+ finished=0;
+
+while [ $finished -lt $jobs ] ; do
+  index=0;
+  for i in ${pids[@]}; do
+#  echo "job $i index $index array length : ${#pids[@]} . Array: ${pids[*]}" ;
+  if [ ! -d /proc/$i ]; then 
+#           echo "$i done ! ( index $index ) " ; 
+           (( finished++ )); 
+           unset pids[$index];
+	   pids=("${pids[@]}")
+#	   pids=${pids[@]//$i/}
+#           echo " after unsetting: ${pids[*]}"
+	   continue
+           fi;
+  (( index++ )); 
+  done;
+#  echo " Finished jobs :: " $finished " ( pids = " ${pids[@]} " )" 
+  sleep .5
+done;
+}
+
+function waitall ()
+{
+ # waits untill all jobs are done from a list submitted as $1;
+ pids=$1;
+ waitsome $1 ${#pids[@]} 
+}
+
+
 
 function check ()
 {
@@ -29,6 +72,13 @@ function timing ()
    TIME=$(( `date +%s` - $START ));
    echo $TIME;
 }
+
+function pedconv ()
+ {  ${CODEVERSION}decoder -v -p -f $1 >> $2 ;  
+    check ${?} "converting pedfile ${1}"; 
+#    sleep 10
+  }
+
 
  MODE=$1;
  ARG=$2;
@@ -88,20 +138,40 @@ stop=0;
  if [ "$ARG" != 'SHORT' ]; then
 
 # converting binary output to ROOT file format
- if [ -e pedconv.out ] ; then 
-   rm pedconv.out
+ for c in `seq 1 100`; do 
+ if [ -e pedconv_$c.out ] ; then 
+   rm pedconv_$c.out
  fi;
+ done;
 
 echo -n " Converting pedfiles @ "
-timing $STARTTIME
-
- for i in `cat pedfiles`; do ${CODEVERSION}decoder -p -f $i >> pedconv.out ;  check ${?} "converting pedfile ${i}"; done;
-# for i in `cat daqfiles`; do ~/MODULE_ANA/PSF_V4/UYORUK_toROOT_V3 -f $i;  check ${?} "converting daqfile ${i}";done;
+ timing $STARTTIME
+ RUNNINGJOBS=0;
+ j=0;
+ for i in `cat pedfiles`; do 
+    if [ $RUNNINGJOBS -lt $CORES ]; then 
+    (( j++ ));
+ #   echo " SUBMITTING JOB "
+    pedconv $i pedconv_$j.out &
+    pids+=($!);
+    (( RUNNINGJOBS++ ));
+    else
+ #   echo " RUNNINGJOBS : $RUNNINGJOBS"
+    waitsome $pids 1
+    RUNNINGJOBS=${#pids[@]}
+    echo " RUNNINGJOBS after waitsome : $RUNNINGJOBS"
+    fi;
+    done;
 
 # pedestal correction, parsing and fine time calculation
 
+    waitall $pids
+
 echo -n " pedestal decoding done @ "
 timing $STARTTIME
+
+RUNNINGJOBS=0
+c=0;
 
 if [ "$MODE" == "LN" ] ; then
   for i in L R; do
@@ -117,10 +187,35 @@ if [ "$MODE" == "LN" ] ; then
 else
  if [ "$MODE" == "PT" ] ; then
   sh ${CODEVERSION}runall.sh files 
- else
-  sh ${CODEVERSION}runall_si.sh files
+ else   
+  while read data ped ; do 
+   if [ $RUNNINGJOBS -lt $CORES ]; then 
+    (( c++ ));
+    echo -n " SUBMITTING JOB "
+    echo "${CODEVERSION}decoder -f $data -pedfile $ped.ped -uv -t -400 ; "
+    ${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400  &
+#    pedconv $i pedconv_$j.out &
+    pids+=($!);
+    (( RUNNINGJOBS++ ));
+    else
+#    echo " RUNNINGJOBS : $RUNNINGJOBS"
+    waitsome $pids 1
+    RUNNINGJOBS=${#pids[@]}
+#    echo " RUNNINGJOBS after waitsome : $RUNNINGJOBS"
+    fi;
+ done < files; 
+
+#  sh ${CODEVERSION}runall_si.sh files
  fi; #MODE =PT
 fi; # MODE=LN
+
+
+waitall $pids
+
+ echo -n " decoding done. Time:: "
+ timing $STARTTIME 
+
+
 
 echo -n " decoding done @ "
 timing $STARTTIME
@@ -138,7 +233,7 @@ fi;
 
 fi;  # ARG != SHORT
 
-
+check -1 "WIP ( ${#pids[2]} entries in pids :: ${pids[@]} )"
 
 ### TODO:  MAKE SURE THE CLEANUP WORKS !!
 TIMECHECK=0

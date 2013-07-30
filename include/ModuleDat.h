@@ -30,7 +30,7 @@ class ModuleDat : public TObject {
   //  ~ModuleDat(); 
   virtual ~ModuleDat();
 
-  ClassDef(ModuleDat,1) 
+  ClassDef(ModuleDat,2) 
 };
 
 

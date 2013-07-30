@@ -72,6 +72,11 @@ int main(int argc, Char_t *argv[])
         TVector* uu_c = (TVector *) rfile->Get("uu_c");
         TVector* vv_c = (TVector *) rfile->Get("vv_c");
 
+        if (!((ppVals) && (ppVals_com) && (uu_c) && (vv_c))){
+	    cout << " Problem reading ppVals and/or uu/cc circle centers.\nExiting. " << endl;
+            return -3;
+	  }
+
 	//        TCanvas *c1 =new TCanvas();
         Char_t treename[40];
         TDirectory *subdir[RENACHIPS];
@@ -324,9 +329,9 @@ Double_t finecalc(Double_t uv, Float_t u_cent, Float_t v_cent){
   Int_t UV = (Int_t) uv;
   Int_t u = (( UV & 0xFFFF0000 ) >> 16 );
   Int_t v = ( UV & 0xFFFF );
-  cout << " finecalc : u = " << u << " v = " << v  << " ( center :: " << u_cent << ","<< v_cent << ")";
+  // cout << " finecalc : u = " << u << " v = " << v  << " ( center :: " << u_cent << ","<< v_cent << ")";
   tmp=TMath::ATan2(u-u_cent,v-v_cent);
-    cout << " tmp = " << tmp << endl;
+  //  cout << " tmp = " << tmp << endl;
   if (tmp < 0. ) { tmp+=2*3.141592;}
   return tmp;///(2*3.141592*CIRCLEFREQUENCY);
 }

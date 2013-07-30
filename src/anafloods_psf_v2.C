@@ -54,7 +54,7 @@ Int_t main(int argc, Char_t *argv[])
 {
 
 
-  cout << " Welcome to anafloods. Program performs Segmentation." << endl;
+  cout << " Welcome to anafloods. Program performs Segmentation.  " ; 
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 	Char_t		filename[FILENAMELENGTH] = "";
@@ -83,6 +83,8 @@ Int_t main(int argc, Char_t *argv[])
 			}
 		}
 	}
+
+	cout << " Inputfile : " << filename << "." << endl; 
 
         rootlogon(verbose);
         set2dcolor(4);

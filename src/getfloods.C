@@ -3,7 +3,7 @@
 
 Int_t main(int argc, Char_t *argv[])
 {
-  	cout << " Welcome to Getfloods. Program obtains Energy and flood histograms " << endl;
+  cout << " Welcome to Getfloods. Program obtains Energy and flood histograms. " ;
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 	Char_t		filename[FILENAMELENGTH] = "";
@@ -39,6 +39,8 @@ Int_t main(int argc, Char_t *argv[])
 			} 
 		}
 	}
+
+        cout << " Inputfile : " << filename << endl;
 
 	//    rootlogon(verbose);
         set2dcolor(4);

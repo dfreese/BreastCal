@@ -1,7 +1,7 @@
 #include "enefit.h"
 int main(int argc, Char_t *argv[])
 {
- 	cout << " Welcome to enefit. Calibrate every pixel & Fill calibrated Tree " << endl;
+ 	cout << " Welcome to enefit. Calibrate every pixel & Fill calibrated Tree. " << endl;
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 	Char_t		filename[FILENAMELENGTH] = "";
@@ -37,6 +37,8 @@ int main(int argc, Char_t *argv[])
 			}
 		}
 	}
+
+        cout <<  " Input file :: " << filename << "." << endl ;
 
         rootlogon(verbose);
 

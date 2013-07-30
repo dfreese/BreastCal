@@ -457,7 +457,10 @@ if (pedfilenamespec) {
     
     if (!MODULE_BASED_READOUT) {
       //  packetSize = rmChip->packetSize;
-      packetSize=146; //FIXME -- need to be changed for data later than 1/4/13 .. ( should be 138 )
+
+      if (DAQ_BEFORE01042013) packetSize=146; //FIXME -- need to be changed for data later than 1/4/13 .. ( should be 138 )
+      else packetSize=138;
+      
       moduletriggers=4;
       trigCode = 0xF;
     }
@@ -581,8 +584,15 @@ if (pedfilenamespec) {
 #define VALUESPERSPATIAL 4
 
     // should be 2 for data obtained before 1/4/2013
+    
+#if DAQ_BEFORE01042013
 #define UNUSEDCHANNELOFFSET 2
+#else
+#define UNUSEDCHANNELOFFSET 0
+#endif
+    
 
+#define UNUSEDCHANNELOFFSET 0
     int kk=0;
     for (int iii=0;iii<4;iii++ ) {
       if ( trigCode & ( 0x1 << iii )) {

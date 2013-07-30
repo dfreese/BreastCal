@@ -251,7 +251,7 @@ int main(int argc, Char_t *argv[])
           cout << " This is too many !\n Not even trying.\n Bye. " << endl;
           return -999;}
 
-        cout << " Anticipating " << ncuts << " iterations. " << endl;
+        if (verbose) cout << " Anticipating " << ncuts << " iterations. " << endl;
         
         Int_t k;
         Int_t nrrollovers=0;
@@ -283,7 +283,7 @@ int main(int argc, Char_t *argv[])
            	  }
           else timecut[0]=lasttime;
 
-	  for (Int_t k=0;k<ncuts;k++) {	  cout << " Time cut " << k << ": " << timecut[k]  << endl;}
+	  if (verbose) { for (Int_t k=0;k<ncuts;k++) {	  cout << " Time cut " << k << ": " << timecut[k]  << endl;} }
 	  Int_t kk=0,stop,finincr,extra;
 
 	  // do 2 criterion   and while loop  :: while  !((criteria1) and (criteria2))
@@ -297,7 +297,7 @@ int main(int argc, Char_t *argv[])
        //  while (curtime<lasttimes[6]) {
        //    while ((curtime<lasttime)&&(kk<2)) {
          while ((curtime<lasttime)) {
-	   cout << "\n Split number :: " << kk << ", timecut = " << timecut[kk] << endl;
+	   if (verbose) cout << "\n Split number :: " << kk << ", timecut = " << timecut[kk] << endl;
 	   //           if (kk > 42) verbose=1;
           time_before_filling = clock();
 
@@ -307,7 +307,7 @@ int main(int argc, Char_t *argv[])
 	   sprintf(rootfile,"%s.4up%d_part%d.root",filebase,rb,kk);
 	//        strcat(rootfile,".panel.root");
 
-        cout << " Opening file " << rootfile << " for writing " << endl;
+	   if (verbose) cout << " Opening file " << rootfile << " for writing " << endl;
         TFile *calfile = new TFile(rootfile,"RECREATE");
         TTree *panel = new TTree("panel","Sorted Panel Data") ;
         Long64_t lasteventtime=0;
@@ -421,7 +421,7 @@ int main(int argc, Char_t *argv[])
 	      //              l-=extra;
               if (l<0 ) l=0; // safety
 	      //              if ( l >= entries[m] ) { skipchip[m]=1; stop=0; continue;}
-              if ((l>0)&&((l%5000000)==0)) cout << " Processed " << l/10e6 << " million events " << endl;
+              if ((verbose)&&(l>0)&&((l%5000000)==0)) cout << " Processed " << l/10e6 << " million events " << endl;
               lasteventtime=curtime;  
 			 	 }  // while !stop
 
@@ -459,15 +459,16 @@ int main(int argc, Char_t *argv[])
 		//             cout << " event->ct = " << event->ct <<  endl;
 	    } // loop over l 
 
-	    std::cout<<"Sorting Run numbers :: " ; //<<std::endl;
+	    if (verbose)  cout<<"Sorting Run numbers :: " ; //<<std::endl;
 
            TMath::Sort(N,table,sorted,kFALSE);
 
           time_after_sorting=clock();
         
-
+          if (verbose){
           printf("Time to merge  8 chips (sec): %f",(double)(time_before_sorting-time_before_filling)/(CLOCKS_PER_SEC));
           printf("Time to sort the merged chips (sec): %f\n",(double)(time_after_sorting-time_before_sorting)/(CLOCKS_PER_SEC));
+	  }
 
 	  if (verbose) cout << N << " entries in tree; cloning tree :: " << endl;
 
@@ -498,7 +499,7 @@ int main(int argc, Char_t *argv[])
 	  thistime=clock();  
 
        for (l=0;l<N;l++){
-	 if ((((l)%5000000)==0)&&(l>0))  { cout << l << " entries processed; " ;
+	 if ((((l)%5000000)==0)&&(l>0)&&(verbose))  { cout << l << " entries processed; " ;
 	      cout << " time spent = " <<(double)  (clock()-thistime)/CLOCKS_PER_SEC ;
               cout << "; since start: " <<(double) (clock()-time_after_sorting)/CLOCKS_PER_SEC <<endl; 
    	    thistime = clock(); }
@@ -512,7 +513,7 @@ int main(int argc, Char_t *argv[])
  
           time_after_filling=clock();
  
-          printf("Time to clone the Tree (sec): %f\n",(double)(time_after_filling-time_after_sorting)/(CLOCKS_PER_SEC));
+          if (verbose) printf("Time to clone the Tree (sec): %f\n",(double)(time_after_filling-time_after_sorting)/(CLOCKS_PER_SEC));
 
 	 	  	 	fourup->Write();
 	//        panel->Write();
