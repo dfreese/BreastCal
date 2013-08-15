@@ -22,7 +22,7 @@
 
 
 
-Double_t GetPhotopeak_v1(TH1F *hist,Double_t pp_low,Double_t pp_up,Int_t verbose);
+Double_t GetPhotopeak_v1(TH1F *hist,Double_t pp_low,Double_t pp_up,Int_t verbose, Int_t width=10);
 Double_t GetPhotopeak_v2(TH1F *hist,Double_t pp_low,Double_t pp_up,Int_t verbose);
  
 #endif

@@ -38,11 +38,13 @@ unsigned long long int byteCounter;
 #define FOURUPBOARDS 4
 #define MAXFILELENGTH      160
 #define E_up 3000
-#define E_low -100
-#define Ebins 310
+#define E_low -200
+#define Ebins 320
+#define Ebins_pixel 160
 #define E_up_com 1400
-#define E_low_com -100
-#define Ebins_com 150
+#define E_low_com -200
+#define Ebins_com 160
+#define Ebins_com_pixel 160
 #define PP_LOW_EDGE 600
 #define PP_UP_EDGE 2800
 #define PP_LOW_EDGE_COM 350

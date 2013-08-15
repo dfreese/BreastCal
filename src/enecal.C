@@ -17,7 +17,7 @@ This program fills the energy histograms for every crystal, needed to do energy 
 
 int main(int argc, Char_t *argv[])
 {
- 	cout << " Welcome to EneCal. Performs Crystal Binning." << endl;
+    cout << " Welcome to EneCal. Performs Crystal Binning." ; 
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 	Char_t		filename[FILENAMELENGTH] = "";
@@ -54,6 +54,9 @@ int main(int argc, Char_t *argv[])
 
 
 	if (!fileset) { cout << " Please specify Filename. Exiting. " << endl; return -99;}
+
+        cout << " Inputfile :: " << filename << endl;
+
 	TFile *rfile = new TFile(filename,"OPEN");
        
         Char_t filebase[FILENAMELENGTH],peaklocationfilename[FILENAMELENGTH],newrootfile[FILENAMELENGTH]; 
@@ -160,10 +163,10 @@ int main(int argc, Char_t *argv[])
 	      for (k=0;k<64;k++){
                 sprintf(tmpname,"Ehist[%d][%d][%d][%d]",m,j,i,k);
                 sprintf(tmptitle,"RENA %d Unit %d Module %d Pixel %d",m,j,i,k);
-                Ehist[m][j][i][k] = new TH1F(tmpname,tmptitle,Ebins,E_low,E_up);
+                Ehist[m][j][i][k] = new TH1F(tmpname,tmptitle,Ebins_pixel,E_low,E_up);
                 sprintf(tmpname,"Ehist_com[%d][%d][%d][%d]",m,j,i,k);
                 sprintf(tmptitle,"RENA %d Unit %d Module %d Pixel %d Common",m,j,i,k);
-                Ehist_com[m][j][i][k] = new TH1F(tmpname,tmptitle,Ebins_com,E_low_com,E_up_com);
+                Ehist_com[m][j][i][k] = new TH1F(tmpname,tmptitle,Ebins_com_pixel,E_low_com,E_up_com);
 		//                sprintf(tmpname,"Efits[%d][%d][%d]",i,j,k);
 		//                sprintf(tmptitle,"Unit %d Module %d Pixel %d",i,j,k);
 		//                Efits[i][j][k] = new TF1(tmpname,"gaus",EBINS,EMIN,EMAX);
@@ -186,7 +189,7 @@ int main(int argc, Char_t *argv[])
            return -10;}
 	 //	 entries=block->GetEntries();
 
-	 cout << " Looping over " << block->GetEntries() << " entries." ;
+	 if (verbose)	 cout << " Looping over " << block->GetEntries() << " entries." ;
 	block->SetBranchAddress("eventdata",&event);
 	   /*
           block->SetBranchAddress("ct",&event.ct);

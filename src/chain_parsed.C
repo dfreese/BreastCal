@@ -50,7 +50,13 @@ int main(int argc, char *argv[]){
   Char_t curfilename[MAXFILELENGTH];
   Char_t treename[40];
   int i;
+  Bool_t verbose=0;
   for (i=0;i<argc;i++) {
+
+    if (strncmp(argv[i],"-v",2)==0) {
+      verbose=1;
+      i++;
+    }
 
 
     if (strncmp(argv[i],"-f",2)==0) {
@@ -116,7 +122,7 @@ int main(int argc, char *argv[]){
     // -------------------------------------------------------	  
 
         filesread++;
-        cout << " Files read :: " << filesread << ". Current file : " << curfilename << endl; 
+        if (verbose) cout << " Files read :: " << filesread << ". Current file : " << curfilename << endl; 
 
 	//  cout << " ListOfKeys :: "  <<  gDirectory->GetListOfKeys()  <<endl;
 

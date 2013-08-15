@@ -5,6 +5,8 @@
 # note the variables are GLOBAL, in order to force them to be local in functions we should type explicitely "local"
 
 CODEVERSION=/home/miil/MODULE_ANA/ANA_V5/ModuleClass/bin/
+
+# NOTE: if CORES > 4 some extra checks will be needed making sure all data has been processed needed for the next steps. 
 CORES=4
 
 ##############################################################################################################
@@ -18,9 +20,10 @@ function waitsome ()
   jobs=$2;
  fi
 
- echo " JOBS TO WAIT FOR :: " $jobs
- pids=$1;
+# echo " JOBS TO WAIT FOR :: " $jobs
+
  finished=0;
+
 
 while [ $finished -lt $jobs ] ; do
   index=0;
@@ -94,6 +97,11 @@ function pedconv ()
 ##############################################################################################################
 
 function calibrate () {
+
+#skip=1
+# if [ $skip -eq 0 ]; then
+
+
 THISDIR=$1;
 mkfolder ${THISDIR}
 cd ./${THISDIR};
@@ -137,11 +145,14 @@ check ${?} "enefit_psf panel ${1}";
 ##  rm *PED_BinaryData_*_${s}${i}*out.ped.RENA?; 
  cd ..;
 
-echo "Estimating split level ${s}${i}"
+#fi; #skip
+
+echo "Estimating split level ${1}"
 VAR=$1;
-LR=echo "${VAR:1:1}";
+LR=`echo "${VAR:0:1}"`;
+echo "${CODEVERSION}get_opt_split -f ./${1}/${MODE}_DAQ_${DATE}_${1}.cal.root --${LR}  > events${1}.txt"
 ${CODEVERSION}get_opt_split -f ./${1}/${MODE}_DAQ_${DATE}_${1}.cal.root --${LR}  > events${1}.txt
-check ${?} "get_optimal_split panel ${s}${i}";
+check ${?} "get_opt_split panel ${s}${i}";
 
 
 }
@@ -288,7 +299,7 @@ else
     (( c++ ));
     echo -n " SUBMITTING JOB "
     echo "${CODEVERSION}decoder -f $data -pedfile $ped.ped -uv -t -400 ; "
-    ${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400  &
+    ${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 > $data.conv.out &
 #    pedconv $i pedconv_$j.out &
     pids+=($!);
     (( RUNNINGJOBS++ ));
@@ -312,8 +323,6 @@ waitall $pids
 
 
 
-echo -n " decoding done @ "
-timing $STARTTIME
  
  
 #if [ ! -d DATA ] ;then 
@@ -328,7 +337,7 @@ timing $STARTTIME
 
 # FIXME JULY29 :: THERE IS AN INCONSISTENCY HERE 
 
-#  fi;  # ARG != SHORT
+fi;  # ARG != SHORT
 
 echo " CHECK ME :: PWD :: `pwd` "
 
@@ -366,7 +375,7 @@ done;
 
 #  waiting for all calibrations to finish 
 
-#    waitall $pids
+waitall $pids
 
 
 
@@ -402,7 +411,9 @@ echo " SPLITS : ${SPLITS} TIME: ${TOTIME} SPLITTIME: ${SPLITTIME}"
 echo -n " split estimate done @ "
 timing $STARTTIME
 
-RUNNINGJOBS=0
+#RUNNINGJOBS=0
+echo " RUNNINGJOBS after estimating split level @merging : $RUNNINGJOBS  ( pids :: ${pids[@]} )"
+# RUNNINGJOBS=${#pids[@]}
 
 for s in L R; do
 i=0;
@@ -416,10 +427,10 @@ if [ $RUNNINGJOBS -lt $CORES ]; then
     (( RUNNINGJOBS++ ));
     (( i++ ));
 else
-    echo " RUNNINGJOBS before waitsome : $RUNNINGJOBS  ( pids :: ${pids[@]} )"
+    echo " RUNNINGJOBS before waitsome @merging : $RUNNINGJOBS  ( pids :: ${pids[@]} )"
     waitsome $pids 1
     RUNNINGJOBS=${#pids[@]}
-    echo " RUNNINGJOBS after waitsome : $RUNNINGJOBS ( pids :: ${pids[@]} )"
+    echo " RUNNINGJOBS after waitsome @merging : $RUNNINGJOBS ( pids :: ${pids[@]} )"
     echo " i = $i " 
 fi;
 
@@ -431,6 +442,10 @@ echo "before  waitall combining :: RUNNINGJOBS = $RUNNINGJOBS : ${pids[@]}"
 waitall $pids
 echo "after  waitall combining :: RUNNINGJOBS = $RUNNINGJOBS : ${pids[@]}" 
 RUNNINGJOBS=${#pids[@]};
+
+
+echo -n " merging done @ "
+timing $STARTTIME
 
 
 
@@ -462,5 +477,10 @@ check ${?} "chain_merged"
 
 ${CODEVERSION}merge_ana -f ${MODE}_DAQ_${DATE}_all.merged.root
 check ${?} "merge_mana"
+
+
+echo -n " All done @ "
+timing $STARTTIME
+
 
 fi; # if stop

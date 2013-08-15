@@ -18,6 +18,7 @@ PROGRAM needs to:
  -pedfile :: run pedestal subtraction, calculate x,y
  -uv :: run timecalc  
  -pos :: position
+ -uvt :: set uv threshold [ for pulser applications ]
 */
 
 
@@ -53,6 +54,7 @@ void usage(void){
   cout << "      you get access to u,v" << endl;
   cout << " -t : threshold for hits, default = " << t << endl;
   cout << " -uv: UV circle centers will be calculated " << endl;
+  cout << " -uvt: UV circle centers threshold ( for pulser applications, NEGATIVE value ) " << endl;
   cout << " -pedfile [pedfilename] : pedestal file name " << endl;
   cout << " -p : calculate pedestals " << endl;
   cout << " -o : optional outputfilename " <<endl;
@@ -77,6 +79,7 @@ int main(int argc, char *argv[]){
   int uvcalc=0;
  int chip;
  int module;
+    int uvthreshold = -1000;
 
  Int_t CHANNELLIST[36]={0};
  Int_t CHANNEL;
@@ -123,6 +126,12 @@ for (i = 0; i < 36; i++) {
     if (strncmp(argv[ix], "-uv", 3) == 0) {
       uvcalc = 1;
     }
+
+    if (strncmp(argv[ix], "-uvt", 3) == 0) {
+      uvthreshold = atoi(argv[ix+1]);
+      ix++;
+    }
+
 
     if (strncmp(argv[ix], "-t", 2) == 0) {
       threshold = atoi(argv[ix+1]);
@@ -682,7 +691,6 @@ if (pedfilenamespec) {
   if (uvcalc){
 
     // to calculate circle centers we need to make sure the module triggered, so we use a high threshold
-    int uvthreshold = -1000;
    
 
     // if (verbose)    cout << " Calculating UV " << " entries :: " << rawdata->GetEntries() << endl;

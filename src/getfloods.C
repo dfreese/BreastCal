@@ -193,12 +193,13 @@ Int_t main(int argc, Char_t *argv[])
 
 	 if ( E[kk][i][j]->GetEntries() > MINHISTENTRIES ) {
            pp_right=GetPhotopeak_v1(E[kk][i][j],pp_low,pp_up,verbose);
+	   if (verbose) cout << " pp_right = " << pp_right << endl; 
            pp_low=0.7*pp_right;
            pp_up=1.3*pp_right;
          if (verbose) { 
-           cout << "pp_low = " << pp_low ;
-	  cout << " pp_up = " << pp_up << endl;
-	  cout << " --------- Common ----------- " <<endl;} 
+           cout << ", pp_low = " << pp_low ;
+       	   cout << " pp_up = " << pp_up << endl;
+	   cout << " --------- Common ----------- " <<endl;} 
            pp_right_com=GetPhotopeak_v1(E_com[kk][i][j],pp_low_com,pp_up_com,verbose);
            pp_low_com=0.7*pp_right_com;
            pp_up_com=1.3*pp_right_com;
@@ -214,10 +215,12 @@ Int_t main(int argc, Char_t *argv[])
            pp_right=0;
            pp_right_com=0;
 	 }
-          ppeaks[kk][i][j]=pp_right;
-          ppeaks_com[kk][i][j]=pp_right_com;
+           ppeaks[kk][i][j]=pp_right;
+           ppeaks_com[kk][i][j]=pp_right_com;
+	   if ( verbose ) { cout << " ppeaks[" << kk << "][" << i << "][" << j << "] = " << ppeaks[kk][i][j] << endl;}
 	   } //loop over i 
        } // loop over j
+
 
        for (j=0;j<2;j++){
          c1->Clear();
@@ -299,10 +302,12 @@ Int_t main(int argc, Char_t *argv[])
          for (i=0;i<4;i++){
            floods[kk][i][j]->Write();
            E[kk][i][j]->Write();
+	   if ( verbose ) { cout << " ppeaks[" << kk << "][" << i << "][" << j << "] = " << ppeaks[kk][i][j] ;}
 	   ppVals(kk*8+j*4+i) = ppeaks[kk][i][j];
 	   ppVals_com(kk*8+j*4+i) = ppeaks_com[kk][i][j];
 	 } // i
        } // j
+       if (verbose) cout << endl;
        	} //loop over kk (chips)
 
        ppVals.Write("pp_spat");
@@ -313,13 +318,13 @@ Int_t main(int argc, Char_t *argv[])
 
 	return 0;}
 
-Double_t  GetPhotopeak_v1(TH1F *hist,Double_t pp_low,Double_t pp_up,Int_t verbose){
+Double_t  GetPhotopeak_v1(TH1F *hist,Double_t pp_low,Double_t pp_up,Int_t verbose, Int_t width){
    Double_t pp_right;
    Int_t kkk,l;
    TSpectrum *sp = new TSpectrum();
    Int_t npeaks,efound;
    
-
+   if ( verbose ) { cout << " ====== Welcome to GetPhotoPeak_v1, width =  " << width << " ====== " << endl; }
 
     kkk=0;
     efound=0;
@@ -328,7 +333,8 @@ Double_t  GetPhotopeak_v1(TH1F *hist,Double_t pp_low,Double_t pp_up,Int_t verbos
     pp_right=pp_low;
 
      while (1){
-        npeaks = sp->Search( hist,10,"",0.4-(float) kkk/10);
+       // changing this from 10 to 3  080513
+         npeaks = sp->Search( hist,width,"",0.6-(float) kkk/10);
       if (verbose ) {  
          cout << npeaks << " peaks found in the Spatial energy spectrum " << endl; }
       // get the peak between E_low and E_up ;
@@ -348,9 +354,22 @@ Double_t  GetPhotopeak_v1(TH1F *hist,Double_t pp_low,Double_t pp_up,Int_t verbos
    } // loop over npeaks;
    //    cout << " i = " << i << endl;
    //   if ((npeaks <3 ) && (j<4)){  j++;}
-   if ((!efound ) && (kkk<4)){  kkk++;}
+   if ((!efound ) && (kkk<5)){  kkk++;}
    else break;
      }
+
+     if (verbose) { cout << " while loop done. pp_right = " << pp_right << ". Efound = " << efound << endl; } 
+
+     if ((!efound)&&(width>3)){
+       width-=2;
+       if (verbose) { 
+       cout << " Changing width of photopeak window to :: " ;
+       cout << width  << endl;}       
+       pp_right=GetPhotopeak_v1(hist,pp_low,pp_up,verbose,width);
+       // try different width
+         }
+
+     if (verbose) { cout << " retURning pp_right = " << pp_right << endl;}
 
      return pp_right;
 }
@@ -360,7 +379,6 @@ Double_t  GetPhotopeak_v2(TH1F *hist,Double_t pp_low,Double_t pp_up,Int_t verbos
    Int_t kkk,l;
    TSpectrum *sp = new TSpectrum();
    Int_t npeaks,efound;
-
 
 
     kkk=0;
@@ -393,6 +411,8 @@ Double_t  GetPhotopeak_v2(TH1F *hist,Double_t pp_low,Double_t pp_up,Int_t verbos
    if ((!efound ) && (kkk<4)){  kkk++;}
    else break;
      }
+
+ if (verbose) { cout << " before return pp_right = " << pp_right ; }
 
      return pp_right;
 }

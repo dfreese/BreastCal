@@ -1029,7 +1029,7 @@ Some debugging Crap
  
                stepback++;
           
-      	       if (stepback>2) { cout << "let's just break here " << endl; break;}
+      	       if (stepback>2) { if (verbose) cout << "let's just break here " << endl; break;}
                break;}              
        }  
  

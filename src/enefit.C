@@ -1,7 +1,7 @@
 #include "enefit.h"
 int main(int argc, Char_t *argv[])
 {
- 	cout << " Welcome to enefit. Calibrate every pixel & Fill calibrated Tree. " << endl;
+ 	cout << " Welcome to enefit. Calibrate every pixel & Fill calibrated Tree. " ;
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 	Char_t		filename[FILENAMELENGTH] = "";
@@ -67,7 +67,7 @@ int main(int argc, Char_t *argv[])
         sprintf(rootfile,"%s",filename);
 	//        strcat(rootfile,".root");
               
-	cout << "Rootfile to open :: " << rootfile << endl;
+	if (verbose)	cout << "Rootfile to open :: " << rootfile << endl;
 
 	TFile *enefile = new TFile(rootfile,"OPEN");       
          if (!enefile || enefile->IsZombie()) {  
@@ -159,24 +159,39 @@ int main(int argc, Char_t *argv[])
 	  for (m=0;m<RENACHIPS;m++){
            for (i=0;i<4;i++){
           for (j=0;j<2;j++){ 
+	    if (verbose) { cout << endl; cout << " --------------- CHIP " << m << " MODULE " << i << " PSAPD " << j;
+	      cout << " ---------------- " << endl;}
 	     if (validpeaks[m][i][j]==1) {
 	       if (verbose) cout << " Getting mean energy :: " << endl;
 	       Emean = (Float_t )  (*ppVals)(m*8+j*4+i);
 	       Emeans[m*8+j*4+i] = (Float_t )  (*ppVals)(m*8+j*4+i);
 	       Emean_com = (Float_t )  (*ppVals_com)(m*8+j*4+i);
 	       Emeans_com[m*8+j*4+i] = (Float_t )  (*ppVals_com)(m*8+j*4+i);
-	       if (verbose) cout  << Emean   << " " << Ehist[m][i][j][0]->GetEntries()   << endl;
+	       if (verbose) cout  << " ppVals : " << Emean   << " " << Ehist[m][i][j][0]->GetEntries()   << endl;
                for (k=0;k<64;k++){
 	      //	      fitall(Ehist[i][j], ftmp, &vals[0], pixvals, E_low, E_up, c1, verbose);
 		 sprintf(tmpstring,"Efits[%d][%d][%d][%d]",m,i,j,k);
+                 if ( Ehist[m][i][j][k]->GetEntries() < MINPIXENTRIES ) Ehist[m][i][j][k]->Rebin(2); 
+		 //     if ( Ehist[m][i][j][k]->GetEntries() < MINPIXENTRIES/2 ) Ehist[m][i][j][k]->Rebin(2); 
               if (verbose) {
                 cout << "===================================================================" << endl;
                 cout << "= Histogram["<<m<<"]["<<i<<"]["<<j<<"]["<<k<<"]"                             << endl;
                 cout << "===================================================================" << endl;
                 cout << " ----------- Spatials ---------------- " <<endl;
                 cout << " Hist entries : " << Ehist[m][i][j][k]->GetEntries() << " Efits mean :" ;
-		cout << Efits[m][i][j][k]->GetParameter(1) << endl;}
-              peak=getpeak( Ehist[m][i][j][k], Emean*0.85,Emean*1.15,verbose);
+		cout << Efits[m][i][j][k]->GetParameter(1) << " nrbins :: " << Ehist[m][i][j][k]->GetNbinsX() << endl;}
+	      // edge has lower gain
+              if ((k==0)||(k==7)||(k==54)||(k==63)){ peak=getpeak( Ehist[m][i][j][k], Emean*0.7,Emean*1.15,verbose);
+                if (peak==NOVALIDPEAKFOUND) { 
+		  if (verbose) cout << " That didn't go well. Retry to get peak with larger margins " << endl;
+		  peak=getpeak( Ehist[m][i][j][k], Emean*0.7,Emean*1.5,verbose);
+		}}
+		else { peak=getpeak( Ehist[m][i][j][k], Emean*0.85,Emean*1.15,verbose);
+                if (peak==NOVALIDPEAKFOUND) { 
+		  if (verbose) cout << " That didn't go well. Retry to get peak with larger margins " << endl;
+		  peak=getpeak( Ehist[m][i][j][k], Emean*0.7,Emean*1.5,verbose);}
+		}
+		if (peak==NOVALIDPEAKFOUND) peak=Emean;
               Efits[m][i][j][k]->SetParameter(1,peak);
               Efits[m][i][j][k]->SetParameter(2,0.04*peak);
               if (verbose) {
@@ -186,13 +201,19 @@ int main(int argc, Char_t *argv[])
               Efits[m][i][j][k]->SetLineColor(kRed);
 	      CRYSTALPP[m][i][j][k]=Efits[m][i][j][k]->GetParameter(1);
               if (TMath::Abs(CRYSTALPP[m][i][j][k]/Emean -1 ) > 0.3 )          {
-		if (verbose) cout << " BAD FIT to histogram ["<<m<<"]["<<i<<"]["<<j<<"]["<<k<<"]" << endl;
+		if (verbose) { cout << " BAD FIT to histogram ["<<m<<"]["<<i<<"]["<<j<<"]["<<k<<"]" << endl; 
+		  cout << " taking PP @ " << Emean << " ( peak = " << peak << " ) " << endl;}
                 CRYSTALPP[m][i][j][k]=Emean;}
 	      if (verbose) {
                 cout << " ------------ Common ----------------- " <<endl;
                 cout << " Hist entries : " << Ehist_com[m][i][j][k]->GetEntries() << " Efits mean :" ;
 		cout << Efits_com[m][i][j][k]->GetParameter(1) << endl;}
               peak=getpeak( Ehist_com[m][i][j][k], Emean_com*0.85,Emean_com*1.15,verbose);
+                if (peak==NOVALIDPEAKFOUND) { 
+		  if (verbose) cout << " That didn't go well. Retry to get peak with larger margins " << endl;
+		  peak=getpeak( Ehist[m][i][j][k], Emean_com*0.7,Emean_com*1.5,verbose);}
+	       
+              if (peak==NOVALIDPEAKFOUND) peak=Emean_com;
               Efits_com[m][i][j][k]->SetParameter(1,peak);
               Efits_com[m][i][j][k]->SetParameter(2,0.04*peak);
               if (verbose) {
@@ -202,7 +223,8 @@ int main(int argc, Char_t *argv[])
               Efits_com[m][i][j][k]->SetLineColor(kBlue);
 	      CRYSTALPP_COM[m][i][j][k]=Efits_com[m][i][j][k]->GetParameter(1);
               if (TMath::Abs(CRYSTALPP_COM[m][i][j][k]/Emean_com -1 ) > 0.3 )          {
-		if (verbose) cout << " BAD FIT to histogram ["<<m<<"]["<<i<<"]["<<j<<"]["<<k<<"]" << endl;
+		if (verbose) {cout << " BAD FIT to histogram ["<<m<<"]["<<i<<"]["<<j<<"]["<<k<<"]" << endl;
+                     cout << " taking PP @ " << Emean_com << " ( peak = " << peak << " ) " << endl;}
                 CRYSTALPP_COM[m][i][j][k]=Emean_com;}
 
 	       } // loop over k
@@ -211,6 +233,38 @@ int main(int argc, Char_t *argv[])
 	  } //j
 	  } // m
 	
+
+   TCanvas *c1;
+   c1 = (TCanvas*)gROOT->GetListOfCanvases()->FindObject("c1");
+  if (!c1) c1 = new TCanvas("c1","c1",10,10,1000,1000);
+  
+  c1->SetCanvasSize(1754,1240);
+	  // plot histograms
+  Bool_t firstloop=1;
+           m=0;i=0;j=0;
+         for (m=0;m<RENACHIPS;m++){
+	  for (i=0;i<4;i++){
+	   for (j=0;j<2;j++){
+            for (Int_t kk=0;kk<2;kk++){
+             c1->Clear();
+             c1->Divide(8,4);
+             for (k=0;k<32;k++){
+	       c1->cd(k+1);
+                Ehist_com[m][i][j][k+kk*32]->Draw();
+                Efits_com[m][i][j][k+kk*32]->Draw("same");
+	      }
+             if (firstloop) { c1->Print("tmp.ps("); firstloop=0;}
+             else { c1->Print("tmp.ps");
+	  }
+
+	    }  // loop kk
+           } // loop j
+	  } // loop over i
+
+          } // loop over m
+
+   c1->Print("tmp.ps)");
+
 
 
 	  if (verbose) {
@@ -227,6 +281,7 @@ int main(int argc, Char_t *argv[])
 
 
 
+
 	  // Open Calfile //
         strncpy(filebase,filename,strlen(filename)-12);
         filebase[strlen(filename)-12]='\0';
@@ -236,7 +291,7 @@ int main(int argc, Char_t *argv[])
         TTree *calblock;
 
         TFile *calfile = new TFile(rootfile,"RECREATE");
-	cout << " Creating file " << rootfile << endl;
+	if (verbose) cout << " Creating file " << rootfile << endl;
              
           // Create Tree //
 
@@ -249,27 +304,6 @@ int main(int argc, Char_t *argv[])
             sprintf(treetitle,"Energy calibrated LYSO-PSAPD module data ");
 	    cal = new TTree(treename,treetitle);
             cal->Branch("Calibrated Event Data",&calevent);
-	    /*
-	    cal->Branch("ct",&calevent.ct,"ct/L");
-	    cal->Branch("chip",&calevent.chip,"chip/S");
-	    cal->Branch("module",&calevent.module,"module/S");
-	    cal->Branch("apd",&calevent.apd,"apd/S");
-	    cal->Branch("Ecal",&calevent.Ecal,"Ecal/F");
-	    cal->Branch("E",&calevent.E,"E/F");
-	    cal->Branch("Ec",&calevent.Ec,"Ec/F");
-	    cal->Branch("Ech",&calevent.Ech,"Ech/F");
-	    cal->Branch("x",&calevent.x,"x/F");
-	    cal->Branch("y",&calevent.y,"y/F");
-	    cal->Branch("ft",&calevent.ft,"ft/F");
-	    cal->Branch("id",&calevent.id,"id/S");
-	    cal->Branch("pos",&calevent.pos,"pos/I");
-	    */
-	    /*
-            cal[m]->Branch("U0",&U0.ct,"ct/L:Ecal/D:E/D:Ec/D:Ech/D:x/D:y/D:ft1/D:ft2/D:id/I:mod/I:pos/I");
-            cal[m]->Branch("U1",&U1.ct,"ct/L:Ecal/D:E/D:Ec/D:Ech/D:x/D:y/D:ft1/D:ft2/D:id/I:mod/I:pos/I");
-            cal[m]->Branch("U2",&U2.ct,"ct/L:Ecal/D:E/D:Ec/D:Ech/D:x/D:y/D:ft1/D:ft2/D:id/I:mod/I:pos/I");
-            cal[m]->Branch("U3",&U3.ct,"ct/L:Ecal/D:E/D:Ec/D:Ech/D:x/D:y/D:ft1/D:ft2/D:id/I:mod/I:pos/I");
-	    */
 
 	    for (m=0; m<RENACHIPS;m++){
              for (i=0;i<4;i++){ 
@@ -301,58 +335,11 @@ int main(int argc, Char_t *argv[])
         calblock = (TTree *) enefile->Get(treename);
         if (!calblock) {
 	  cout << "error reading tree " << calblock << " from file " << rootfile <<endl;}
-        cout << " Performing calibration over " << calblock->GetEntries() << " entries." <<  endl;
+        if (verbose)  cout << " Performing calibration over " << calblock->GetEntries() << " entries." <<  endl;
 
-	/*
-        block->SetBranchAddress("UNIT0",&UNIT0);
-        block->SetBranchAddress("UNIT1",&UNIT1);
-        block->SetBranchAddress("UNIT2",&UNIT2);
-        block->SetBranchAddress("UNIT3",&UNIT3);
-	*/
          calblock->SetBranchAddress("eventdata",&event);
-	 /*
-          calblock->SetBranchAddress("ct",&event.ct);
-	  calblock->SetBranchAddress("chip",&event.chip);
-	  calblock->SetBranchAddress("module",&event.module);
-	  calblock->SetBranchAddress("apd",&event.apd);
-	  calblock->SetBranchAddress("Ec",&event.Ec);
-	  calblock->SetBranchAddress("Ech",&event.Ech);
-	  calblock->SetBranchAddress("x",&event.x);
-	  calblock->SetBranchAddress("y",&event.y);
-	  calblock->SetBranchAddress("E",&event.E);
-	  calblock->SetBranchAddress("ft",&event.ft);
-	  calblock->SetBranchAddress("a",&event.a);
-	  calblock->SetBranchAddress("b",&event.b);
-	  calblock->SetBranchAddress("c",&event.c);
-	  calblock->SetBranchAddress("d",&event.d);
-	  calblock->SetBranchAddress("id",&event.id);
-	  calblock->SetBranchAddress("pos",&event.pos);
-	 */
 
 
-	/*
-        strncpy(filebase,filename,strlen(filename)-17);
-        filebase[strlen(filename)-17]='\0';
-
-       sprintf(newrootfile,"%s",filebase);
-       strcat(newrootfile,".root");
-
-          TFile *f = new TFile(newrootfile,"RECREATE");
-          TTree *calblock = block->CloneTree(0);
-       
-	  for (j=0;j<2;j++){
-            for (i=0;i<4;i++){
-	      for (k=0;k<64;k++){
-                sprintf(tmpname,"Ehist[%d][%d][%d]",i,j,k);
-                sprintf(tmptitle,"Unit %d Module %d Pixel %d",i,j,k);
-                Ehist[i][j][k] = new TH1F(tmpname,tmptitle,EBINS,EMIN,EMAX);
-                sprintf(tmpname,"Efits[%d][%d][%d]",i,j,k);
-                sprintf(tmptitle,"Unit %d Module %d Pixel %d",i,j,k);
-                Efits[i][j][k] = new TF1(tmpname,"gaus",EBINS,EMIN,EMAX);
-	      }
-            }
-          }
-	*/
 
 	  if (verbose) cout << " Looping over entries: " <<endl;
        for (k=0;k<calblock->GetEntries();k++){
@@ -402,10 +389,8 @@ int main(int argc, Char_t *argv[])
  Double_t eres,d_eres;
  TPaveText *labeltxt = new TPaveText(.12,.8,.5,.88,"NDC");
  labeltxt->SetFillColor(kWhite);
-   TCanvas *c1;
-   c1 = (TCanvas*)gROOT->GetListOfCanvases()->FindObject("c1");
-  if (!c1) c1 = new TCanvas("c1","c1",10,10,1000,1000);
-   c1->SetCanvasSize(700,700);
+
+ c1->SetCanvasSize(700,700);
 
    calfile->cd();
    cal->Write(); 
@@ -587,10 +572,10 @@ Float_t getpeak(TH1F *hist, Float_t xlow, Float_t xhigh, Int_t verbose){
   TSpectrum *ss = new TSpectrum();
   Float_t y;
   //  Float_t corpeakpos;
-
+  if (verbose) { cout << " Funtion getpeak. Looking for peak between " << xlow << " and " << xhigh << endl;}
   y=0;
 
-	while((npeaks < 3) && (i < 8)) {
+	while((npeaks < 3) && (i < 9)) {
 	if(verbose) {cout << "loop " << i << " " << npeaks << endl;}
 	npeaks = ss->Search(hist, 3, "", 0.9 - (Float_t) i / 10);
         i++;
@@ -600,25 +585,27 @@ Float_t getpeak(TH1F *hist, Float_t xlow, Float_t xhigh, Int_t verbose){
 
 	if(verbose) {
 	   cout << npeaks << " peaks found " << i << " number of iterations" << endl;
-	   cout << *ss->GetPositionX() << endl;
 		}
 
 	if(npeaks != 1) {
 	for(i = 0; i < npeaks; i++) {
 	if(verbose) {cout << "x= " << *(ss->GetPositionX() + i) << " y = " << *(ss->GetPositionY() + i) << endl;}
 	/* take largest peak with x position larger than lower fit limit */
-       if((y < *(ss->GetPositionY() + i)) && (*(ss->GetPositionX() + i) > xlow) && (*(ss->GetPositionX() +i) < xhigh)) {
+       if( (y < *(ss->GetPositionY() + i) ) && (*(ss->GetPositionX() + i) > xlow) && (*(ss->GetPositionX() +i) < xhigh)) {
 	corpeak = i;
         y = *(ss->GetPositionY() + i);
+        if (verbose) cout << " Assuming peak " << corpeak << " at x=" << *(ss->GetPositionX() + corpeak) << endl;
 			}
 		} // for loop
-
+        } 
+        else corpeak=0; 
+            
 	if(verbose) {
 			cout << "The correct peak out of " << npeaks << " peaks is peak number " << corpeak;
 			cout << " at position: x = " << *(ss->GetPositionX() + corpeak) << endl;
 		}
 	//	corpeakpos=*(ss->GetPositionX() + corpeak);
-            
+	  
 
  // FIRST CHECK ::
   if((*(ss->GetPositionX() + corpeak)) < xlow) {
@@ -629,7 +616,7 @@ Float_t getpeak(TH1F *hist, Float_t xlow, Float_t xhigh, Int_t verbose){
       Int_t j;
       Int_t stop=0;
          while((i < 8)&&(!stop)) {
-        	npeaks = ss->Search(hist, 10 - i, "", 0.4);
+        	npeaks = ss->Search(hist, 10 - i, "nobackground", 0.4);
 		if(verbose) {cout << "2nd while loop " << i << " " << npeaks << endl;}
 		if(verbose) {cout << npeaks << " peaks found " << i << " number of iterations" << endl;
 			     cout << " peak position :: " << *ss->GetPositionX() << endl;}
@@ -728,7 +715,8 @@ Float_t getpeak(TH1F *hist, Float_t xlow, Float_t xhigh, Int_t verbose){
                   
 
  // Giving up, taking the highest peak 
-
+			return  NOVALIDPEAKFOUND;
+                                              
 			y = 0;
 			for(i = 0; i < npeaks; i++) {
 				if(y < *(ss->GetPositionX() + i)) {
@@ -741,12 +729,14 @@ Float_t getpeak(TH1F *hist, Float_t xlow, Float_t xhigh, Int_t verbose){
 				cout << "The correct peak out of " << npeaks << " peaks is peak number " << corpeak;
 				cout << " at position: x = " << *(ss->GetPositionX() + corpeak) << endl;
 			}
-		} // giving up
-	 } //npeaks = ss->Search(hist, 2, "", 0.3);
-   } //npeaks = ss->Search(hist, 2, "", 0.3);
+		} // corpeak < xlow
+          } // corpeak < xlow
+	} //corpeak < xlow 
 
-} // 4th check
-} // 3rd check
-} // 2nd check
+  } //  !stop
+  } // corpeak < xlow
+  //	} // 2nd check  -- npeaks != 1 ;
  // first check if the location of peak is okay.
+
+
 	return *(ss->GetPositionX()+corpeak);} // else corresponding to  if (com)

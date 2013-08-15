@@ -443,6 +443,8 @@ Int_t stop=0;
 	signal->SetParLimits(1, -10, PP_UP_EDGE);
 	signal->SetParameters(&params[3]);
 
+       
+
 	/*~~~~~~~~~~~~*/
 	Int_t	fitstat;
 	/*~~~~~~~~~~~~*/
@@ -506,7 +508,7 @@ Int_t stop=0;
    
 
           return fitfunc;
-        }  // if com 
+        }  // if com ==1
         else {
 	if(verbose) {
                 cout << "Fitting signal between " << params[4] - params[5] << " and " << params[4]+params[5] << endl;
@@ -563,6 +565,7 @@ Int_t stop=0;
 	  if ( params[5]*2.35/params[4]<.25) xhigh = params[4] + 3 * params[5];
           else  xhigh = params[4] + 1.5 * params[5];
      }
+
 
 
 	/*

@@ -34,8 +34,8 @@ int main(int argc, Char_t *argv[])
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 	Char_t		filenamel[FILENAMELENGTH] = "";
 	Int_t		verbose = 0;
-	Int_t		ix,rb;
-        rb=-99;
+	Int_t		ix;
+
         Int_t    left=-9999;
 	//        modulecal       UL0,UL1,UL2,UL3;
 
@@ -48,8 +48,7 @@ int main(int argc, Char_t *argv[])
 
 		if(strncmp(argv[ix], "-h", 2) == 0) {
 			cout << " Usage:  " << endl;
-                        cout << " ./merge_panel -f [Filename] -rb [renaboard] --L/--R [-v] " << endl;
-                        cout << " Renaboard is either 0,1,2 or 3" << endl;
+                        cout << " ./merge_panel -f [Filename] --L/--R [-v] " << endl;
                         cout << " Specify which panel: --L for left; --R for right " << endl;
 			return -1;
 		}
@@ -61,12 +60,6 @@ int main(int argc, Char_t *argv[])
 		if(strncmp(argv[ix], "-v", 2) == 0) {
 			cout << "Verbose Mode " << endl;
 			verbose = 1;
-		}
-
-		if(strncmp(argv[ix], "-rb", 3) == 0) {
-			rb = atoi(argv[ix+1]);
-                        cout << "Rena board : " << rb <<endl;
-                         ix++;
 		}
 
 
@@ -100,10 +93,6 @@ int main(int argc, Char_t *argv[])
 	if (left==-9999) {
           cout << "Please specify which panel we're using: Add --L or --R to command line"  << endl;  return -1;}         
 
-	if ((rb<0)||(rb>3)) {
-	    cout << " Please specify a valid renaboard  ( -rb [Renaboard] ). Options are 0,1,2, or 3. Nothing else.\nExiting." ;
-            return -1;
-	  }           
 
              TCanvas *c1;
              c1 = (TCanvas*)gROOT->GetListOfCanvases()->FindObject("c1");
@@ -132,9 +121,10 @@ int main(int argc, Char_t *argv[])
             return -11;}
 
 
+	if (verbose){
 	cout << " File Content : " << endl;
-	//	file_left->ls();
-        
+      	file_left->ls();
+        }
         
 
         ModuleCal *calevent=0;
@@ -149,11 +139,17 @@ int main(int argc, Char_t *argv[])
 
 	  sprintf(treename,"cal");
           cal = (TTree *) file_left->Get(treename);
+
+          if (verbose) { cal->Print();}
           if (!(cal))    {
 	    cout << " Problem reading " << treename << " from file." << endl;
 	    //          continue;
 	  }
+
+	  if (verbose)	  cal->GetListOfBranches()->Print(); 
+
        cal->SetBranchAddress("Calibrated Event Data",&calevent);
+
        // cal->SetBranchAddress("ct",&calevent.ct);
        //       cal->SetBranchAddress("chip",&calevent.chip);
 	  /*
