@@ -200,6 +200,7 @@ Int_t main(int argc, Char_t *argv[])
            cout << ", pp_low = " << pp_low ;
        	   cout << " pp_up = " << pp_up << endl;
 	   cout << " --------- Common ----------- " <<endl;} 
+           E_com[kk][i][j]->SetAxisRange(E_low_com,SATURATIONPEAK,"X");
            pp_right_com=GetPhotopeak_v1(E_com[kk][i][j],pp_low_com,pp_up_com,verbose);
            pp_low_com=0.7*pp_right_com;
            pp_up_com=1.3*pp_right_com;

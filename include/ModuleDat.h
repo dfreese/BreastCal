@@ -10,6 +10,7 @@ class ModuleDat : public TObject {
  public:
   Long64_t ct;
   Short_t chip;
+  Short_t cartridge;
   Short_t module;
   Short_t apd;
   Float_t Ec;
@@ -30,7 +31,7 @@ class ModuleDat : public TObject {
   //  ~ModuleDat(); 
   virtual ~ModuleDat();
 
-  ClassDef(ModuleDat,2) 
+  ClassDef(ModuleDat,3) 
 };
 
 

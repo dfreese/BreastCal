@@ -29,13 +29,15 @@ unsigned long long int byteCounter;
 //#define NUM_RENA_PER_DAQ 8
 
 #define CHANPERMODULE 8
-#define RENACHIPS 8
 #define MODULES 4
-#define RENACHIPS 8
+#define NUM_RENA_PER_4UPBOARD 8
+#define FOURUPBOARDS 4
+#define RENACHIPS NUM_RENA_PER_4UPBOARD*FOURUPBOARDS
 #define MINENTRIES 10000
 #define MINEHISTENTRIES 10
 
-#define FOURUPBOARDS 4
+
+
 #define MAXFILELENGTH      160
 #define E_up 3000
 #define E_low -200
@@ -49,6 +51,8 @@ unsigned long long int byteCounter;
 #define PP_UP_EDGE 2800
 #define PP_LOW_EDGE_COM 350
 #define PP_UP_EDGE_COM 1200
+
+#define SATURATIONPEAK 1200
 
 #define MINHISTENTRIES 200
 
@@ -147,6 +151,7 @@ struct chipevent
 { Long64_t ct;
   Int_t pos;
   Short_t chip;
+  Short_t cartridge;
   Short_t module;
   Short_t com1;
   Short_t com2;

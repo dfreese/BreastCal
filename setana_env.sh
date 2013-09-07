@@ -1,5 +1,5 @@
 
-CURDIR=/home/miil/MODULE_ANA/ANA_V5/ModuleClass
+CURDIR=/home/miil/MODULE_ANA/ANA_V5/Ethernet
 
 if [[ $PATH != ?(*:)${CURDIR}/bin?(:*) ]]; then
  export PATH=$PATH:$CURDIR/bin

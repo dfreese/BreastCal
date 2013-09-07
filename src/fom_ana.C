@@ -26,6 +26,7 @@ int main(int argc, Char_t *argv[])
 	Int_t		verbose = 0;
 	Int_t		ix;
         ModuleCal       *event=0;
+        Bool_t          filenamespec;
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     
@@ -41,9 +42,10 @@ int main(int argc, Char_t *argv[])
 
 
 		/* filename '-f' */
-		if(strncmp(argv[ix], "-f2", 2) == 0) {
+		if(strncmp(argv[ix], "-f", 2) == 0) {
 			if(strlen(argv[ix + 1]) < FILENAMELENGTH) {
 				sprintf(filenamel, "%s", argv[ix + 1]);
+				filenamespec=true;
 			}
 			else {
 				cout << "Filename " << argv[ix + 1] << " too long !" << endl;
@@ -54,7 +56,9 @@ int main(int argc, Char_t *argv[])
 		
 
 	}
-
+	if (!filenamespec) { 
+             cout << " Please Specify filename:: fom_ana -f [filename] .\n Exiting. " << endl ;
+	  return -2;}
              TCanvas *c1;
              c1 = (TCanvas*)gROOT->GetListOfCanvases()->FindObject("c1");
              if (!c1) c1 = new TCanvas("c1","c1",10,10,1000,1000);
@@ -87,7 +91,7 @@ int main(int argc, Char_t *argv[])
         for (i=0;i<4;i++)
         for (j=0;j<2;j++){
           { validpeaks[m][i][j]=0;
-            sprintf(peaklocationfilename,"%s.parse.RENA%d.unit%d_apd%d_peaks",filebase,m,i,j);
+            sprintf(peaklocationfilename,"./CHIPDATA/%s.RENA%d.unit%d_apd%d_peaks",filebase,m,i,j);
        strcat(peaklocationfilename,".txt");
        infile.open(peaklocationfilename);
        lines = 0;
@@ -136,7 +140,7 @@ int main(int argc, Char_t *argv[])
         TTree *block;
         Char_t treename[40];
 
-         sprintf(treename,"mdata");
+         sprintf(treename,"cal");
          block = (TTree *) file_left->Get(treename);
          if (!block) {
            cout << " Problem reading Tree " << treename  << " from file " << filenamel << endl;
@@ -146,7 +150,7 @@ int main(int argc, Char_t *argv[])
 
          cout << " Entries : " << block->GetEntries() << endl;
         
-	 block->SetBranchAddress("eventdata",&event);
+	 block->SetBranchAddress("Calibrated Event Data",&event);
 	 /*
           block->SetBranchAddress("ct",&event.ct);
           block->SetBranchAddress("chip",&event.chip);
@@ -261,7 +265,7 @@ Double_t FOM_CTR_AV_E=0 ; Double_t FOM_TOP_AV_E=0 ; Double_t EDGE_FOM_CTR_AV_E=0
 	 fomout << "==============================================================" <<endl;
 	 fomout << "== FOM DATA CHIP " << m  <<endl;
 	 fomout << "==============================================================" <<endl;
-         fomout << "      |    FOM_top   |  FOM_center   | FOM_top_edge  |FOM_center_edge|" << endl;
+         fomout << "      |    FOM_center   |  FOM_top   | FOM_center_edge  |FOM_top_edge|" << endl;
 
 
 	   for (i=0;i<4;i++){

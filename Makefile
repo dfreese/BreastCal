@@ -106,8 +106,8 @@ print:
 
 clean: 
 	rm .depend
-	rm .buildrules
-	rm .binrules
+	if [ -f .buildrules ] ; then rm .buildrules; fi
+	if [ -f .buildrules ] ; then rm .binrules; fi
 	rm -f ./src/*.o
 	if [[ -e ModuleDatDict.C ]]; then rm ./ModuleDatDict.* ;fi
 	rm -f ./lib/*.so

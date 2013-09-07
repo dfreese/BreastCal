@@ -1,4 +1,14 @@
 #include "enefit.h"
+
+/*
+#define FIRSTCHIP 0
+#define LASTCHIP RENACHIPS
+*/
+
+#define FIRSTCHIP 8
+#define LASTCHIP 9
+
+
 int main(int argc, Char_t *argv[])
 {
  	cout << " Welcome to enefit. Calibrate every pixel & Fill calibrated Tree. " ;
@@ -47,7 +57,7 @@ int main(int argc, Char_t *argv[])
         Char_t filebase[FILENAMELENGTH],peaklocationfilename[FILENAMELENGTH],rootfile[FILENAMELENGTH]; 
         Char_t tmpname[20],tmptitle[50];
         Int_t i,j,k,m,lines;
-        Int_t validpeaks[RENACHIPS][4][2];
+        Int_t validpeaks[RENACHIPS][4][2]={{{0}}};
         Double_t U_x[RENACHIPS][4][2][64];
         Double_t U_y[RENACHIPS][4][2][64];
         Double_t aa, bb;
@@ -84,7 +94,8 @@ int main(int argc, Char_t *argv[])
         strncpy(filebase,filename,strlen(filename)-12);
         filebase[strlen(filename)-12]='\0';
 
-        for (m=0;m<RENACHIPS;m++){
+	//        for (m=0;m<RENACHIPS;m++){
+        for (m=FIRSTCHIP;m<LASTCHIP;m++){
         for (i=0;i<4;i++)
         for (j=0;j<2;j++){
 	  { validpeaks[m][i][j]=0;
@@ -107,7 +118,7 @@ int main(int argc, Char_t *argv[])
 	} //m
 
 	if (verbose){
-	  for (m=0;m<RENACHIPS;m++){
+	  for (m=FIRSTCHIP;m<LASTCHIP;m++){
       	  for (i=0;i<4;i++){
         for (j=0;j<2;j++){      
 	  cout << " m = " << m << " i = " << i << " j = " << j << " : " <<validpeaks[m][i][j] <<endl;
@@ -124,7 +135,7 @@ int main(int argc, Char_t *argv[])
 
 	/* Getting E hists */
       Char_t tmpstring[30];
-      for (m=0;m<RENACHIPS;m++){
+      for (m=FIRSTCHIP;m<LASTCHIP;m++){
 	//        sprintf(tmpstring,"RENA%d",m);
 	//      	enefile->cd(tmpstring);
 	//        subdir[m]->cd();
@@ -156,7 +167,7 @@ int main(int argc, Char_t *argv[])
 
 
 
-	  for (m=0;m<RENACHIPS;m++){
+	  for (m=FIRSTCHIP;m<LASTCHIP;m++){
            for (i=0;i<4;i++){
           for (j=0;j<2;j++){ 
 	    if (verbose) { cout << endl; cout << " --------------- CHIP " << m << " MODULE " << i << " PSAPD " << j;
@@ -167,7 +178,8 @@ int main(int argc, Char_t *argv[])
 	       Emeans[m*8+j*4+i] = (Float_t )  (*ppVals)(m*8+j*4+i);
 	       Emean_com = (Float_t )  (*ppVals_com)(m*8+j*4+i);
 	       Emeans_com[m*8+j*4+i] = (Float_t )  (*ppVals_com)(m*8+j*4+i);
-	       if (verbose) cout  << " ppVals : " << Emean   << " " << Ehist[m][i][j][0]->GetEntries()   << endl;
+	       if (verbose)  { cout  << " S :: ppVals : " << Emean   << " Entries :" << Ehist[m][i][j][0]->GetEntries()   << endl;}
+	       if (verbose)  { cout  << " C :: ppVals : " << Emean_com   << " Entries :" << Ehist_com[m][i][j][0]->GetEntries()   << endl;}
                for (k=0;k<64;k++){
 	      //	      fitall(Ehist[i][j], ftmp, &vals[0], pixvals, E_low, E_up, c1, verbose);
 		 sprintf(tmpstring,"Efits[%d][%d][%d][%d]",m,i,j,k);
@@ -181,15 +193,15 @@ int main(int argc, Char_t *argv[])
                 cout << " Hist entries : " << Ehist[m][i][j][k]->GetEntries() << " Efits mean :" ;
 		cout << Efits[m][i][j][k]->GetParameter(1) << " nrbins :: " << Ehist[m][i][j][k]->GetNbinsX() << endl;}
 	      // edge has lower gain
-              if ((k==0)||(k==7)||(k==54)||(k==63)){ peak=getpeak( Ehist[m][i][j][k], Emean*0.7,Emean*1.15,verbose);
+              if ((k==0)||(k==7)||(k==54)||(k==63)){ peak=getpeak( Ehist[m][i][j][k], Emean*0.7,Emean*1.15,0,verbose);
                 if (peak==NOVALIDPEAKFOUND) { 
 		  if (verbose) cout << " That didn't go well. Retry to get peak with larger margins " << endl;
-		  peak=getpeak( Ehist[m][i][j][k], Emean*0.7,Emean*1.5,verbose);
+		  peak=getpeak( Ehist[m][i][j][k], Emean*0.6,Emean*1.5,1,verbose);
 		}}
-		else { peak=getpeak( Ehist[m][i][j][k], Emean*0.85,Emean*1.15,verbose);
+	      else { peak=getpeak( Ehist[m][i][j][k], Emean*0.85,Emean*1.15,0,verbose);
                 if (peak==NOVALIDPEAKFOUND) { 
 		  if (verbose) cout << " That didn't go well. Retry to get peak with larger margins " << endl;
-		  peak=getpeak( Ehist[m][i][j][k], Emean*0.7,Emean*1.5,verbose);}
+		  peak=getpeak( Ehist[m][i][j][k], Emean*0.7,Emean*1.5,1,verbose);}
 		}
 		if (peak==NOVALIDPEAKFOUND) peak=Emean;
               Efits[m][i][j][k]->SetParameter(1,peak);
@@ -208,11 +220,13 @@ int main(int argc, Char_t *argv[])
                 cout << " ------------ Common ----------------- " <<endl;
                 cout << " Hist entries : " << Ehist_com[m][i][j][k]->GetEntries() << " Efits mean :" ;
 		cout << Efits_com[m][i][j][k]->GetParameter(1) << endl;}
-              peak=getpeak( Ehist_com[m][i][j][k], Emean_com*0.85,Emean_com*1.15,verbose);
+	      Ehist_com[m][i][j][k]->SetAxisRange(E_low_com,SATURATIONPEAK,"X");
+              peak=getpeak( Ehist_com[m][i][j][k], Emean_com*0.85,Emean_com*1.25,0,verbose);
                 if (peak==NOVALIDPEAKFOUND) { 
 		  if (verbose) cout << " That didn't go well. Retry to get peak with larger margins " << endl;
-		  peak=getpeak( Ehist[m][i][j][k], Emean_com*0.7,Emean_com*1.5,verbose);}
-	       
+                  if ((k==0)||(k==7)||(k==54)||(k==63)){ peak=getpeak( Ehist_com[m][i][j][k], Emean_com*0.6,Emean_com*1.25,1,verbose);}
+		  else {peak=getpeak( Ehist_com[m][i][j][k], Emean_com*0.7,Emean_com*1.5,1,verbose);}
+		}
               if (peak==NOVALIDPEAKFOUND) peak=Emean_com;
               Efits_com[m][i][j][k]->SetParameter(1,peak);
               Efits_com[m][i][j][k]->SetParameter(2,0.04*peak);
@@ -222,7 +236,7 @@ int main(int argc, Char_t *argv[])
 		Ehist_com[m][i][j][k]->Fit(Efits_com[m][i][j][k],"Q","",peak*0.85,peak*1.15);}
               Efits_com[m][i][j][k]->SetLineColor(kBlue);
 	      CRYSTALPP_COM[m][i][j][k]=Efits_com[m][i][j][k]->GetParameter(1);
-              if (TMath::Abs(CRYSTALPP_COM[m][i][j][k]/Emean_com -1 ) > 0.3 )          {
+              if (TMath::Abs(CRYSTALPP_COM[m][i][j][k]/Emean_com -1 ) > 0.35 )          {
 		if (verbose) {cout << " BAD FIT to histogram ["<<m<<"]["<<i<<"]["<<j<<"]["<<k<<"]" << endl;
                      cout << " taking PP @ " << Emean_com << " ( peak = " << peak << " ) " << endl;}
                 CRYSTALPP_COM[m][i][j][k]=Emean_com;}
@@ -242,7 +256,8 @@ int main(int argc, Char_t *argv[])
 	  // plot histograms
   Bool_t firstloop=1;
            m=0;i=0;j=0;
-         for (m=0;m<RENACHIPS;m++){
+	   //         for (m=0;m<RENACHIPS;m++){
+         for (m=FIRSTCHIP;m<LASTCHIP;m++){
 	  for (i=0;i<4;i++){
 	   for (j=0;j<2;j++){
             for (Int_t kk=0;kk<2;kk++){
@@ -253,8 +268,8 @@ int main(int argc, Char_t *argv[])
                 Ehist_com[m][i][j][k+kk*32]->Draw();
                 Efits_com[m][i][j][k+kk*32]->Draw("same");
 	      }
-             if (firstloop) { c1->Print("tmp.ps("); firstloop=0;}
-             else { c1->Print("tmp.ps");
+             if (firstloop) { c1->Print("crystalpeakfits_com.ps("); firstloop=0;}
+             else { c1->Print("crystalpeakfits_com.ps");
 	  }
 
 	    }  // loop kk
@@ -263,13 +278,39 @@ int main(int argc, Char_t *argv[])
 
           } // loop over m
 
-   c1->Print("tmp.ps)");
+   c1->Print("crystalpeakfits_com.ps)");
+
+   firstloop=1;
+           m=0;i=0;j=0;
+	   //         for (m=0;m<RENACHIPS;m++){
+         for (m=FIRSTCHIP;m<LASTCHIP;m++){
+	  for (i=0;i<4;i++){
+	   for (j=0;j<2;j++){
+            for (Int_t kk=0;kk<2;kk++){
+             c1->Clear();
+             c1->Divide(8,4);
+             for (k=0;k<32;k++){
+	       c1->cd(k+1);
+                Ehist[m][i][j][k+kk*32]->Draw();
+                Efits[m][i][j][k+kk*32]->Draw("same");
+	      }
+             if (firstloop) { c1->Print("crystalpeakfits_spat.ps("); firstloop=0;}
+             else { c1->Print("crystalpeakfits_spat.ps");
+	  }
+
+	    }  // loop kk
+           } // loop j
+	  } // loop over i
+
+          } // loop over m
+
+   c1->Print("crystalpeakfits_spat.ps)");
 
 
 
 	  if (verbose) {
 	    cout << "Energy Calibration parameters :: " << endl;
-	    for (m=0;m<RENACHIPS;m++){
+	    for (m=FIRSTCHIP;m<LASTCHIP;m++){
 	      cout << "Chip " << m << endl;
 	      for (k=0;k<64;k++){
               for ( i=0;i<4;i++){
@@ -305,7 +346,8 @@ int main(int argc, Char_t *argv[])
 	    cal = new TTree(treename,treetitle);
             cal->Branch("Calibrated Event Data",&calevent);
 
-	    for (m=0; m<RENACHIPS;m++){
+	    //	    for (m=0; m<RENACHIPS;m++){
+	    for (m=FIRSTCHIP; m<LASTCHIP;m++){
              for (i=0;i<4;i++){ 
               for (j=0;j<2;j++){
                sprintf(tmpstring,"globhist[%d][%d][%d]",m,i,j);
@@ -397,7 +439,8 @@ int main(int argc, Char_t *argv[])
    ppVals->Write();
    if (verbose)   cout << "Fitting global histogram: " <<endl;
 
-   for (m=0;m<RENACHIPS;m++){
+
+   for (m=FIRSTCHIP;m<LASTCHIP;m++){
      calfile->cd();
      sprintf(tmpstring,"RENA%d",m);
      subdir[m] = calfile->mkdir(tmpstring);
@@ -444,7 +487,7 @@ int main(int argc, Char_t *argv[])
 
    if (verbose)   cout << "Fitting Common global histogram common: " <<endl;
 
-   for (m=0;m<RENACHIPS;m++){
+   for (m=FIRSTCHIP;m<LASTCHIP;m++){
      calfile->cd();
      //     sprintf(tmpstring,"RENA%d",m);
      //     subdir[m] = calfile->mkdir(tmpstring);
@@ -499,7 +542,7 @@ int main(int argc, Char_t *argv[])
       
 	  ofstream ofile;
 
-   for (m=0;m<RENACHIPS;m++){
+   for (m=FIRSTCHIP;m<LASTCHIP;m++){
      for (i=0;i<4;i++){
      for (j=0;j<2;j++){
        sprintf(peaklocationfilename,"%s.RENA%d.unit%d_apd%d_cal",filebase,m,i,j);
@@ -566,7 +609,7 @@ Int_t getcrystal(Double_t x, Double_t y, Double_t xpos[64], Double_t ypos[64], I
 
 
 
-Float_t getpeak(TH1F *hist, Float_t xlow, Float_t xhigh, Int_t verbose){
+Float_t getpeak(TH1F *hist, Float_t xlow, Float_t xhigh, Bool_t force, Int_t verbose){
   Int_t npeaks=0;
   Int_t i=0,corpeak=0;
   TSpectrum *ss = new TSpectrum();
@@ -575,7 +618,7 @@ Float_t getpeak(TH1F *hist, Float_t xlow, Float_t xhigh, Int_t verbose){
   if (verbose) { cout << " Funtion getpeak. Looking for peak between " << xlow << " and " << xhigh << endl;}
   y=0;
 
-	while((npeaks < 3) && (i < 9)) {
+	while((npeaks < 2) && (i < 9)) {
 	if(verbose) {cout << "loop " << i << " " << npeaks << endl;}
 	npeaks = ss->Search(hist, 3, "", 0.9 - (Float_t) i / 10);
         i++;
@@ -608,15 +651,20 @@ Float_t getpeak(TH1F *hist, Float_t xlow, Float_t xhigh, Int_t verbose){
 	  
 
  // FIRST CHECK ::
-  if((*(ss->GetPositionX() + corpeak)) < xlow) {
+	if(( (*(ss->GetPositionX() + corpeak)) < xlow) || ((*(ss->GetPositionX() + corpeak)) > xhigh))  {
 
       if(verbose) {cout << " Peak at " << *(ss->GetPositionX() + corpeak) << " is not within the window " << endl;}
         // move SIGMA rather than threshold
+
+      if (!(force)) return NOVALIDPEAKFOUND;
+
       i=0; npeaks=0; 
       Int_t j;
       Int_t stop=0;
-         while((i < 8)&&(!stop)) {
+      /* I find that sigma = 3 is too small, limit it to 4 by demanding i<7 */ 
+      while((i < 7)&&(!stop)) {
         	npeaks = ss->Search(hist, 10 - i, "nobackground", 0.4);
+
 		if(verbose) {cout << "2nd while loop " << i << " " << npeaks << endl;}
 		if(verbose) {cout << npeaks << " peaks found " << i << " number of iterations" << endl;
 			     cout << " peak position :: " << *ss->GetPositionX() << endl;}
@@ -639,14 +687,16 @@ Float_t getpeak(TH1F *hist, Float_t xlow, Float_t xhigh, Int_t verbose){
                 else corpeak=0;
 
               
-	if((*(ss->GetPositionX() + corpeak)) < xlow) {
+		if(((*(ss->GetPositionX() + corpeak)) < xlow) || ((*(ss->GetPositionX() + corpeak)) > xhigh ) ) {
 		if(verbose) {cout << "Peak at " << *(ss->GetPositionX() + corpeak) << " is not within the window " << endl;} }
         else { if (verbose) {cout << "Valid peak found at : " << *(ss->GetPositionX()+corpeak) << endl;} stop=1; }
        } // while loop
 
   if (!(stop)){ 
 	y = 0;
-	npeaks = ss->Search(hist, 2, "", 0.4);
+
+	/* note 9-6-13: changed sigma from 2 to 3,  need to clean up FIXME */
+	npeaks = ss->Search(hist, 3, "", 0.4);
 	for(i = 0; i < npeaks; i++) {
 	if(verbose) {cout << "x= " << *(ss->GetPositionX() + i) << " y = " << *(ss->GetPositionY() + i) << endl;}
 
@@ -664,10 +714,10 @@ Float_t getpeak(TH1F *hist, Float_t xlow, Float_t xhigh, Int_t verbose){
 		}
 // SECOND CHECK
 	if((*(ss->GetPositionX() + corpeak)) < xlow) {
-			if(verbose) {cout << "Peak at " << *(ss->GetPositionX() + corpeak) << " is STILL not within the window " << endl;}
+			if(verbose) {cout << "Peak at " << *(ss->GetPositionX() + corpeak) << " is STILL (II) not within the window " << endl;}
                        
          /* Lower "SIGMA" of tspectrum */
-         npeaks = ss->Search(hist, 2, "", 0.3);
+         npeaks = ss->Search(hist, 3, "", 0.3);
 	for(i = 0; i < npeaks; i++) {
 	  if(verbose) {cout << "x= " << *(ss->GetPositionX() + i) << " y = " << *(ss->GetPositionY() + i) << endl;}
 				/* take largest peak with x position larger than lower fit limit */
@@ -686,11 +736,11 @@ Float_t getpeak(TH1F *hist, Float_t xlow, Float_t xhigh, Int_t verbose){
 // THIRD CHECK
    if((*(ss->GetPositionX() + corpeak)) < xlow) {
 			if(verbose) {
-	cout << "Peak at " << *(ss->GetPositionX() + corpeak) << " is STILL not within the window " << endl;
+	cout << "Peak at " << *(ss->GetPositionX() + corpeak) << " is STILL (III) not within the window " << endl;
 			}
 
-     /* Lower "SIGMA, threshold" of tspectrum */
- 		npeaks = ss->Search(hist, 2, "", 0.3);
+     /* Lower "SIGMA, threshold" of tspectrum  FIXME -- mind this too  */
+ 		npeaks = ss->Search(hist, 3, "", 0.3);
 		for(i = 0; i < npeaks; i++) {
 		if(verbose) {cout << "x= " << *(ss->GetPositionX() + i) << " y = " << *(ss->GetPositionY() + i) << endl;}
 				/* take largest peak with x position larger than lower fit limit */
@@ -710,11 +760,14 @@ Float_t getpeak(TH1F *hist, Float_t xlow, Float_t xhigh, Int_t verbose){
 // FOURTH CHECK
 		if((*(ss->GetPositionX() + corpeak)) < xlow) {
 			if(verbose) {
-				cout << "Peak at " << *(ss->GetPositionX() + corpeak) << " is STILL not within the window " << endl;
+				cout << "Peak at " << *(ss->GetPositionX() + corpeak) << " is STILL (IV) not within the window " << endl;
 			}
                   
 
  // Giving up, taking the highest peak 
+ 
+			if (verbose) cout << " Returning NOVALIDPEAKFOUND " << endl;
+
 			return  NOVALIDPEAKFOUND;
                                               
 			y = 0;

@@ -7,28 +7,30 @@
 CODEVERSION=/home/miil/MODULE_ANA/ANA_V5/ModuleClass/bin/
 
 # NOTE: if CORES > 4 some extra checks will be needed making sure all data has been processed needed for the next steps. 
-CORES=4
+CORES=2
 
 ##############################################################################################################
 
 function waitsome ()
 {
  # waits untill all jobs are done from a list submitted as $1;
- if [ -z "$2" ] ; then
-  jobs=0;
- else
-  jobs=$2;
- fi
+ 
+local jobs=${2:-0}
+#if [ -z "$2" ] ; then
+#  jobs=1;
+# else
+#  jobs=$2;
+# fi
 
-# echo " JOBS TO WAIT FOR :: " $jobs
+ echo " JOBS TO WAIT FOR :: " $jobs
 
- finished=0;
+ local finished=0;
 
 
 while [ $finished -lt $jobs ] ; do
-  index=0;
+  local index=0;
   for ii in ${pids[@]}; do
-#  echo "job ${ii} index $index array length : ${#pids[@]} . Array: ${pids[*]}" ;
+  echo "job ${ii} index $index array length : ${#pids[@]} . Array: ${pids[*]}" ;
   if [ ! -d /proc/${ii} ]; then 
 #           echo "${ii} done ! ( index $index ) " ; 
            (( finished++ )); 
@@ -41,7 +43,7 @@ while [ $finished -lt $jobs ] ; do
   (( index++ )); 
   done;
 #  echo " Finished jobs :: " $finished " ( pids = " ${pids[@]} " )" 
-  sleep .5
+  sleep 2
 done;
 }
 
@@ -50,7 +52,8 @@ done;
 function waitall ()
 {
  # waits untill all jobs are done from a list submitted as $1;
- pids=$1;
+# pids=$1;
+ echo " WAITALL :: NEED TO WAIT FOR ${#pids[@]} jobs to finish with IDs :: ${pids[*]}"
  waitsome $1 ${#pids[@]} 
 }
 
@@ -143,6 +146,9 @@ check ${?} "enefit_psf panel ${1}";
  rm ${MODE}_DAQ_${DATE}_${1}.enecal.root;
  mv ${MODE}_DAQ_${DATE}_${1}.RENA* ./CHIPDATA
 ##  rm *PED_BinaryData_*_${s}${i}*out.ped.RENA?; 
+${CODEVERSION}fom_ana -f  ${MODE}_DAQ_${DATE}_${1}.cal.root;
+check ${?} "fom_ana panel ${1}"
+
  cd ..;
 
 #fi; #skip
@@ -265,7 +271,7 @@ echo -n " Converting pedfiles @ "
  #   echo " RUNNINGJOBS : $RUNNINGJOBS"
     waitsome $pids 1
     RUNNINGJOBS=${#pids[@]}
-    echo " RUNNINGJOBS after waitsome : $RUNNINGJOBS"
+    echo " PEDCONV LOOP RUNNINGJOBS after waitsome : $RUNNINGJOBS"
     fi;
     done;
 
@@ -320,7 +326,7 @@ waitall $pids
 
  echo -n " decoding done. Time:: "
  timing $STARTTIME 
-
+ echo " PIDS = ${pids[@]} "
 
 
  
@@ -342,10 +348,14 @@ fi;  # ARG != SHORT
 echo " CHECK ME :: PWD :: `pwd` "
 
 
+
 ### TODO:  MAKE SURE THE CLEANUP WORKS !!
 TIMECHECK=0
  RUNNINGJOBS=0;
  c=0;
+
+echo " PIDS before calibration : ${#pids[@]} :: ${pids[@]} "
+
 
 #fixme .. fix code !! doesn't run enecal ! --- investigate.
 
@@ -368,7 +378,7 @@ while [ $i -le 3 ] ; do
  #   echo " RUNNINGJOBS : $RUNNINGJOBS"
     waitsome $pids 1
     RUNNINGJOBS=${#pids[@]}
-    echo " RUNNINGJOBS after waitsome : $RUNNINGJOBS"
+    echo " Calibration loop ... RUNNINGJOBS after waitsome : $RUNNINGJOBS"
     fi;
     done;
 done;
@@ -382,7 +392,7 @@ waitall $pids
 echo -n " calibration done @ "
 timing $STARTTIME
 
-
+check -1 "WIP"
 
 
 SPLITS=0;
