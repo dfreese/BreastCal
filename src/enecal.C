@@ -117,7 +117,7 @@ int main(int argc, Char_t *argv[])
               while (1){
                if (!infile.good()) break;
                infile >> k >>  aa >> bb;
-               if (k < 64) { U_y[m][j][i][k]=aa; U_x[m][j][i][k]=bb;}
+               if (k < 64) { U_x[m][j][i][k]=aa; U_y[m][j][i][k]=bb;}
        //       cout << k << ", " << U_x[i][j][k]<< ", " << U_y[i][j][k] << endl;
                lines++;      
                 }

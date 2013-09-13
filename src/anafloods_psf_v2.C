@@ -43,9 +43,9 @@
 #include "time.h"
 #endif
 
-TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validflag,Float_t &cost);
-Double_t findmean( TH1D * h1, Int_t verbose);
-Double_t findmean8( TH1D * h1, Int_t verbose,Int_t X);
+TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validflag,Float_t &cost, Bool_t APD);
+Double_t findmean( TH1D * h1, Int_t verbose, Bool_t APD);
+Double_t findmean8( TH1D * h1, Int_t verbose,Int_t X, Bool_t APD);
 Int_t updatesegmentation(TH2F *hist, Double_t x[16], Double_t y[16], TGraph *updated,Int_t verbose);
 Int_t updatesegpoint(TH2F *hist, Double_t x, Double_t y, Double_t &xxx, Double_t &yyy, Int_t verbose) ;
 Int_t validate_sort(TGraph *gr, Int_t verbose);
@@ -239,7 +239,7 @@ Int_t main(int argc, Char_t *argv[])
 #endif
      //   cout << " Starttime : " << starttime;
      //     verbose=0;
-     peaks[m][i][j] =   PeakSearch(floods[m][i][j],peaklocationfilename,verbose, flag, costs[m][i][j]);
+     peaks[m][i][j] =   PeakSearch(floods[m][i][j],peaklocationfilename,verbose, flag, costs[m][i][j],j);
      //     verbose=1;
       }
       else{
@@ -346,7 +346,7 @@ floods[m][i][j]->Draw("colz");
 
 
 
-TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validflag,Float_t &cost){
+TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validflag,Float_t &cost, Bool_t APD){
 
   cost=999.999;
 
@@ -368,9 +368,9 @@ TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validfl
    projY->SetName("projY");
 
    if (verbose)     cout << " finding X center " << endl;
-   meanX = findmean8(projX,verbose,1);
+   meanX = findmean8(projX,verbose,1,APD);
      if (verbose)  cout << " finding Y center " << endl;
-     meanY = findmean8(projY,verbose,0);
+     meanY = findmean8(projY,verbose,0,APD);
 
 #ifdef DEVELOP
    TFile *f = new TFile("proj.root","RECREATE");
@@ -383,12 +383,12 @@ TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validfl
 
     if (meanX==12345) {
          projX = (TH1D*) flood->ProjectionX();        
-	 meanX = findmean(projX,verbose);
+	 meanX = findmean(projX,verbose,APD);
     }
 
     if (meanY==12345) {
          projY = (TH1D*) flood->ProjectionY();        
-	 meanY = findmean(projY,verbose);
+	 meanY = findmean(projY,verbose,APD);
     }
 
 
@@ -1117,7 +1117,7 @@ Some debugging Crap
  
  return peaks_sorted;}
 
-Double_t findmean8( TH1D * h1, Int_t verbose,Int_t X){
+Double_t findmean8( TH1D * h1, Int_t verbose,Int_t X, Bool_t APD){
   TSpectrum *s = new TSpectrum();
   Int_t nfound;
   Float_t *xx,*yy;
@@ -1144,6 +1144,7 @@ Double_t findmean8( TH1D * h1, Int_t verbose,Int_t X){
   // NOTE !!!
   // the y-coordinate is always slightly below 0 ! due to some remaining asymmetry
   // DO NOT FORGET THIS !!!
+  // HOWEVER, FOR APD 1 it is slightly ABOVE 0, due to the mirroring
 
   else {
     if (verbose){    cout << "FINDMEAN8 FAILED !! " << endl;}
@@ -1166,11 +1167,20 @@ Double_t findmean8( TH1D * h1, Int_t verbose,Int_t X){
     i=0;
     if ( X==0){
       if (verbose) cout << "looking at Y" << endl;
+      if (APD) {
+       while (meanloc[ind2[i]]<0) { 
+       if (verbose) { cout <<  " candidate :: " << meanloc[ind2[i]] << endl;}
+       if ( i< ( nfound-2) ) i++; else return 12345;}
+       if ( verbose ) cout << " returning : " << meanloc[ind2[i]] << endl;      
+       return meanloc[ind2[i]];     
+      }
+      else {
     while (meanloc[ind2[i]]>0) { 
     if (verbose) { cout <<  " candidate :: " << meanloc[ind2[i]] << endl;}
     if ( i< ( nfound-2) ) i++; else return 12345;}
     if ( verbose ) cout << " returning : " << meanloc[ind2[i]] << endl;      
     return meanloc[ind2[i]];}
+    }
     else { 
       if (verbose) cout << "looking at X" << endl;
       return meanloc[ind2[0]];}
@@ -1180,7 +1190,7 @@ Double_t findmean8( TH1D * h1, Int_t verbose,Int_t X){
 }
 }
 
-Double_t findmean( TH1D * h1, Int_t verbose){
+Double_t findmean( TH1D * h1, Int_t verbose, Bool_t APD){
   Int_t initialbin,i,leftbinmax,rightbinmax,meanbin;
   Double_t leftmax, rightmax, mean, curval, prevval;
   //  h1->Rebin(2);

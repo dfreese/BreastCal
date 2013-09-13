@@ -640,8 +640,8 @@ if (pedfilenamespec) {
 	     event->c=rawevent.c - pedestals[chipId][module][2];
 	     event->d=rawevent.d - pedestals[chipId][module][3];
 	     event->E=event->a+event->b+event->c+event->d;
-	     event->x= event->a + event->d - ( event->b + event->c );
-	     event->y= event->c + event->d - ( event->b + event->a );
+	     event->y= event->a + event->d - ( event->b + event->c );
+	     event->x= event->c + event->d - ( event->b + event->a );
 	     event->x/=event->E;
 	     event->y/=event->E;
 
@@ -668,6 +668,7 @@ if (pedfilenamespec) {
      if ( (rawevent.com2h - pedestals[chipId][module][7]) < threshold ) {   
      totaltriggers[chipId][module][1]++;
      event->apd=1;   
+     event->y*=-1;
      // FIXME :: need to find solution for ft. 
      //     event->ft=finecalc(rawevent.u2h,rawevent.v2h,uu_c[chipId][module][1],vv_c[chipId][module][1])  ;
      event->ft= (  ( ( rawevent.u2h & 0xFFFF ) << 16  )  | (  rawevent.v2h & 0xFFFF ) ) ;

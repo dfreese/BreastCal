@@ -277,7 +277,7 @@ Int_t main(int argc, Char_t *argv[])
            pp_low=.7*ppeaks[event->chip][event->module][event->apd];
 	   pp_up=1.3*ppeaks[event->chip][event->module][event->apd];
            if ((event->E>pp_low)&&(event->E<pp_up)) {
-           floods[event->chip][event->module][event->apd]->Fill(event->y,event->x);
+           floods[event->chip][event->module][event->apd]->Fill(event->x,event->y);
            }
          } // ppeaks[][][] > 0
 	} // loop over entries (l) 

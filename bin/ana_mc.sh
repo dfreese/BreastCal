@@ -143,6 +143,7 @@ ${CODEVERSION}enefit -f ${MODE}_DAQ_${DATE}_${1}.enecal.root;
 check ${?} "enefit_psf panel ${1}";
  mkfolder ./ERES;
  mv ${MODE}_DAQ_${DATE}_${1}*glob.png ./ERES/
+ mv ${MODE}_DAQ_${DATE}_${1}*glob_com.png ./ERES/
  rm ${MODE}_DAQ_${DATE}_${1}.enecal.root;
  mv ${MODE}_DAQ_${DATE}_${1}.RENA* ./CHIPDATA
 ##  rm *PED_BinaryData_*_${s}${i}*out.ped.RENA?; 
