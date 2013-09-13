@@ -665,7 +665,7 @@ if (pedfilenamespec) {
      else doubletriggers[chipId][module]++;
    }
    else {
-     if ( (rawevent.com2h - pedestals[chipId][module][5]) < threshold ) {   
+     if ( (rawevent.com2h - pedestals[chipId][module][7]) < threshold ) {   
      totaltriggers[chipId][module][1]++;
      event->apd=1;   
      // FIXME :: need to find solution for ft. 

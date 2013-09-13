@@ -212,10 +212,8 @@ fi; # MODE=LN
 
 waitall $pids
 
- echo -n " decoding done. Time:: "
+echo -n " decoding done. Time:: "
  timing $STARTTIME 
-
-
 
 echo -n " decoding done @ "
 timing $STARTTIME

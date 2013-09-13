@@ -22,6 +22,8 @@
 #include "time.h"
 #include <sstream>
 
+#define FOURUPBOARDS 4
+
 int main(int argc, Char_t *argv[])
 {
   	cout << "\nWelcome to merge_panel, merging data from 4 4-up boards" << endl;
