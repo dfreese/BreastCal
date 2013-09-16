@@ -19,7 +19,7 @@
 
 int main(int argc, Char_t *argv[])
 {
-  	cout << "Welcome to FOM ana" << endl;
+
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 	Char_t		filenamel[FILENAMELENGTH] = "", curoutfile[FILENAMELENGTH];
@@ -29,6 +29,7 @@ int main(int argc, Char_t *argv[])
         Bool_t          filenamespec;
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
+        
     
 	for(ix = 1; ix < argc; ix++) {
 
@@ -56,6 +57,9 @@ int main(int argc, Char_t *argv[])
 		
 
 	}
+
+       cout << "Welcome to FOM ana." ; if (verbose) cout << endl;
+
 	if (!filenamespec) { 
              cout << " Please Specify filename:: fom_ana -f [filename] .\n Exiting. " << endl ;
 	  return -2;}
@@ -63,6 +67,7 @@ int main(int argc, Char_t *argv[])
              c1 = (TCanvas*)gROOT->GetListOfCanvases()->FindObject("c1");
              if (!c1) c1 = new TCanvas("c1","c1",10,10,1000,1000);
 
+	     if (!verbose) gErrorIgnoreLevel=kError;
 
         rootlogon(verbose);
 
@@ -82,10 +87,11 @@ int main(int argc, Char_t *argv[])
 	 Char_t peaklocationfilename[FILENAMELENGTH],histname[40],histtitle[120];
         strncpy(filebase,filenamel,strlen(filenamel)-9);
         filebase[strlen(filenamel)-9]='\0';
-        
+       
+        if (verbose){ 
 	cout << " filename = " << filenamel << endl;
 	cout << " filebase = " << filebase << endl;
-
+        }
 
        for (m=0;m<RENACHIPS;m++){
         for (i=0;i<4;i++)
@@ -102,9 +108,10 @@ int main(int argc, Char_t *argv[])
        //       cout << k << ", " << U_x[i][j][k]<< ", " << U_y[i][j][k] << endl;
        lines++;      
        }
-       cout << "Found " << lines-1 << " peaks in  file " << peaklocationfilename << endl;
+
+       if (verbose) cout << "Found " << lines-1 << " peaks in  file " << peaklocationfilename << endl;
        infile.close();
-       if (lines==65){ cout << "Setting Validpeaks " << endl; validpeaks[m][i][j]=1; }
+       if (lines==65){ if (verbose) cout << "Setting Validpeaks " << endl; validpeaks[m][i][j]=1; }
           }//j
         } //i 
         } //m
@@ -126,7 +133,7 @@ int main(int argc, Char_t *argv[])
                  xhist[m][i][j][k] = new TH1F(tmpname,tmpname,NRPOSBINS, POSMIN, POSMAX);
                   }}}}
  
-        cout << " Opening file " << filenamel << endl;
+	 if (verbose) cout << " Opening file " << filenamel << endl;
         TFile *file_left = new TFile(filenamel,"OPEN");
 
 	  // Open Calfile //
@@ -135,7 +142,7 @@ int main(int argc, Char_t *argv[])
         sprintf(rootfile,"%s",filebase);
         strcat(rootfile,".fom.root");
 
-        cout << " Opening file " << rootfile << " for writing " << endl;
+        if (verbose) cout << " Opening file " << rootfile << " for writing " << endl;
         TFile *calfile = new TFile(rootfile,"RECREATE");
         TTree *block;
         Char_t treename[40];
@@ -172,7 +179,7 @@ int main(int argc, Char_t *argv[])
 
        Int_t entries_ch1_l = block->GetEntries();
 
-       cout << " Looping over " << entries_ch1_l << " entries " <<endl;
+       if (verbose) cout << " Looping over " << entries_ch1_l << " entries " <<endl;
 
        //       entries_ch1_l/=100;
 

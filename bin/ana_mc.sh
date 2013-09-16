@@ -269,10 +269,14 @@ echo -n " Converting pedfiles @ "
     pids+=($!);
     (( RUNNINGJOBS++ ));
     else
- #   echo " RUNNINGJOBS : $RUNNINGJOBS"
+#    echo " RUNNINGJOBS : $RUNNINGJOBS"
     waitsome $pids 1
     RUNNINGJOBS=${#pids[@]}
-    echo " PEDCONV LOOP RUNNINGJOBS after waitsome : $RUNNINGJOBS"
+#    echo " PEDCONV LOOP RUNNINGJOBS after waitsome : $RUNNINGJOBS"
+    (( j++ )) ;
+    pedconv $i pedconv_$j.out &
+    pids+=($!);
+    (( RUNNINGJOBS++ ));
     fi;
     done;
 
@@ -282,6 +286,8 @@ echo -n " Converting pedfiles @ "
 
 echo -n " pedestal decoding done @ "
 timing $STARTTIME
+
+
 
 RUNNINGJOBS=0
 c=0;
@@ -298,9 +304,9 @@ if [ "$MODE" == "LN" ] ; then
    done;
   done;
 else
- if [ "$MODE" == "PT" ] ; then
-  sh ${CODEVERSION}runall.sh files 
- else   
+# if [ "$MODE" == "PT" ] ; then
+#  sh ${CODEVERSION}runall.sh files 
+# else   
   while read data ped ; do 
    if [ $RUNNINGJOBS -lt $CORES ]; then 
     (( c++ ));
@@ -313,13 +319,18 @@ else
     else
 #    echo " RUNNINGJOBS : $RUNNINGJOBS"
     waitsome $pids 1
+    echo -n " SUBMITTING JOB "
+    echo "${CODEVERSION}decoder -f $data -pedfile $ped.ped -uv -t -400 ; "
+    ${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 > $data.conv.out &
+    pids+=($!);
+    (( RUNNINGJOBS++ ));
     RUNNINGJOBS=${#pids[@]}
-#    echo " RUNNINGJOBS after waitsome : $RUNNINGJOBS"
+  #    echo " RUNNINGJOBS after waitsome : $RUNNINGJOBS"
     fi;
  done < files; 
 
 #  sh ${CODEVERSION}runall_si.sh files
- fi; #MODE =PT
+# fi; #MODE =PT
 fi; # MODE=LN
 
 

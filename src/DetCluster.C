@@ -20,6 +20,7 @@ Int_t ClusterSize(TH2F *hist, Int_t xbin, Int_t ybin, bin *maxbin){
 
 #ifdef DEBUG
   cout << "Welcome to clustersize xbin = " << xbin << "; ybin = " << ybin <<endl;
+  Int_t i,j,size,totsum;
   for ( i=xbin-1;i<=xbin+1;i++ ){ 
      for ( j=ybin-1;j<=ybin+1;j++ ){ 
        cout << hist->GetBinContent(i,j) << "  " ;
@@ -189,7 +190,11 @@ Int_t countcolumn(TH2F *hist, Int_t binx,Int_t biny, Int_t order, bin *max){
   if (order >= 0 ) i=binx+1;
   else i=binx-1;
 
-  while (i>=0){
+#ifdef DEBUG
+  cout <<" Function Countcolumn. i = " << i << ", order = " << order << " hist->GetNbinsx() = " << hist->GetNbinsX() << endl;
+#endif
+
+  while ((i>=0)&&(i<=hist->GetNbinsX())){
     thisbin=hist->GetBinContent(i,biny);
     if (thisbin<1e-10) break;
     else {

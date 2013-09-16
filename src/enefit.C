@@ -24,7 +24,7 @@ int main(int argc, Char_t *argv[])
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 	//see eg http://root.cern.ch/phpBB3/viewtopic.php?f=14&t=3498
-	gErrorIgnoreLevel=kWarning;
+	gErrorIgnoreLevel=kError;
 	for(ix = 1; ix < argc; ix++) {
 
 		/*
@@ -422,7 +422,7 @@ int main(int argc, Char_t *argv[])
        } // loop over entries 
 
 
-
+ 
 	
 
  Int_t hibin=0;
@@ -440,6 +440,10 @@ int main(int argc, Char_t *argv[])
    ppVals->Write();
    if (verbose)   cout << "Fitting global histogram: " <<endl;
 
+   ofstream globpeaks;
+
+   sprintf(peaklocationfilename,"%s_globfits_spat.txt",filebase);
+   globpeaks.open(peaklocationfilename);
 
    for (m=FIRSTCHIP;m<LASTCHIP;m++){
      calfile->cd();
@@ -469,6 +473,7 @@ int main(int argc, Char_t *argv[])
                globhist[m][i][j]->Draw();
 	      eres=0.99;d_eres=0.99; 
 	    }  // else
+	    globpeaks << " R" << m << "M" << i << "A" << j << " " << eres << " " << d_eres << endl;
                sprintf(tmpstring,"Eres = %.2f #pm %.2f FWHM",100*eres,100*d_eres);
                labeltxt->Clear();
                labeltxt->AddText(tmpstring);
@@ -485,8 +490,13 @@ int main(int argc, Char_t *argv[])
 	}//j
    }//m
 
+   globpeaks.close();
 
    if (verbose)   cout << "Fitting Common global histogram common: " <<endl;
+
+   sprintf(peaklocationfilename,"%s_globfits_com.txt",filebase);
+   globpeaks.open(peaklocationfilename);
+
 
    for (m=FIRSTCHIP;m<LASTCHIP;m++){
      calfile->cd();
@@ -520,6 +530,7 @@ int main(int argc, Char_t *argv[])
                globhist_com[m][i][j]->Draw();
 	      eres=0.99;d_eres=0.99; 
 	    }  // else
+	    globpeaks << " R" << m << "M" << i << "A" << j << " " << eres << " " << d_eres << endl;
                sprintf(tmpstring,"Eres = %.2f #pm %.2f FWHM",100*eres,100*d_eres);
                labeltxt->Clear();
                labeltxt->AddText(tmpstring);
@@ -537,7 +548,7 @@ int main(int argc, Char_t *argv[])
    }//m
 
 
- 
+   globpeaks.close();
           calfile->Close();
          
       

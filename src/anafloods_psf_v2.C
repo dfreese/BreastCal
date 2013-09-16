@@ -190,8 +190,8 @@ Int_t main(int argc, Char_t *argv[])
             validsegment[m][i][j]=0; }}}
 
 
-        for (m=0;m<RENACHIPS;m++){
-	  //                for (m=6;m<7;m++){
+       for (m=0;m<RENACHIPS;m++){
+      //                     for (m=6;m<7;m++){
            // m=6;{
 		 // m=5;{
 	  //         if (!chipevents[m]) continue;
