@@ -125,6 +125,7 @@ check ${?} "getfloods panel ${1}";
 mkfolder CHIPDATA;
 mv ${MODE}_DAQ_${DATE}_${1}.RENA?.floodsapd?.png ./CHIPDATA/
 mv ${MODE}_DAQ_${DATE}_${1}.RENA?.Eapd?.png ./CHIPDATA/
+mv ${MODE}_DAQ_${DATE}_${1}.RENA?.Eapd_com?.png ./CHIPDATA/
 
 # crystal segmentation
 ${CODEVERSION}anafloods_psf_v2 -f ${MODE}_DAQ_${DATE}_${1}.root; 

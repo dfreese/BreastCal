@@ -183,23 +183,26 @@ int main(int argc, Char_t *argv[])
 
        //       entries_ch1_l/=100;
 
-        for (ii=0;ii<entries_ch1_l;ii++){
-       //       for (ii=0;ii<10;ii++){
-       block->GetEntry(ii);
+       for (ii=0;ii<entries_ch1_l;ii++){
+       //       for (ii=0;ii<1;ii++){
+	    block->GetEntry(ii);
        //       cout << "UL2.mod = " << UL2.mod << "; UL2.x = "<<  UL2.x << "; UL2.id = ";
        //       cout << UL2.id << "; UL2.Ecal = " << UL2.Ecal << endl;
-
-       if ((event->id>=0)||(event->id<64)) {
+       
+       if ((event->id>=0)&&(event->id<64)) {
          if ((event->Ecal>EGATEMIN)&&(event->Ecal<EGATEMAX)) {
 	   if ((event->apd==1)||(event->apd==0)){
              m=event->chip;
              if ((m>=0)&&(m<RENACHIPS)) {
                if ((event->m<4)&&(event->m>=0)) {
-		 xhist[m][event->m][event->apd][event->id]->Fill(event->x); }}}}}
+		 //		 cout << " m = " << m << ", event->m=" << event->m << ", event->apd=" << event->apd << ", event->id=" << event->id << endl;
+		 xhist[m][event->m][event->apd][event->id]->Fill(event->x); 
+               }}}}}
     
-  
+       
        } // for loop
 
+	if (verbose) cout << " Looping Done. " << endl;
 	//	} // loop over chips
 
 
