@@ -110,7 +110,7 @@ int main(int argc, Char_t *argv[])
         for (j=0;j<4;j++){
 	  for (i=0;i<2;i++){
 	     validpeaks[m][j][i]=0;
-	     sprintf(peaklocationfilename,"%s.RENA%d.unit%d_apd%d_peaks",filebase,m,j,i);
+	     sprintf(peaklocationfilename,"./CHIPDATA/%s.RENA%d.unit%d_apd%d_peaks",filebase,m,j,i);
              strcat(peaklocationfilename,".txt");
              infile.open(peaklocationfilename);
              lines = 0;

@@ -5,6 +5,8 @@
 #include "TObject.h"
 #endif
 
+#define CALFILENAMELENGTH FILENAMELENGTH+50
+
 class CoincEvent : public TObject {
  public:
   Long64_t dtc;

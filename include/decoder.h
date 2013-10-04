@@ -36,6 +36,10 @@ unsigned long long int byteCounter;
 #define MINENTRIES 10000
 #define MINEHISTENTRIES 10
 
+#define MODULES_PER_FIN 16
+#define APDS_PER_MODULE 2
+#define FINS_PER_CARTRIDGE 8
+
 #define MAXFILELENGTH      160
 #define E_up 3000
 #define E_low -200
@@ -68,6 +72,7 @@ unsigned long long int byteCounter;
 #define MAXHITS 5000000
 #define MAXCUTS 50
 #define DEFAULTTHRESHOLD -600;
+#define DEFAULT_NOHIT_THRESHOLD -50;
 #define INFTY 1e99;
 
 #define EGATEMIN 400

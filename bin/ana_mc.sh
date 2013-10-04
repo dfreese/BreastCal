@@ -7,7 +7,7 @@
 CODEVERSION=/home/miil/MODULE_ANA/ANA_V5/ModuleClass/bin/
 
 # NOTE: if CORES > 4 some extra checks will be needed making sure all data has been processed needed for the next steps. 
-CORES=3
+CORES=4
 
 ##############################################################################################################
 
@@ -134,6 +134,8 @@ mkfolder ./FLOODS;
 mv ${MODE}_DAQ*${1}*flood.png ./FLOODS
 mkfolder ./QUADRANTS;
 mv ${MODE}_DAQ*${1}*quadrants.png ./QUADRANTS
+ mv ${MODE}_DAQ_${DATE}_${1}.RENA*peaks.txt ./CHIPDATA
+ mv ${MODE}_DAQ_${DATE}_${1}.RENA*peaks.failed.txt ./CHIPDATA
 
 # determine energy calibration parameters
 ${CODEVERSION}enecal -f ${MODE}_DAQ_${DATE}_${1}.root;
@@ -146,10 +148,13 @@ check ${?} "enefit_psf panel ${1}";
  mv ${MODE}_DAQ_${DATE}_${1}*glob.png ./ERES/
  mv ${MODE}_DAQ_${DATE}_${1}*glob_com.png ./ERES/
  rm ${MODE}_DAQ_${DATE}_${1}.enecal.root;
- mv ${MODE}_DAQ_${DATE}_${1}.RENA* ./CHIPDATA
+
+ mv ${MODE}_DAQ_${DATE}_${1}.RENA*cal.txt ./CHIPDATA
 ##  rm *PED_BinaryData_*_${s}${i}*out.ped.RENA?; 
 ${CODEVERSION}fom_ana -f  ${MODE}_DAQ_${DATE}_${1}.cal.root;
 check ${?} "fom_ana panel ${1}"
+mkfolder ./FOM;
+ mv ${MODE}_DAQ_${DATE}_${1}*FOM.ps ./FOM/
 
  cd ..;
 
@@ -168,7 +173,7 @@ check ${?} "get_opt_split panel ${s}${i}";
 ##############################################################################################################
 
 function merging () {
-echo "input args :: $0 $1 $2 $3 $4"
+echo "input args :: $1 $2 $3 $4"
 VAR=$1
 cd ${VAR}
 LR=${VAR:0:1}
@@ -187,7 +192,7 @@ check ${?} "merge panel R part ${1}"
 ${CODEVERSION}merge_panel -f ${MODE}_DAQ_${DATE}_L0.4up0_part${1}.root -nb 4
 check ${?} "merge panel L part ${1}"
 #combining both sides:
-${CODEVERSION}merge_coinc -a -fl ${MODE}_DAQ_${DATE}_part${1}_L.panel.root -fr ${MODE}_DAQ_${DATE}_part${1}_R.panel.root
+${CODEVERSION}merge_coinc -fl ${MODE}_DAQ_${DATE}_part${1}_L.panel.root -fr ${MODE}_DAQ_${DATE}_part${1}_R.panel.root
 check $? "mergecal part ${1}"
 }
 
@@ -309,11 +314,12 @@ else
 #  sh ${CODEVERSION}runall.sh files 
 # else   
   while read data ped ; do 
+   pos=`echo $data | cut -f1 -d 'u' |  sed 's/.*[^0-9]\([0-9]\+\)[^0-9]*$/\1/'`
    if [ $RUNNINGJOBS -lt $CORES ]; then 
     (( c++ ));
     echo -n " SUBMITTING JOB "
     echo "${CODEVERSION}decoder -f $data -pedfile $ped.ped -uv -t -400 ; "
-    ${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 > $data.conv.out &
+    ${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 -pos $pos > $data.conv.out &
 #    pedconv $i pedconv_$j.out &
     pids+=($!);
     (( RUNNINGJOBS++ ));
@@ -322,7 +328,7 @@ else
     waitsome $pids 1
     echo -n " SUBMITTING JOB "
     echo "${CODEVERSION}decoder -f $data -pedfile $ped.ped -uv -t -400 ; "
-    ${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 > $data.conv.out &
+    ${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 -pos $pos > $data.conv.out &
     pids+=($!);
     (( RUNNINGJOBS++ ));
     RUNNINGJOBS=${#pids[@]}
@@ -378,6 +384,7 @@ for s in L R; do
 j=0;
 i=0;
 while [ $i -le 3 ] ; do 
+#while [ $i -le 0 ] ; do 
 #for i in 0 1 2 3; do
 #for i in 1; do
  if [ $RUNNINGJOBS -lt $CORES ]; then 
@@ -405,18 +412,15 @@ waitall $pids
 echo -n " calibration done @ "
 timing $STARTTIME
 
-check -1 "WIP"
+
 
 
 SPLITS=0;
 
 DATE=`pwd | cut -d/ -f4`
 for s in L R; do 
-#for s in L ; do
 j=0;
 for i in 0 1 2 3; do
-#for i in 0; do
-#fi
 THISSPLITS=`grep FINDME events${s}${i}.txt | awk '{print $5}'`
 THISTIME=`grep FINDME events${s}${i}.txt | awk '{print $3}'`
 THISSPLITTIME=`grep FINDME events${s}${i}.txt | awk '{print $7}'`
@@ -437,6 +441,8 @@ timing $STARTTIME
 #RUNNINGJOBS=0
 echo " RUNNINGJOBS after estimating split level @merging : $RUNNINGJOBS  ( pids :: ${pids[@]} )"
 # RUNNINGJOBS=${#pids[@]}
+
+#check -1 "WIP"
 
 for s in L R; do
 i=0;
@@ -461,6 +467,8 @@ fi;
 done;
 done;
 
+
+
 echo "before  waitall combining :: RUNNINGJOBS = $RUNNINGJOBS : ${pids[@]}" 
 waitall $pids
 echo "after  waitall combining :: RUNNINGJOBS = $RUNNINGJOBS : ${pids[@]}" 
@@ -470,14 +478,16 @@ RUNNINGJOBS=${#pids[@]};
 echo -n " merging done @ "
 timing $STARTTIME
 
-
+#fi;  # ARG != SHORT
+#SPLITS=2;
+#DATE=`pwd | cut -d/ -f4`
 
 #rm parselist*
 
 #combining 4-up boards into cartridge:
 ((SPLITS--))
 #for k in `seq 1 ${SPLITS}`; do
-k=1;
+k=0;
 while [ $k -le ${SPLITS} ] ; do
 if [ $RUNNINGJOBS -lt $CORES ]; then 
     mergepanel ${k} &

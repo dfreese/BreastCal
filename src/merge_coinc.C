@@ -23,7 +23,7 @@ Int_t  getmintime(Double_t a,Double_t b,Double_t c, Double_t d);
 
 int main(int argc, Char_t *argv[])
 {
- 	cout << "Welcome " << endl;
+  cout << "Welcome to Merge_coinc."; 
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 	Char_t		filenamel[FILENAMELENGTH] = "";
@@ -86,6 +86,7 @@ int main(int argc, Char_t *argv[])
 
 	}
 
+        if (verbose) cout << endl;
         rootlogon(verbose);
 
 
@@ -106,7 +107,7 @@ int main(int argc, Char_t *argv[])
 	//	cout << "Rootfile to open :: " << rootfile << endl;
 
 
-        cout << " Opening file " << filenamel << endl;
+        if (verbose) cout << " Opening file " << filenamel << endl;
         TFile *file_left = new TFile(filenamel,"OPEN");
         if (!file_left || file_left->IsZombie()) {  cout << "problems opening file " << filenamel << "\n.Exiting" << endl; return -11;} 
         TTree *car_l = (TTree *) file_left->Get("cartridge");
@@ -133,7 +134,7 @@ int main(int argc, Char_t *argv[])
 
 	*/
 
-        cout << " Opening file " << filenamer <<endl;
+        if (verbose) cout << " Opening file " << filenamer <<endl;
         TFile *file_right = new TFile(filenamer,"OPEN");
         if (!file_right || file_right->IsZombie()) {  cout << "problems opening file " << filenamel << "\n.Exiting" << endl; return -11;} 
         TTree *car_r = (TTree *) file_right->Get("cartridge");
@@ -182,10 +183,10 @@ int main(int argc, Char_t *argv[])
        Long64_t entries_car_r = car_r->GetEntries();
        Long64_t entries_car_l = car_l->GetEntries();
 
-
+       if (verbose){
        cout << " Right entries: " << entries_car_r  << endl;
        cout << " Left  entries: " << entries_car_l  << endl;
-
+       }
 
 
 
@@ -210,6 +211,9 @@ int main(int argc, Char_t *argv[])
        Int_t endlessloop=0;
        Int_t dontaugmentmask=0;
 
+
+       cout << rootfile ;
+
        while (1){
 
 #ifdef DEBUG2
@@ -221,10 +225,10 @@ int main(int argc, Char_t *argv[])
        car_l->GetEntry(car_li);
 
 
-       if ( ( (double) car_ri / entries_car_r ) >  l*0.1 ) { 
-       if ( ( (double) car_li / entries_car_l ) >  l*0.1 ) { 
-	 cout << l*10 << " % done .. " << endl; l++;}}
-         
+       if ( ( (double) car_ri / entries_car_r ) >  l*0.25 ) { 
+       if ( ( (double) car_li / entries_car_l ) >  l*0.25 ) { 
+	 cout <<  " " << l*25 << " % done .. ;  "; l++;}}
+
 
 #ifdef DEBUG2
        cout << " Prev Left  times: " << setprecision(12) << lefttime << endl ;
@@ -241,6 +245,7 @@ int main(int argc, Char_t *argv[])
        righttime=ER->ct;
 
 #ifdef DEBUG2
+       cout << endl;
        cout << " This event::  left: " << car_li ;
        cout <<             ", right: " << car_ri << endl ;
 #endif
@@ -411,7 +416,7 @@ int main(int argc, Char_t *argv[])
        } // while loop 	
 
        cout << "Filled tree with " << evts << " events  ( car_ri = " << car_ri  ; // ", car2_ri = " << ch2_ri ;
-       cout << "; car_li = " << car_li << endl ; //", ch2_li = " << ch2_li << ")" << endl;
+       cout << "; car_li = " << car_li << " )" <<endl ; //", ch2_li = " << ch2_li << ")" << endl;
 
         merged->Write();
 

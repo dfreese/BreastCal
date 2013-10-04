@@ -228,12 +228,13 @@ int main(int argc, Char_t *argv[])
                  sprintf(histtitle, "Peak to valley row %d Chip %d module %d apd %d ", k,m,i,j);
                  xsums[m][i][j][k] = new TH1F(histname, histtitle, NRPOSBINS, POSMIN, POSMAX);
                 for(Int_t ll = 0; ll < 8; ll++) {
-                        xsums[m][i][j][k]->Add(xhist[m][i][j][k * 8 + ll], 1);
+		  //                        xsums[m][i][j][k]->Add(xhist[m][i][j][k * 8 + ll], 1);
+                        xsums[m][i][j][k]->Add(xhist[m][i][j][k + ll*8], 1);
 			//			cout << " m = " << m << " i= " << i << " j= " << j << " k= " << k*8+ll << endl;
                 }
 
 	       }
-        FOM[m][i][j][0] = ptv_ana(xsums[m][i][j][0], xfits[m][i][j],c1, 0, 1, verbose);
+        FOM[m][i][j][0] = ptv_ana(xsums[m][i][j][0], xfits[m][i][j],c1, 0, 0, verbose);
 	sprintf(curoutfile, "%s.RENA%d.unit%d.apd%d_FOM.ps(", filebase, m,i,j);
 
         /*
@@ -245,12 +246,12 @@ int main(int argc, Char_t *argv[])
         sprintf(curoutfile, "%s.RENA%d.unit%d.apd%d_FOM.ps", filebase, m,i,j);
 	//	sprintf(curoutfile, "%s_FOM.ps", filebase);
         for( k = 1; k < 7; k++) {
-         FOM[m][i][j][k] = ptv_ana(xsums[m][i][j][k], xfits[m][i][j], c1, k, 1, verbose);
+         FOM[m][i][j][k] = ptv_ana(xsums[m][i][j][k], xfits[m][i][j], c1, k, 0, verbose);
 	  //xsums[m][i][j][k]->Draw();
                c1->Print(curoutfile);
         }
 
-        FOM[m][i][j][7] = ptv_ana(xsums[m][i][j][7],  xfits[m][i][j], c1, 7, 1, verbose);
+        FOM[m][i][j][7] = ptv_ana(xsums[m][i][j][7],  xfits[m][i][j], c1, 7, 0, verbose);
 	        for( k = 0; k < 8; k++) { xsums[m][i][j][k]->Write();}
         sprintf(curoutfile, "%s.RENA%d.unit%d.apd%d_FOM.ps)",filebase, m,i,j);
 	//        sprintf(curoutfile, "%s_FOM.ps)", filebase);

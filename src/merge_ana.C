@@ -122,7 +122,7 @@ int main(int argc, Char_t *argv[])
 
         TTree *mana = new  TTree("mana","Merged and Calibrated LYSO-PSAPD data ");
 	//       mana->Branch("event",&evt.dtc,"dtc/L:dtf/D:E1/D:Ec1/D:Ech1/D:ft1/D:E2/D:Ec2/D:Ech2/D:ft2/D:x1/D:y1/D:x2/D:y2/D:chip1/I:fin1/I:m1/I:apd1/I:crystal1/I:chip2/I:fin2/I:m2/I:apd2/I:crystal2/I:pos/I");
-	mana->Branch("event",&evt);
+	mana->Branch("Event",&evt);
 
 	/*
 	data.dtc   - Coarse time difference

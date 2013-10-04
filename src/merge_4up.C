@@ -372,7 +372,9 @@ int main(int argc, Char_t *argv[])
 
 	      //              for ( j=0;j<4;j++) {
 	      //                if (UL[m*4+j].apd >=0 ) {
-                  if (verbose) cout << " thischiptime = " << curtime ; //<< endl;
+#ifdef DEBUG
+                  cout << " thischiptime = " << curtime ; //<< endl;
+#endif
 		  //                  if (UL[m*4+j].apd == 0 ) { event.ft=UL[m*4+j].ft1 ;}// event.Ec=UL[m*4}
 		  //                  else { event.ft=UL[m*4+j].ft2 ;}
 		  //                    event.ct=unsrt_evt.ct;
@@ -410,9 +412,10 @@ int main(int argc, Char_t *argv[])
                       extra++;
 		      if (( curtime-timecut[kk])>10000 ) { stop=1;} }   
 		     // we stop the while loop and close the file if the timedifference is larger than 10
-
-    	      if (verbose) {cout << " filling chip " << unsrt_evt->chip << " UNIT " << event->m ;
-	      cout << " (l="<<l<<")"<< endl;}
+#ifdef DEBUG
+    	     cout << " filling chip " << unsrt_evt->chip << " UNIT " << event->m ;
+	      cout << " (l="<<l<<")"<< endl;
+#endif
 		    //	    } // if mod >= 0
 	    //   } // loop over 4 modules in chip
 	      l++;

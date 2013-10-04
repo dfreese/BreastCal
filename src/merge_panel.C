@@ -26,7 +26,6 @@
 
 int main(int argc, Char_t *argv[])
 {
-  	cout << "\nWelcome to merge_panel, merging data from 4 4-up boards" << endl;
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 	Char_t		filenamel[FILENAMELENGTH] = "";
@@ -36,6 +35,8 @@ int main(int argc, Char_t *argv[])
         nb=0;
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+  	cout << "Welcome to merge_panel, merging data from 4 4-up boards.";
 
      
 
@@ -86,8 +87,10 @@ int main(int argc, Char_t *argv[])
 
 	}
 
+	  if (verbose) cout  << endl;
+
 	if ((nb<1)||(nb>4)) {
-	    cout << " Please specify a valid number of renaboards  ( -nb [number 4ups] ). Options are 1,2,3 or 4. Nothing else.\nExiting." ;
+	    cout << "\n Please specify a valid number of renaboards  ( -nb [number 4ups] ). Options are 1,2,3 or 4. Nothing else.\nExiting." ;
             return -1;
 	  }           
 
@@ -179,7 +182,7 @@ int main(int argc, Char_t *argv[])
 	      //   cout << " file to open : _filenamel : " << _filenamel << endl;
 	  if (partnumber==-99){ sprintf(filenamel,"%s%d.4up%d.root",filebase,i,i);}
 	  else {	  sprintf(filenamel,"%s%d.4up%d_part%d.root",filebase,i,i,partnumber); }
-        cout << " Opening file " << _filenamel << endl;
+	  if (verbose) cout << " Opening file " << _filenamel << endl;
         TFile *file_left = new TFile(_filenamel.c_str(),"OPEN");
 	//  
 	//	continue;
@@ -220,7 +223,7 @@ int main(int argc, Char_t *argv[])
 	  }
 
         entries[i]=panel[i]->GetEntries();
-        cout << " Entries Tree " << i << ": " << entries[i] << endl; 
+        if (verbose) cout << " Entries Tree " << i << ": " << entries[i] << endl; 
 
         } // loop over i
 
@@ -263,7 +266,7 @@ int main(int argc, Char_t *argv[])
         for (m=0;m<nb;m++){
         if(entries[m]) {
 	  panel[m]->GetEntry(entries[m]-1);
-          cout << " Last Timestamp Panel " << m  << ": " << event[m]->ct << endl;
+          if (verbose) cout << " Last Timestamp Panel " << m  << ": " << event[m]->ct << endl;
           lasttimes[m]=event[m]->ct;
           if ( lasttime <  event[m]->ct ) lasttime= event[m]->ct;
 	  skipfourup[m]=0;
@@ -272,7 +275,7 @@ int main(int argc, Char_t *argv[])
         else skipfourup[m]=1;
 }
  
-        cout << " Last timestamp = " << lasttime << endl;
+        if (verbose) cout << " Last timestamp = " << lasttime << endl;
 	time_t time_before_filling, time_before_sorting, time_after_sorting, time_after_filling,thistime; 
         Long64_t l,curtime=0;
        
@@ -282,7 +285,7 @@ int main(int argc, Char_t *argv[])
 	timestep=TMath::Floor(lasttime/10); //1e10;
 	//	            timestep=TMath::Floor(lasttime/1000); //1e10;
  
-	  cout << " Timestep = " << timestep << endl;
+	if (verbose) cout << " Timestep = " << timestep << endl;
   
 	  Int_t kk=1,stop;
            Int_t skipsum=0;
@@ -339,17 +342,17 @@ int main(int argc, Char_t *argv[])
 		//             cout << " event->ct = " << event->ct <<  endl;
   }
 
-           std::cout<<"Sorting Run numbers"<<std::endl;
+	    if (verbose) std::cout<<"Sorting Run numbers"<<std::endl;
 
            TMath::Sort(N,table,sorted,kFALSE);
 
           time_after_sorting=clock();
         
 
-          printf("Time to merge  8 chips (sec): %f\n",(double)(time_before_sorting-time_before_filling)/(CLOCKS_PER_SEC));
-          printf("Time to sort the merged chips (sec): %f\n",(double)(time_after_sorting-time_before_sorting)/(CLOCKS_PER_SEC));
+          printf("Time to merge  8 chips (sec): %f. ",(double)(time_before_sorting-time_before_filling)/(CLOCKS_PER_SEC));
+          printf("Time to sort the merged chips (sec): %f. ",(double)(time_after_sorting-time_before_sorting)/(CLOCKS_PER_SEC));
 
-	  cout << N << " entries in tree " << endl;
+	  if (verbose) cout << endl << N << " entries in tree " << endl;
 
 	  //          TTree *cartridge = cartr->CloneTree(0);
 	  //          cartridge->SetName("cartridge");
@@ -398,7 +401,7 @@ int main(int argc, Char_t *argv[])
 	  thistime=clock();  
 
        for (l=0;l<N;l++){
-	 if ((((l)%5000000)==0)&&(l>0))  { cout << l << " entries processed ";// << endl;
+	 if ((((l)%5000000)==0)&&(l>0)&&(verbose))  { cout << l << " entries processed ";// << endl;
 	      cout << "; time spent = " <<(double)  (clock()-thistime)/CLOCKS_PER_SEC ;
               cout << "; since start: " <<(double) (clock()-time_after_sorting)/CLOCKS_PER_SEC <<endl; 
    	    thistime = clock(); }
@@ -411,7 +414,7 @@ int main(int argc, Char_t *argv[])
              cartridge->Fill();
           }
  
-       cout << cartridge->GetEntries() << " Entries in the new tree. " << endl;
+       if (verbose) cout << cartridge->GetEntries() << " Entries in the new tree. " << endl;
 
           time_after_filling=clock();
  

@@ -1168,7 +1168,7 @@ Double_t findmean8( TH1D * h1, Int_t verbose,Int_t X, Bool_t APD){
     if ( X==0){
       if (verbose) cout << "looking at Y" << endl;
       if (APD) {
-       while (meanloc[ind2[i]]<0) { 
+       while (meanloc[ind2[i]]<0.01) { 
        if (verbose) { cout <<  " candidate :: " << meanloc[ind2[i]] << endl;}
        if ( i< ( nfound-2) ) i++; else return 12345;}
        if ( verbose ) cout << " returning : " << meanloc[ind2[i]] << endl;      

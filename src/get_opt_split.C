@@ -167,7 +167,7 @@ int main(int argc, Char_t *argv[])
 	// 	} // loop m
 
 	// Long64_t lasttimes;
- bool rollover;
+ bool rollover=false;
  Int_t skipchip;
  // Long64_t l;
  Long64_t curevent;

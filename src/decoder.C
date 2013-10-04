@@ -1,3 +1,4 @@
+
 /* AVDB 11-30-12 
    Conversion Program for RENA data as it comes from the DAQ
    to a root TREE 
@@ -48,11 +49,13 @@ void usage(void);
 
 void usage(void){
   int t=DEFAULTTHRESHOLD;
+  int tnohit=DEFAULT_NOHIT_THRESHOLD;
   cout << " decode  -f [filename] [-v -o [outputfilename] -p  -d -t [threshold] " ;
   cout << " -uv -pedfile [pedfilename] ]" <<endl;
   cout << " -d : debug mode, a tree with unparsed data will be written (non-pedestal corrected). " <<endl;
   cout << "      you get access to u,v" << endl;
-  cout << " -t : threshold for hits, default = " << t << endl;
+  cout << " -t : threshold for hits (trigger threshold), default = " << t << endl;
+  cout << " -n : no hit threshold in other APD on same module, default = " << tnohit << endl;
   cout << " -uv: UV circle centers will be calculated " << endl;
   cout << " -uvt: UV circle centers threshold ( for pulser applications, NEGATIVE value ) " << endl;
   cout << " -pedfile [pedfilename] : pedestal file name " << endl;
@@ -98,7 +101,7 @@ int main(int argc, char *argv[]){
  verbose=0;
  Int_t sourcepos=0;
  int threshold=DEFAULTTHRESHOLD;
-
+ int nohit_threshold=DEFAULT_NOHIT_THRESHOLD;
  int debugmode=0;
  /*
  TTree *rena[RENACHIPS]; 
@@ -115,8 +118,10 @@ for (i = 0; i < 36; i++) {
   for ( ix=1;ix< argc;ix++){
     //    cout << argv[ix] << endl;
     /* Verbose  '-v' */
+
     if (strncmp(argv[ix], "-v", 2) == 0) {
       verbose = 1;
+      cout << " Running verbose mode " << endl;
     }
 
     if (strncmp(argv[ix], "-d", 2) == 0) {
@@ -127,7 +132,7 @@ for (i = 0; i < 36; i++) {
       uvcalc = 1;
     }
 
-    if (strncmp(argv[ix], "-uvt", 3) == 0) {
+    if (strncmp(argv[ix], "-uvt", 4) == 0) {
       uvthreshold = atoi(argv[ix+1]);
       ix++;
     }
@@ -137,6 +142,12 @@ for (i = 0; i < 36; i++) {
       threshold = atoi(argv[ix+1]);
        ix++;
     }
+
+    if (strncmp(argv[ix], "-n", 2) == 0) {
+      nohit_threshold = atoi(argv[ix+1]);
+       ix++;
+    }
+
 
 
     if (strncmp(argv[ix], "-pedfile", 8) == 0) {
@@ -247,6 +258,7 @@ for (i = 0; i < 36; i++) {
 
   ModuleDat *event = new ModuleDat();
  int doubletriggers[RENACHIPS][MODULES]={{0}};
+ int belowthreshold[RENACHIPS][MODULES]={{0}};
  int totaltriggers[RENACHIPS][MODULES][2]={{{0}}};
  // Energy histograms ::
  TH1F *E[RENACHIPS][MODULES][2];
@@ -653,7 +665,7 @@ if (pedfilenamespec) {
 #endif 
 
    if ( (rawevent.com1h - pedestals[chipId][module][5]) < threshold ) { 
-     if ( (rawevent.com2h - pedestals[chipId][module][7]) > threshold ) { 
+     if ( (rawevent.com2h - pedestals[chipId][module][7]) > nohit_threshold ) { 
        totaltriggers[chipId][module][0]++;
        event->apd=0; 
        // FIXME
@@ -665,7 +677,8 @@ if (pedfilenamespec) {
      else doubletriggers[chipId][module]++;
    }
    else {
-     if ( (rawevent.com2h - pedestals[chipId][module][7]) < threshold ) {   
+     if ( (rawevent.com2h - pedestals[chipId][module][7]) < threshold ) {
+        if ( (rawevent.com1h - pedestals[chipId][module][5]) > nohit_threshold ) { 
      totaltriggers[chipId][module][1]++;
      event->apd=1;   
      event->y*=-1;
@@ -675,7 +688,11 @@ if (pedfilenamespec) {
      //  ,rawevent.v2h,uu_c[chipId][module][1],vv_c[chipId][module][1])  ;
      event->Ec = rawevent.com2 - pedestals[chipId][module][6];
      event->Ech=rawevent.com2h- pedestals[chipId][module][7];
-     mdata->Fill(); } }
+     mdata->Fill(); }
+     else doubletriggers[chipId][module]++;
+    }
+     else belowthreshold[chipId][module]++;
+   }
    // fill energy histogram
 #ifdef DEBUG
    if (( event->module > MODULES ) || ( event->apd > 1 ) || ( event->apd < 0) || (event->chip > RENACHIPS ) )  { cout << "ERROR !!" ;
@@ -804,6 +821,9 @@ if (verbose){
 // FIXME :: in principle we could fill histograms even without pedestal subtraction
   if (pedfilenamespec ) {
 
+    Int_t totaldoubletriggers=0;
+    Int_t totalbelowthreshold=0;
+
    for (int kk=0;kk<RENACHIPS;kk++){
           for (int j=0;j<2;j++){
             for (int i=0;i<4;i++){
@@ -816,7 +836,9 @@ if (verbose){
  cout << "========== Double Triggers =============== " << endl;
  for (int ii = 0 ;ii < RENACHIPS; ii++ ){
    for ( int jj = 0 ; jj < MODULES; jj++ ) {
-     cout << doubletriggers[ii][jj] << " " ; }
+     cout << doubletriggers[ii][jj] << " " ; 
+     totaldoubletriggers+=doubletriggers[ii][jj]; 
+     totalbelowthreshold+=belowthreshold[ii][jj]; }
    cout << endl;
  }
 
@@ -835,8 +857,14 @@ if (verbose){
    totalacceptedtriggers+=totalchiptriggers[ii]    ;
      } // loop over ii 
 
- cout << " Total events :: " << rawdata->GetEntries() <<  " Total accepted :: " << totalacceptedtriggers ;
- cout << " ( = " << 100* (float) totalacceptedtriggers/rawdata->GetEntries() << " %) " << endl;
+ cout << " Total events :: " << rawdata->GetEntries() <<  endl;
+ cout << " Total accepted :: " << totalacceptedtriggers ;
+ cout << setprecision(1) << fixed;
+ cout << " (= " << 100* (float) totalacceptedtriggers/rawdata->GetEntries() << " %) " ;
+ cout << " Total double triggers :: " << totaldoubletriggers ;
+ cout << " (= " << 100* (float) totaldoubletriggers/rawdata->GetEntries() << " %) " ;
+ cout << " Total below threshold :: " << totalbelowthreshold;
+ cout << " (= " << 100* (float) totalbelowthreshold/rawdata->GetEntries() << " %) " <<endl;
  mdata->Write();
 
 

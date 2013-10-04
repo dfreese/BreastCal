@@ -3,6 +3,7 @@
 # AVDB JUL 2013
 
 # make clean :: removes libs, bins and *o
+# make .rules :: make dependencies
 # make :: will generate hidden files with rules and dependencies ( a bit ugly but it's because we have a variety of dependencies )
 # make all :: will compile everything 
 
@@ -48,6 +49,7 @@ all:	default
 
 .depend: $(SRCS)
 	rm -f ./.depend
+	echo $(SRCS)
 	$(CC) $(CFLAGS) -MM $^  >> ./.depend;
 	sed -i 's/\(^[[:alnum:]_]\+\.o\)/src\/&/g' ./.depend
 

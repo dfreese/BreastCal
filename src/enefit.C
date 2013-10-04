@@ -100,7 +100,7 @@ int main(int argc, Char_t *argv[])
         for (i=0;i<4;i++)
         for (j=0;j<2;j++){
 	  { validpeaks[m][i][j]=0;
-	    sprintf(peaklocationfilename,"%s.RENA%d.unit%d_apd%d_peaks",filebase,m,i,j);
+	    sprintf(peaklocationfilename,"./CHIPDATA/%s.RENA%d.unit%d_apd%d_peaks",filebase,m,i,j);
        strcat(peaklocationfilename,".txt");
        infile.open(peaklocationfilename);
        lines = 0;
@@ -352,10 +352,10 @@ int main(int argc, Char_t *argv[])
              for (i=0;i<4;i++){ 
               for (j=0;j<2;j++){
                sprintf(tmpstring,"globhist[%d][%d][%d]",m,i,j);
-    	       sprintf(tmptitle,"Global Espec RENA %d Unit %d module %d",m,i,j);
+    	       sprintf(tmptitle,"Global Espec RENA %d Module %d PSAPD %d",m,i,j);
                globhist[m][i][j] = new TH1F(tmpstring,tmptitle,Ebins,E_low,E_up);
                sprintf(tmpstring,"globhist_com[%d][%d][%d]",m,i,j);
-	       sprintf(tmptitle,"Global Common Espec RENA %d Unit %d module %d",m,i,j);
+	       sprintf(tmptitle,"Global Common Espec RENA %d Module %d PSAPD %d",m,i,j);
                globhist_com[m][i][j] = new TH1F(tmpstring,tmptitle,Ebins_com,E_low_com,E_up_com);
 	      }//j
 	     }//i
@@ -441,7 +441,7 @@ int main(int argc, Char_t *argv[])
    if (verbose)   cout << "Fitting global histogram: " <<endl;
 
    ofstream globpeaks;
-
+   Float_t mean;
    sprintf(peaklocationfilename,"%s_globfits_spat.txt",filebase);
    globpeaks.open(peaklocationfilename);
 
@@ -451,7 +451,7 @@ int main(int argc, Char_t *argv[])
      subdir[m] = calfile->mkdir(tmpstring);
                subdir[m]->cd();
     for (Int_t i=0;i<4;i++){
-     for (Int_t j=0;j<2;j++){
+     for ( j=0;j<2;j++){
 	    hibin=0;
             max=0;
 	    xlow = Emeans[m*8+j*4+i]*0.85;
@@ -467,13 +467,16 @@ int main(int argc, Char_t *argv[])
                eres=2.35*globfits[m][i][j]->GetParameter(5)/globfits[m][i][j]->GetParameter(4);
                d_eres=2.35*errorprop_divide(globfits[m][i][j]->GetParameter(5),globfits[m][i][j]->GetParError(5),
                                        globfits[m][i][j]->GetParameter(4),globfits[m][i][j]->GetParError(4));
+                       mean = getmean(CRYSTALPP[m][i][j]);
 	    }
 	    else{
 	      // in case not enough entries we still want to store the globhist and draw it,
                globhist[m][i][j]->Draw();
-	      eres=0.99;d_eres=0.99; 
+	       eres=0.99;d_eres=0.99; mean=5000;
 	    }  // else
-	    globpeaks << " R" << m << "M" << i << "A" << j << " " << eres << " " << d_eres << endl;
+
+ 	    globpeaks << " R" << m << "M" << i << "A" << j << " " << eres << " " << d_eres << " " << mean << endl;
+ 
                sprintf(tmpstring,"Eres = %.2f #pm %.2f FWHM",100*eres,100*d_eres);
                labeltxt->Clear();
                labeltxt->AddText(tmpstring);
@@ -488,7 +491,7 @@ int main(int argc, Char_t *argv[])
 	    for(k=0;k<64;k++){ Ehist[m][i][j][k]->Write();Efits[m][i][j][k]->Write();}
 	  }//i
 	}//j
-   }//m
+    }//m
 
    globpeaks.close();
 
@@ -524,13 +527,14 @@ int main(int argc, Char_t *argv[])
                eres=2.35*globfits_com[m][i][j]->GetParameter(5)/globfits_com[m][i][j]->GetParameter(4);
                d_eres=2.35*errorprop_divide(globfits_com[m][i][j]->GetParameter(5),globfits_com[m][i][j]->GetParError(5),
                                        globfits_com[m][i][j]->GetParameter(4),globfits_com[m][i][j]->GetParError(4));
+                       mean = getmean(CRYSTALPP_COM[m][i][j]);
 	    }
 	    else{
 	      // in case not enough entries we still want to store the globhist and draw it,
                globhist_com[m][i][j]->Draw();
-	      eres=0.99;d_eres=0.99; 
+	       eres=0.99;d_eres=0.99; mean=5000;
 	    }  // else
-	    globpeaks << " R" << m << "M" << i << "A" << j << " " << eres << " " << d_eres << endl;
+	    globpeaks << " R" << m << "M" << i << "A" << j << " " << eres << " " << d_eres << " " << mean << endl;
                sprintf(tmpstring,"Eres = %.2f #pm %.2f FWHM",100*eres,100*d_eres);
                labeltxt->Clear();
                labeltxt->AddText(tmpstring);
@@ -805,3 +809,14 @@ Float_t getpeak(TH1F *hist, Float_t xlow, Float_t xhigh, Bool_t force, Int_t ver
 
 
 	return *(ss->GetPositionX()+corpeak);} // else corresponding to  if (com)
+
+
+Float_t getmean(Float_t *array){
+  Double_t mean=0.;
+  for (Int_t i=0;i<64;i++){
+    mean+=array[i];
+  }
+
+  return mean/64.;}
+
+
