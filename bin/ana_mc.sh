@@ -486,6 +486,10 @@ timing $STARTTIME
 
 #combining 4-up boards into cartridge:
 ((SPLITS--))
+
+#let's do only 2 merges at a time due to memory limitation
+CORES=2
+
 #for k in `seq 1 ${SPLITS}`; do
 k=0;
 while [ $k -le ${SPLITS} ] ; do
