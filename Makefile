@@ -9,12 +9,14 @@
 
 # note source files that start with a capital letter are just a bunch of functions and don't have a "main {} "
 
-LIBRARY=~/root/macros/myrootlib.C
+ROOTMACRODIR=$(HOME)/root/macros
+ROOTMACRODIR_LIB=$(ROOTMACRODIR)/lib
+ROOTMACRODIR_INC=$(ROOTMACRODIR)/include
 
 #
-CFLAGS =  -Wall -Wno-deprecated -W -g -fPIC -I$(HOME)/root/macros -I./include -I$(ROOTSYS)/include
+CFLAGS =  -Wall -Wno-deprecated -W -g -fPIC -I$(ROOTMACRODIR_INC) -I./include -I$(ROOTSYS)/include
 CXXFLAGS = $(CFLAGS) $(shell root-config --cflags) -O3
-MYLIB = -L$(HOME)/root/macros -lmyrootlib -lInit_avdb
+MYLIB = -L$(ROOTMACRODIR_LIB) -lmyrootlib -lInit_avdb
 DICTLIB = -L./lib -lModuleDatDict
 LDFLAGS = $(shell root-config --glibs) $(shell root-config --libs) -lMinuit -lSpectrum -lHistPainter $(MYLIB) $(DICTLIB)
 CC =g++
