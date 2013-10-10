@@ -243,12 +243,31 @@ else
 else  
  ls ./Tech/${MODE}_PED*dat   > pedfiles;
  ls ./Tech/${MODE}_DAQ*dat   > daqfiles
- paste daqfiles pedfiles  > files
+ if [ `wc -l ./pedfiles | awk '{print $1}'` -eq `wc -l ./daqfiles | awk '{print $1}'` ]; then 
+  # equal number of pedfiles as datafiles
+   paste daqfiles pedfiles  > files
+ else 
+  # echo "different"; 
+  pedcount=0; 
+  if [ -e files ] ; then rm files; fi;
+  while read data; do 
+       echo -n $data" " >> files; 
+          if  [ `basename $data .dat | rev | cut -f1 -d'_'` -eq 0   ]; then (( pedcount++ ))  ; fi;  
+       PEDFILE=`sed -n "${pedcount}p" ./pedfiles`; 
+       echo $PEDFILE  >> files;
+  done < ./daqfiles
+ 
+ fi;
+
+
+ 
 fi; # mode != SI
 fi; # Mode != LN
 
 
 fi; # Arg != short
+
+# check -1 "YUP"
 
 stop=0;
 
@@ -362,7 +381,7 @@ waitall $pids
 
 # FIXME JULY29 :: THERE IS AN INCONSISTENCY HERE 
 
-fi;  # ARG != SHORT
+
 
 echo " CHECK ME :: PWD :: `pwd` "
 
@@ -413,7 +432,7 @@ echo -n " calibration done @ "
 timing $STARTTIME
 
 
-
+fi;  # ARG != SHORT
 
 SPLITS=0;
 
