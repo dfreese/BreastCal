@@ -56,7 +56,7 @@ all:	default
 	sed -i 's/\(^[[:alnum:]_]\+\.o\)/src\/&/g' ./.depend
 
 .rules: .depend
-	$(shell cat .depend |  tr ' ' '\n' | sed '/ROOT/d' | sed '/\\/d' | grep -v myrootlib | grep -v libInit_avdb | grep -v home | grep "[[:alnum:]]" | tr '\n' ' ' | sed  's/src\/[[:alnum:]_]*.o:/\n&/g'  | sed '/^$$/d' > .buildrules; echo "" >> .buildrules)
+	$(shell cat .depend |  tr ' ' '\n' | grep -v $(ROOTSYS) | sed '/\\/d' | grep -v myrootlib | grep -v libInit_avdb  | grep "[[:alnum:]]" | tr '\n' ' ' | sed  's/src\/[[:alnum:]_]*.o:/\n&/g'  | sed '/^$$/d' > .buildrules; echo "" >> .buildrules)
 	@cat .buildrules | sed 's/^src/bin/g' | sed 's/include/src/g' | sed 's/\.o//' | sed 's/\.[Ch]/\.o/g' | sed 's/\.\///g'  |  awk '{ while(++i<=NF) printf (!a[$$(i)]++) ? $$(i) FS : ""; i=split("",a); print "" }'  |  sed '/^bin\/decoder/!s/[a-zA-Z/]*decoder\.o//'   | awk '{print $$(0)"\n\t $$(CC) $$(CXXFLAGS) $$(LDFLAGS) $$^ -o $$@"}' > .binrules
 
 -include .binrules
