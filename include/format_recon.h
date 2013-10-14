@@ -17,4 +17,18 @@
 #include "CoincEvent.h"
 
 
+struct buf{
+    float x1;
+    float y1;
+    float z1;
+    float cdt;
+    float ri;
+    float x2;
+    float y2;
+    float z2;
+    float si;
+    float Si;
+};
+
+
 #endif

@@ -652,8 +652,10 @@ if (pedfilenamespec) {
 	     event->c=rawevent.c - pedestals[chipId][module][2];
 	     event->d=rawevent.d - pedestals[chipId][module][3];
 	     event->E=event->a+event->b+event->c+event->d;
-	     event->y= event->a + event->d - ( event->b + event->c );
 	     event->x= event->c + event->d - ( event->b + event->a );
+
+	     event->y= event->a + event->d - ( event->b + event->c );
+
 	     event->x/=event->E;
 	     event->y/=event->E;
 

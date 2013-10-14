@@ -5,6 +5,9 @@
 // cout << " mergecal -fl [filename] -fr [filename] [-t [threshold] -v ]" <<endl;
 //  return;}
 
+
+
+
 int main(int argc, Char_t *argv[])
 {
  	cout << "Welcome " << endl;
@@ -13,6 +16,7 @@ int main(int argc, Char_t *argv[])
 	Char_t		filename[FILENAMELENGTH] = "";
 	Int_t		verbose = 0, threshold=-1000;
 	Int_t		ix,ascii;
+	 buf buffer; 
 	//module UNIT0,UNIT1,UNIT2,UNIT3;
 	//        event           evt;
 
@@ -63,7 +67,7 @@ int main(int argc, Char_t *argv[])
 
 
         Char_t filebase[FILENAMELENGTH],rootfile[FILENAMELENGTH]; 
-        Char_t asciifile[FILENAMELENGTH]; 
+        Char_t asciifile[FILENAMELENGTH], outfile[FILENAMELENGTH]; 
 	//       Char_t tmpname[20],tmptitle[50];
 	//        Int_t i,j,k,m,lines;
 	//        Double_t aa, bb;
@@ -81,43 +85,15 @@ int main(int argc, Char_t *argv[])
         cout << " Opening file " << filename << endl;
         TFile *file = new TFile(filename,"OPEN");
         TTree *m = (TTree *) file->Get("merged");
-        CoincEvent *data;
+        CoincEvent *data = new CoincEvent();
 
-	m->SetBranchAddress("event",&data);
-	/*
-	data.dtc   - Coarse time difference
-        data.dtf   - Fine Time difference
-        data.E1    - Energy spatial channel L
-	data.Ec1   - Energy common L
-        data.Ech1  - Energy common high L
-        data.ft1   - fine time L
-        data.E2    
-	data.Ec2
-        data.Ech2
-        data.ft2
-        data.x1 - don't use
-        data.y1 - don't use
-        data.x2 - don't use
-        data.y2 - don't use
-        data.chip1   - Chip number - not important
-        data.fin1   - Fin number
-        data.m1     - Module number (  0-> 15 )
-        data.apd1   - Apd number ( 0 or 1, 0 is front, 1 is back )
-        data.crystal1 - Crystal number ( 0 to 63, -1 or >64 is some error )
-        data.chip2
-        data.fin2
-        data.m2
-        data.apd2
-        data.crystal2
-        data.pos  - position of point source
-	*/
+	m->SetBranchAddress("Event",&data);
 
-
-	ofstream asciiout;
+	ofstream asciiout,outputfile;
 
 	  // Open output file - matching required format for ALEX //
-	strncpy(filebase,filename,strlen(filename)-17);
-         filebase[strlen(filename)-5]='\0';
+	strncpy(filebase,filename,strlen(filename)-5);
+        filebase[strlen(filename)-5]='\0';
          sprintf(rootfile,"%s",filebase);
          strcat(rootfile,".merged.root");
         if (ascii){
@@ -127,7 +103,8 @@ int main(int argc, Char_t *argv[])
         cout << " Opening file " << rootfile << " for writing " << endl;
 	// OPEN YOUR OUTPUTFILE HERE ! 
      
-
+        sprintf(outfile,"%s.cuda",filebase);
+        outputfile.open(outfile);
 
        Long64_t entries_m = m->GetEntries();
 
@@ -137,6 +114,29 @@ int main(int argc, Char_t *argv[])
       Long64_t i;
  
       Double_t x1,y1,z1,x2,y2,z2;
+
+    buffer.cdt =0;
+    buffer.ri=0;
+    buffer.si=0;
+    buffer.Si=0;
+
+
+#define INCHTOMM 25.4
+#define PANELDISTANCE 40 // mm
+#define XCRYSTALPITCH 1
+#define YCRYSTALPITCH 1
+#define XMODULEPITCH 0.405*INCHTOMM
+    // #define YOFFSET 0.057*INCHTOMM // 1.4478 mm   -  1.51 -> 0.057 is distance to the hole, distance to module is 0.0595
+#define YOFFSET 1.51 // mm
+#define YDISTANCEBETWEENAPDS (0.32+0.079)*INCHTOMM  // 10.1346 mm
+#define ZPITCH 0.0565*INCHTOMM //
+
+    Double_t TOTALPANELDISTANCE=PANELDISTANCE+2*YOFFSET;
+
+    cout << "X:: PITCH : " << XMODULEPITCH << " mm." << endl;
+    cout << "Y:: PANELDISTANCE : " << PANELDISTANCE << " mm, APD0 @ " << PANELDISTANCE+YOFFSET;
+    cout << " mm, APD1 @ " << PANELDISTANCE+YOFFSET+YDISTANCEBETWEENAPDS << " mm."<<endl ;
+    cout << "Z:: ZPITCH : " << ZPITCH << " mm."<<endl;
 
       for (i=0;i<entries_m;i++){
 
@@ -148,38 +148,54 @@ int main(int argc, Char_t *argv[])
         	  if ( ( data->E2<700 ) && (data->E2> 400 ) ) {
 		    if ( (data->crystal1>0 ) && (data->crystal1<64 )) {
            		    if ( (data->crystal2>0 ) && (data->crystal2<64 )) {
+			      if ( TMath::Abs(data->dtf)<20 ) {
+				//	if ( data->apd1 ) continue;
 
-#define PANELDISTANCE 60 // mm
 
-                              y1 = PANELDISTANCE/2;
-                              y2 = -PANELDISTANCE/2;
-                              y1 +=   data->apd1*10;
-                              y2 -=   data->apd2*10;
-			      y1 +=  (( TMath::Floor(data->crystal1%8)- 4 )*0.5  );
-			      y2 +=  (( TMath::Floor(data->crystal1%8)- 4 )*0.5  );                              
+                              y1 = TOTALPANELDISTANCE/2;
+                              y2 = -TOTALPANELDISTANCE/2;
+                              y1 +=   data->apd1*YDISTANCEBETWEENAPDS;
+                              y2 -=   data->apd2*YDISTANCEBETWEENAPDS;
+			      y1 +=  (( 7-TMath::Floor(data->crystal1%8) * YCRYSTALPITCH ) + 0.5  );
+			      y2 -=  (( 7-TMath::Floor(data->crystal2%8) * YCRYSTALPITCH ) + 0.5  );                              
 			
-			      x1 = (data->m1-8)*0.405*25.4;  
-                              x2 = (8-data->m2)*0.405*25.4;  
-			      x1 +=  (( TMath::Floor(data->crystal1/8)- 4 )*0.5  );
-                              x2 +=  (( 4 - TMath::Floor(data->crystal1/8))*0.5  );
+			      x1 = (XMODULEPITCH-8*XCRYSTALPITCH)/2+(data->m1-8)*XMODULEPITCH;  
+			      x2 = (XMODULEPITCH-8*XCRYSTALPITCH)/2+(8-data->m2)*XMODULEPITCH;  
+			      x1 +=  ( TMath::Floor(data->crystal1/8)  + 0.5  )*XCRYSTALPITCH;
+			      x2 +=  ( 7-TMath::Floor(data->crystal2/8)  + 0.5  )*XCRYSTALPITCH;
                               
-                              z1 = data->fin1*0.056*25.4;
-          		      z2 = data->fin2*0.056*25.4;
-                             
+                              
+                              
+                              z1 = -ZPITCH/2+(4-data->fin1)*ZPITCH;
+          		      z2 = -ZPITCH/2+(4-data->fin2)*ZPITCH;
+			      // z1=0;
+			      //  z2=0;
  
              // this is a good data now ..
              // do something+ write to disk
+			      buffer.x1 = x1;
+                              buffer.x2 = x2;
+                              buffer.y1 = y1;
+			      buffer.y2 = y2;
+			      buffer.z1 = z1;
+			      buffer.z2 = z2;
+
+			      if (ascii) asciiout << x1 << " " <<y1 << " " << z1 << " " << x2 << " " << y2 << " " << z2 << endl;
+
+			      outputfile.write( (char *) &buffer, sizeof(buffer));
+                 }
 
 
+
+			    }
+		    }
 		  }
-         	  }
-	}
 	  }
-	} 
+	}
            
-          
-      } // loop over entries
-             
+      }
+       // loop over entries
+      if (ascii) asciiout.close();
 
 #define COARSEDIFF 100       
 
@@ -193,6 +209,6 @@ int main(int argc, Char_t *argv[])
 
 
  
-	  return 0;}
+      return 0;}
 
 
