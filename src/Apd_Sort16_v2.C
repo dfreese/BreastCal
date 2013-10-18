@@ -85,16 +85,17 @@ Int_t sort16(Float_t *xpeaks, Float_t *ypeaks, Double_t **sortedxpeaks, Double_t
                                            TMath::Power(xpeaks[xmap[j]]-remapped_x[prevpoint],2));
                        cout << length << " ( prevpoint = " << prevpoint << ")";
                        cout <<  "(x,y)_prev = (" << remapped_x[prevpoint] << "," << remapped_y[prevpoint] <<"); (x,y)_cur = (";
-                       cout << xpeaks[xmap[j]] << "," << ypeaks[xmap[j]] << ")";
-                       cout <<endl;  } 
+                       cout << xpeaks[xmap[j]] << "," << ypeaks[xmap[j]] << "); ( j = " << j << " ).";
+                       cout <<endl;  cout << " l = " << l << " k = " << k << endl; } 
         if (l!=(2-k)){
 	  /* check next unused point */
 	  // late night fix: sometimes the next point along $x$ is taken first ( a point with higher $x$ value ) ,
           // that results in an error, which will appear from the angle between the current candidate point and 
 	  // the next point to be around -90 degrees, smaller than 0  which we check for. 
-	  jj=j+1;
+	  if (j<15) jj=j+1; else jj=j;
           while (jj<16) { if (flagged[xmap[jj]]) jj++;
 			  else break;}
+	  if (verbose) { cout << " jj after  while loop :: " << jj << endl;}
         	       angle=atan2(ypeaks[xmap[jj]]-ypeaks[xmap[j]],xpeaks[xmap[jj]]-xpeaks[xmap[j]]);
                        length=TMath::Sqrt(TMath::Power(ypeaks[xmap[j]]-ypeaks[xmap[jj]],2)+
                                            TMath::Power(xpeaks[xmap[j]]-xpeaks[xmap[jj]],2));
@@ -114,6 +115,8 @@ Int_t sort16(Float_t *xpeaks, Float_t *ypeaks, Double_t **sortedxpeaks, Double_t
 	  } // first angle check passed
       } // unused point
     } // while loop
+
+    if (verbose) { cout << " curcorner : " << curcorner << ", l = " << l << endl;}
 
     if (verbose) { if (j<16) cout << " setting point : " << curcorner+l+1 << " (j=" << j << "); x=" << xpeaks[xmap[j]] << ", y=" << ypeaks[xmap[j]]<<endl; }
     if (j>15) j=curcorner+l+1;

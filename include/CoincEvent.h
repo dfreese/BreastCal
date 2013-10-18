@@ -38,7 +38,7 @@ class CoincEvent : public TObject {
   CoincEvent();
   virtual ~CoincEvent();
 
-  ClassDef(CoincEvent,1)
+  ClassDef(CoincEvent,2)
 
 };
 

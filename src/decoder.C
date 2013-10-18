@@ -216,6 +216,7 @@ for (i = 0; i < 36; i++) {
      int events;
      double tmp;
      pedvals.open(pedvaluefilename);
+     cout << " Decoding file " << filename << " with pedestals " << pedvaluefilename << endl;
      while ( pedvals >> chip ){ 
        pedvals >> module;
        pedvals >> events;
@@ -242,6 +243,7 @@ for (i = 0; i < 36; i++) {
      } // verbose
   } //pedfilenamespec
  
+  else {    cout << " Decoding file " << filename << " without pedestals " << endl;}
    
   if (verbose) {
     cout << " threshold :: " << threshold << endl; }
@@ -743,6 +745,7 @@ if (pedfilenamespec) {
 	    //                parsePack(packBuffer);
                 packBuffer.clear();
 	  }
+
 	  //	  cout << " Packet Processed " << endl;
  } // loop over i
 

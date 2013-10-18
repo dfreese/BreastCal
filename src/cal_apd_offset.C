@@ -112,8 +112,17 @@ int main(int argc, Char_t *argv[])
 
 		if(strncmp(argv[ix], "-ft", 3) == 0) {
                   coarsetime=0;
-		  cout << " Fine time interval "  <<endl;
+                  ix++;
+                  if (ix == argc ) { cout << " Please enter finelimit interval: -ft [finelimit]\nExiting. " << endl;
+                    return -20;} 
+                  FINELIMIT=atoi(argv[ix]);
+                  if (FINELIMIT<1) { cout << " Error. FINELIMIT = " << FINELIMIT << " too small. Please specify -ft [finelimit]. " << endl;
+		    cout << "Exiting." << endl; return -20;}
+             
+		  cout << " Fine time interval = "  << FINELIMIT << endl;
 		}
+
+
 
                 else {
 		if(strncmp(argv[ix], "-f1", 3) == 0) {
@@ -165,7 +174,7 @@ int main(int argc, Char_t *argv[])
 	Int_t tt, mod, aa,ii;
 
 	if (coarsetime ) {  DTF_low = -300; DTF_hi = 300; FINELIMIT=400; DTFLIMIT=200; cout << " Using Coarse limits: " << FINELIMIT << endl;}
-        else { DTF_low = -50; DTF_hi = 50; FINELIMIT=50; DTFLIMIT=5;}
+        else { DTF_low = -50; DTF_hi = 50;  DTFLIMIT=5;}
 
 
    
@@ -320,36 +329,41 @@ ii=1;
       cout << " Opening file " << rootfile << " for writing " << endl;
       TFile *calfile = new TFile(rootfile,"RECREATE");
       TTree *merged = new  TTree("merged","Merged and Calibrated LYSO-PSAPD data ");
-
+      //   merged->SetDirectory(0);
       merged->Branch("Event",&calevt);
 
 
       //      merged->Branch("event",&calevt->dtc,"dtc/L:dtf/D:E1/D:Ec1/D:Ech1/D:ft1/D:E2/D:Ec2/D:Ech2/D:ft2/D:x1/D:y1/D:x2/D:y2/D:chip1/I:fin1/I:m1/I:apd1/I:crystal1/I:chip2/I:fin2/I:m2/I:apd2/I:crystal2/I:pos/I");
 
-
+     checkevts=0;
       cout << "filling new Tree :: " << endl;
 
         for (i=0;i<entries; i++) {
 	 mm->GetEntry(i);
+	 calevt=evt;
          if (evt->fin1>FINS_PER_CARTRIDGE) continue;
          if (evt->fin2>FINS_PER_CARTRIDGE) continue;
 	 if ((evt->crystal1<65)&&((evt->apd1==APD1)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
 	 if ((evt->crystal2<65)&&((evt->apd2==APD1)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
-	   calevt=evt;
+
            calevt->dtf-= mean_apdoffset[0][evt->fin1][evt->m1][evt->apd1] ;
            calevt->dtf-= mean_apdoffset[1][evt->fin2][evt->m2][evt->apd2] ; 
            if (evt->E1>400&&evt->E1<600&&evt->E2>400&&evt->E2<600) {
 	     tres->Fill(calevt->dtf);}
 	 }
 	 }
+         checkevts++;
          merged->Fill();
 	}
     
 
+	cout << " New Tree filled with " << checkevts << " events. " << endl;
+
+	merged->Write();
       calfile->Close();
 
-	     // crystime[0][MOD1][APD1][0]->Draw(); c1->Print("testje2.ps");
-	     // cout << crystime[0][MOD1][APD1][0]->GetEntries() << endl;
+ // crystime[0][MOD1][APD1][0]->Draw(); c1->Print("testje2.ps");
+ // cout << crystime[0][MOD1][APD1][0]->GetEntries() << endl;
  // TFile *ff = new TFile("test.root");
  // crystime[0][0][0][0]->Write();
  // ff->Close();

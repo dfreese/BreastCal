@@ -175,7 +175,7 @@ Int_t main(int argc, Char_t *argv[])
  peaks_remapped64 = new TGraph(PEAKS);
  Int_t nvalid=0;
  Bool_t  validsegment[RENACHIPS][4][2];
- Float_t costs[RENACHIPS][4][2];
+ Float_t costs[RENACHIPS][4][2]={{{0}}};
  Int_t nfound;
  TGraph *peaks[RENACHIPS][4][2];
  Int_t flag=0;
@@ -657,7 +657,7 @@ if (npeaks_q[k] != 16 ) {
        ypeaks_q[k]=peaks[k]->GetPositionY() ;
        if (verbose) {  cout << "Going to SORT16" <<endl;}
        //       cout << sort16( npeaks_q[k], xpeaks_q[k], ypeaks_q[k], &ysort_q[k], &xsort_q[k], peaks_remapped[k], verbose) << endl; 
-       
+                
        xcorner=floodsq[k]->GetXaxis()->GetBinCenter(0);
        ycorner=floodsq[k]->GetYaxis()->GetBinCenter(0);
         
@@ -665,6 +665,7 @@ if (npeaks_q[k] != 16 ) {
        if (verbose) cout << " Flood corner :: " << xcorner << " " << ycorner << endl;
        sort16(xpeaks_q[k],ypeaks_q[k],&ysort_q[k],&xsort_q[k],peaks_remapped[k],xcorner,ycorner,verbose);
        if ( ! validate_sort(peaks_remapped[k],verbose) ) validflag |= ( 1 << k) ;
+       if (verbose ) cout << " Done with SORT16 " << endl;
    } // if (npeaks == 16 )
    else { if (verbose) cout << " not enough peaks found in histogram " << k << endl;  } //invalid=1;}
 

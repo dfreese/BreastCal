@@ -17,8 +17,9 @@ int main(int argc, Char_t *argv[])
 	Int_t		verbose = 0, threshold=-1000;
 	Int_t		ix,ascii;
 	 buf buffer; 
-	//module UNIT0,UNIT1,UNIT2,UNIT3;
-	//        event           evt;
+         Int_t PANELDISTANCE=40; // mm
+         Bool_t RANDOMS=0;
+	 Float_t FINETIMEWINDOW=40;
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -33,8 +34,19 @@ int main(int argc, Char_t *argv[])
 			cout << "Verbose Mode " << endl;
 			verbose = 1;
 		}
+    
+ 	if(strncmp(argv[ix], "-r", 2) == 0) {
+			cout << "RANDOMS SELECTION " << endl;
+			RANDOMS = 1;
+		}
 
 
+                if (strncmp(argv[ix],"-p",2) ==0 ) {
+                  ix++;
+		  PANELDISTANCE=atoi(argv[ix]);
+                  cout << " Using panel distance " << PANELDISTANCE << " mm." << endl;
+		}
+ 
 		if(strncmp(argv[ix], "-a", 2) == 0) {
 			cout << "Ascii output file generated" << endl;
 			ascii = 1;
@@ -42,13 +54,23 @@ int main(int argc, Char_t *argv[])
 
 
 		if(strncmp(argv[ix], "-t", 2) == 0) {
+                  FINETIMEWINDOW = atoi( argv[ix+1]);
+                  ix++;
+		}
+
+
+		if(strncmp(argv[ix], "-f", 2) == 0) {
+
+		if(strncmp(argv[ix], "-ft", 3) == 0) {
                   threshold = atoi( argv[ix+1]);
 		  cout << "Threshold =  " << threshold << " ( not implemented yet ) " << endl;
                   ix++;
 		}
 
+		else {
+
 		/* filename '-f' */
-		if(strncmp(argv[ix], "-f", 3) == 0) {
+
 			if(strlen(argv[ix + 1]) < FILENAMELENGTH) {
 				sprintf(filename, "%s", argv[ix + 1]);
 			}
@@ -59,33 +81,31 @@ int main(int argc, Char_t *argv[])
 			}
 		}
 
-
+                }
 	} // loop over arguments
 
         rootlogon(verbose);
-
-
+     
+        if (RANDOMS) cout << " Reformatting for RANDOMS " << endl;
+        else {  cout << " Fine Time window =  " << FINETIMEWINDOW << "  " << endl;}
 
         Char_t filebase[FILENAMELENGTH],rootfile[FILENAMELENGTH]; 
         Char_t asciifile[FILENAMELENGTH], outfile[FILENAMELENGTH]; 
-	//       Char_t tmpname[20],tmptitle[50];
-	//        Int_t i,j,k,m,lines;
-	//        Double_t aa, bb;
-	//        Int_t augment;
-        ifstream infile;
-	//        Int_t evts=0;
-	//        strncpy(filebase,filename,strlen(filename)-17);
-	//        filebase[strlen(filename)-17]='\0';
-	//        sprintf(rootfile,"%s",filename);
-	//        strcat(rootfile,".root");
-              
-	//	cout << "Rootfile to open :: " << rootfile << endl;
 
+        ifstream infile;
 
         cout << " Opening file " << filename << endl;
         TFile *file = new TFile(filename,"OPEN");
         TTree *m = (TTree *) file->Get("merged");
         CoincEvent *data = new CoincEvent();
+
+        if (!m) {            m  = (TTree *) file->Get("mana"); }  
+
+
+
+
+        if (!m) { cout << " Problem reading branch 'merged' or 'mana'  from file "<<  filename << endl; 
+	  cout << " Exiting. " << endl; return -99;}
 
 	m->SetBranchAddress("Event",&data);
 
@@ -122,7 +142,7 @@ int main(int argc, Char_t *argv[])
 
 
 #define INCHTOMM 25.4
-#define PANELDISTANCE 40 // mm
+
 #define XCRYSTALPITCH 1
 #define YCRYSTALPITCH 1
 #define XMODULEPITCH 0.405*INCHTOMM
@@ -143,12 +163,14 @@ int main(int argc, Char_t *argv[])
 	m->GetEntry(i);
 
 	// YOUR CODE HERE -- YOU HAVE ACCESS TO THE STRUCT DATA AND ITS MEMBERS TO DO WHATEVER CONSTRAINTS //
-        if ( TMath::Abs(data->dtc)<6) {  
+
+	// The different constraint here compared to merged_ana, is that we assume that merged_ana already did a valid random selection on dtc,
+        // the selection is only converted to CUDA readable format. 
+        if ((RANDOMS) || ( TMath::Abs(data->dtf)<FINETIMEWINDOW)) {  
 	  if ( ( data->E1<700 ) && (data->E1> 400 ) ) {
         	  if ( ( data->E2<700 ) && (data->E2> 400 ) ) {
 		    if ( (data->crystal1>0 ) && (data->crystal1<64 )) {
            		    if ( (data->crystal2>0 ) && (data->crystal2<64 )) {
-			      if ( TMath::Abs(data->dtf)<20 ) {
 				//	if ( data->apd1 ) continue;
 
 
@@ -191,7 +213,7 @@ int main(int argc, Char_t *argv[])
 		    }
 		  }
 	  }
-	}
+      
            
       }
        // loop over entries

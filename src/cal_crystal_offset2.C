@@ -104,7 +104,14 @@ int main(int argc, Char_t *argv[])
 		
 		if(strncmp(argv[ix], "-ft", 3) == 0) {
                   coarsetime=0;
-		  cout << " Fine time interval "  <<endl;
+                  ix++;
+                  if (ix == argc ) { cout << " Please enter finelimit interval: -ft [finelimit]\nExiting. " << endl;
+                    return -20;} 
+                  FINELIMIT=atoi(argv[ix]);
+                  if (FINELIMIT<1) { cout << " Error. FINELIMIT = " << FINELIMIT << " too small. Please specify -ft [finelimit]. " << endl;
+		    cout << "Exiting." << endl; return -20;}
+             
+		  cout << " Fine time interval = "  << FINELIMIT << endl;
 		}
 
 		
@@ -154,7 +161,7 @@ int main(int argc, Char_t *argv[])
 	Int_t tt,  aa,ii,jj,kk;
 
 	if (coarsetime ) {  DTF_low = -100; DTF_hi = 100; FINELIMIT=100; DTFLIMIT=50; cout << " Using Coarse limits: " << FINELIMIT << endl;}
-        else { DTF_low = -50; DTF_hi = 50; FINELIMIT=50; DTFLIMIT=5;}
+        else { DTF_low = -50; DTF_hi = 50; DTFLIMIT=5;}
 
 
    
@@ -304,11 +311,12 @@ int main(int argc, Char_t *argv[])
 
         for (i=0;i<entries; i++) {
 	 mm->GetEntry(i);
+	   calevt=evt;
          if (evt->fin1>FINS_PER_CARTRIDGE) continue;
          if (evt->fin2>FINS_PER_CARTRIDGE) continue;
 	 if ((evt->crystal1<65)&&((evt->apd1==APD1)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
 	 if ((evt->crystal2<65)&&((evt->apd2==APD1)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
-	   calevt=evt;
+
            calevt->dtf-= mean_crystaloffset[0][evt->fin1][evt->m1][evt->apd1][evt->crystal1] ;
            calevt->dtf-= mean_crystaloffset[1][evt->fin2][evt->m2][evt->apd2][evt->crystal2] ; 
            if (evt->E1>400&&evt->E1<600&&evt->E2>400&&evt->E2<600) {
@@ -320,6 +328,7 @@ int main(int argc, Char_t *argv[])
 	}
     
 
+	merged->Write();
       calfile->Close();
 
 

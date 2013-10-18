@@ -232,14 +232,20 @@ else
  if [ -e files ] ; then 
    rm files
  fi;
+ if [ -e tmpfiles ] ; then
+   rm tmpfiles
+ fi;
  for k in L R; do
   for j in 0 1 2 3; do
  pedfile=`ls ./Tech/PED*_${k}${j}_*dat`
- NR=`ls -1 ./Tech/DAQ*${k}${j}_*.dat | wc -l`; (( NR-- )); for i in `seq 0 ${NR}`; do echo `ls ./Tech/DAQ*${k}${j}_${i}.dat` $pedfile >> files; done;
+ NR=`ls -1 ./Tech/DAQ*${k}${j}_*.dat | wc -l`; (( NR-- )); for i in `seq 0 ${NR}`; do echo `ls ./Tech/DAQ*${k}${j}_${i}.dat` $pedfile >> tmpfiles; done;
  done;
  done;
  ls ./Tech/PED_*dat > pedfiles;
  ls ./Tech/DAQ_*dat > daqfiles;
+# sometimes there will be multiple pedestal files in the folder
+ cat tmpfiles | awk '{print $1" "$2}' > files;
+ rm tmpfiles;
 else  
  ls ./Tech/${MODE}_PED*dat   > pedfiles;
  ls ./Tech/${MODE}_DAQ*dat   > daqfiles
@@ -333,11 +339,15 @@ else
 #  sh ${CODEVERSION}runall.sh files 
 # else   
   while read data ped ; do 
-   pos=`echo $data | cut -f1 -d 'u' |  sed 's/.*[^0-9]\([0-9]\+\)[^0-9]*$/\1/'`
+   if [ "$MODE" == "PT" ] ; then 
+      pos=`echo $data | cut -f1 -d 'u' |  sed 's/.*[^0-9]\([0-9]\+\)[^0-9]*$/\1/'`
+   else
+      pos=0;
+   fi;
    if [ $RUNNINGJOBS -lt $CORES ]; then 
     (( c++ ));
     echo -n " SUBMITTING JOB "
-    echo "${CODEVERSION}decoder -f $data -pedfile $ped.ped -uv -t -400 ; "
+    echo "${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 -pos $pos ; "
     ${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 -pos $pos > $data.conv.out &
 #    pedconv $i pedconv_$j.out &
     pids+=($!);
@@ -346,7 +356,7 @@ else
 #    echo " RUNNINGJOBS : $RUNNINGJOBS"
     waitsome $pids 1
     echo -n " SUBMITTING JOB "
-    echo "${CODEVERSION}decoder -f $data -pedfile $ped.ped -uv -t -400 ; "
+    echo "${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 -pos $pos ; "
     ${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 -pos $pos > $data.conv.out &
     pids+=($!);
     (( RUNNINGJOBS++ ));

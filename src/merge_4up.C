@@ -185,27 +185,6 @@ int main(int argc, Char_t *argv[])
 	  }
 
           cal->SetBranchAddress("Calibrated Event Data",&unsrt_evt);
-	  /*
-	  cal->SetBranchAddress("ct",&unsrt_evt.ct);
-	  cal->SetBranchAddress("chip",&unsrt_evt.chip);
-	  cal->SetBranchAddress("module",&unsrt_evt.module);
-	  cal->SetBranchAddress("apd",&unsrt_evt.apd);
-	  cal->SetBranchAddress("Ecal",&unsrt_evt.Ecal);
-	  cal->SetBranchAddress("E",&unsrt_evt.E);
-	  cal->SetBranchAddress("Ec",&unsrt_evt.Ec);
-	  cal->SetBranchAddress("Ech",&unsrt_evt.Ech);
-	  cal->SetBranchAddress("x",&unsrt_evt.x);
-	  cal->SetBranchAddress("y",&unsrt_evt.y);
-	  cal->SetBranchAddress("ft",&unsrt_evt.ft);
-	  cal->SetBranchAddress("pos",&unsrt_evt.pos);
-	  cal->SetBranchAddress("id",&unsrt_evt.id);
-	  */
-	  /*	  
-        cal[m]->SetBranchAddress("U0",&UL[m*4+0]);
-        cal[m]->SetBranchAddress("U1",&UL[m*4+1]);
-        cal[m]->SetBranchAddress("U2",&UL[m*4+2]);
-        cal[m]->SetBranchAddress("U3",&UL[m*4+3]);
-	  */
 
 
         // Create Tree //
@@ -220,31 +199,8 @@ int main(int argc, Char_t *argv[])
 
         if (verbose) cout << " Last timestamp = " << lasttime << endl;
 
-	//        Long64_t lasttimes[RENACHIPS];
-	//   Int_t skipchip[RENACHIPS];
         Long64_t l,curevent=0;
 
-/*
-//        for (m=0;m<RENACHIPS;m++){
-        if(entries[m]) {
-	  cal[m]->GetEntry(entries[m]-1);
-          if (verbose) cout << " Last Timestamp Chip " << m  << ": " << UL[m*4+2].ct << endl;
-          lasttimes[m]=UL[m*4+2].ct;
-          if ( lasttime <  UL[m*4+2].ct ) { lasttime= UL[m*4+2].ct;}
-	  skipchip[m]=0;
-          curevent[m]=0;
-         }
-        else skipchip[m]=1;
-//}
- 
-	//#define MAXHITS 20000000
-	//#define MAXCUTS 50
-
-        cout << " Last timestamp = " << lasttime << endl;
-
-        cout << " Maximum entries : " << maxentries << " (chip " << maxchip << ")." << endl;	
-
-*/   
 
         if ( ncuts > MAXCUTS ) {
           cout << " ERROR ! THERE ARE OVER " << MAXCUTS*MAXHITS << " EVENTS TO PROCESS. " << endl;
@@ -315,39 +271,6 @@ int main(int argc, Char_t *argv[])
 
         panel->Branch("Sorted data",&event);
 
-	//        panel->Branch("event",&event.ct,"ct/L:ft/D:E/D:Ec/D:Ech/D:x/D:y/D:chip/I:m/I:apd/I:id/I",2);
-	//        panel->Branch("event",&event.ct,"ct/L:ft/D:E/D:Ec/D:Ech/D:x/D:y/D:chip/I:m/I:apd/I:id/I");
-	/*
-        panel->Branch("ct",&event.ct,"ct/L");
-        panel->Branch("ft",&event.ft,"ft/F");
-        panel->Branch("E",&event.E,"E/F");
-	panel->Branch("Ec",&event.Ec,"Ec/F");
-        panel->Branch("Ech",&event.Ech,"Ech/F");
-        panel->Branch("x",&event.x,"x/F");
-        panel->Branch("y",&event.y,"y/F");
-        panel->Branch("chip",&event.chip,"chip/S");
-        panel->Branch("fin",&event.fin,"fin/S");
-        panel->Branch("m",&event.m,"m/S");
-        panel->Branch("apd",&event.apd,"apd/S");
-        panel->Branch("id",&event.id,"id/S");
-        panel->Branch("pos",&event.pos,"pos/I");
-	*/
-	/*
-        panel->Branch("ct",&event.ct,"ct/L");
-        panel->Branch("ft",&event.ft,"ft/D");
-        panel->Branch("E",&event.E,"E/D");
-	panel->Branch("Ec",&event.Ec,"Ec/D");
-        panel->Branch("Ech",&event.Ech,"Ech/D");
-        panel->Branch("x",&event.x,"x/D");
-        panel->Branch("y",&event.y,"y/D");
-        panel->Branch("chip",&event.chip,"chip/I");
-        panel->Branch("fin",&event.fin,"fin/I");
-        panel->Branch("m",&event.m,"m/I");
-        panel->Branch("apd",&event.apd,"apd/I");
-        panel->Branch("id",&event.id,"id/I");
-        panel->Branch("pos",&event.pos,"pos/I");
-	*/
-
 	// this could be simple: we just split the file according to the timestamp 
 	// check whether timestamp[unsrt_evt.chip]  
 
@@ -363,6 +286,10 @@ int main(int argc, Char_t *argv[])
 	      cal->GetEntry(l);
 	      //              thischiptime=UL[m*4+2].ct ;
               curtime=unsrt_evt->ct ;
+
+              if ( ( ( curtime-lasteventtime) > 50e9  ) &&  ( lasteventtime>0)) {
+                if (verbose) cout << " CT BUG :: Event " << l << ": curtime = " << curtime << ", lasteventtime = " << lasteventtime << endl;
+                l++; continue ; }
 	      if (( curtime+1e12 ) < lasteventtime ) { 
                 // rollover occured !! 
 		// FIXME :: only one rollover supported as of now. 

@@ -116,24 +116,40 @@ int main(int argc, Char_t *argv[])
 		  cout << " Using spatials for energy calibration "  <<endl;
 		}
 
+
+	/* filename '-f' */
+		if(strncmp(argv[ix], "-f", 2) == 0) {
+
 		if(strncmp(argv[ix], "-ft", 3) == 0) {
                   coarsetime=0;
-		  cout << " Fine time interval "  <<endl;
+                  ix++;
+                  if (ix == argc ) { cout << " Please enter finelimit interval: -ft [finelimit]\nExiting. " << endl;
+                    return -20;} 
+                  FINELIMIT=atoi(argv[ix]);
+                  if (FINELIMIT<1) { cout << " Error. FINELIMIT = " << FINELIMIT << " too small. Please specify -ft [finelimit]. " << endl;
+		    cout << "Exiting." << endl; return -20;}
+             
+		  cout << " Fine time interval = "  << FINELIMIT << endl;
 		}
+
+
+		else {
 
 		if(strncmp(argv[ix], "-f1", 3) == 0) {
                   fin1=atoi ( argv[ix+1]); ix++;
 		  cout << " Fin 1 :: "  <<fin1<< endl;
 		}
+                else {
 		if(strncmp(argv[ix], "-f1", 3) == 0) {
                   fin2=atoi ( argv[ix+1]) ; ix++;
 		  cout << " Fin 2 :: " << fin2 <<endl;
 		}
 
-
+                else {
+	       
 
 		/* filename '-f' */
-		if(strncmp(argv[ix], "-f", 3) == 0) {
+
 			if(strlen(argv[ix + 1]) < FILENAMELENGTH) {
 				sprintf(filenamel, "%s", argv[ix + 1]);
 			}
@@ -146,7 +162,9 @@ int main(int argc, Char_t *argv[])
 
 
 	}
-
+		}
+		}
+	}
         rootlogon(verbose);
       gStyle->SetOptStat(kTRUE); 
   //	TStyle::SetOptStat();
@@ -332,11 +350,12 @@ int main(int argc, Char_t *argv[])
 
         for (i=0;i<entries; i++) {
 	 mm->GetEntry(i);
+	   calevt=evt;
          if (evt->fin1>FINS_PER_CARTRIDGE) continue;
          if (evt->fin2>FINS_PER_CARTRIDGE) continue;
 	 if ((evt->crystal1<65)&&((evt->apd1==APD1)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
 	 if ((evt->crystal2<65)&&((evt->apd2==APD1)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
-	   calevt=evt;
+
            calevt->dtf-= profehistfit[0]->Eval(evt->E1);
            calevt->dtf-= profehistfit[1]->Eval(evt->E2);
              if (evt->E1>400&&evt->E1<600&&evt->E2>400&&evt->E2<600) {
@@ -346,6 +365,8 @@ int main(int argc, Char_t *argv[])
          merged->Fill();
 	}
     
+
+	merged->Write();
 
       calfile->Close();
 
