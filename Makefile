@@ -42,7 +42,7 @@ SOLIBS := ./lib/libModuleDatDict.so
 #depend: .depend .rules
 #	@echo "Done with dependencies"
 
-default: ./ModuleDatDict.C ./lib/libModuleDatDict.so  $(BINS)
+default: ./setana_env.sh ./ModuleDatDict.C ./lib/libModuleDatDict.so  $(BINS)
 	@echo "Done making ANA CODE"
 
 all:	default
@@ -83,7 +83,9 @@ print:
 ./lib/libModuleDatDict.so: ./ModuleDatDict.C ./src/ModuleDat.C ./src/ModuleCal.C ./src/CoincEvent.C
 	g++ -shared -o $@ `root-config --ldflags` $(CXXFLAGS) -I$(ROOTSYS)/include $^
 
-
+./setana_env.sh:
+	echo "CURDIR=`pwd`" > ./setana_env.sh
+	echo "source `pwd`/src/addtopath.sh `pwd`" > ./setana_env.sh
 
 # GENERATED WITH ::
 # 1. change whitespace to endline
