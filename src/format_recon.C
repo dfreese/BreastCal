@@ -17,7 +17,7 @@ int main(int argc, Char_t *argv[])
 	Int_t		verbose = 0, threshold=-1000;
 	Int_t		ix,ascii;
 	 buf buffer; 
-         Int_t PANELDISTANCE=40; // mm
+         Int_t PANELDISTANCE=-1; // mm
          Bool_t RANDOMS=0;
 	 Float_t FINETIMEWINDOW=40;
 
@@ -86,6 +86,8 @@ int main(int argc, Char_t *argv[])
 
         rootlogon(verbose);
      
+        if (PANELDISTANCE<0) { cout << "please specify paneldistance: -p [DISTANCE].\nExiting." << endl;return -2;}
+
         if (RANDOMS) cout << " Reformatting for RANDOMS " << endl;
         else {  cout << " Fine Time window =  " << FINETIMEWINDOW << "  " << endl;}
 
@@ -151,6 +153,7 @@ int main(int argc, Char_t *argv[])
 #define YDISTANCEBETWEENAPDS (0.32+0.079)*INCHTOMM  // 10.1346 mm
 #define ZPITCH 0.0565*INCHTOMM //
 
+    Long64_t lines=0;
     Double_t TOTALPANELDISTANCE=PANELDISTANCE+2*YOFFSET;
 
     cout << "X:: PITCH : " << XMODULEPITCH << " mm." << endl;
@@ -202,6 +205,8 @@ int main(int argc, Char_t *argv[])
 			      buffer.z1 = z1;
 			      buffer.z2 = z2;
 
+                              lines++;
+
 			      if (ascii) asciiout << x1 << " " <<y1 << " " << z1 << " " << x2 << " " << y2 << " " << z2 << endl;
 
 			      outputfile.write( (char *) &buffer, sizeof(buffer));
@@ -218,6 +223,9 @@ int main(int argc, Char_t *argv[])
       }
        // loop over entries
       if (ascii) asciiout.close();
+
+      cout << " wrote " << lines << " LORS. " << endl;
+
 
 #define COARSEDIFF 100       
 
