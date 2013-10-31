@@ -204,7 +204,8 @@ int main(int argc, Char_t *argv[])
           return 0;
          }
 
-       if ( maxtime > lasttime ) {
+       // note it could be that the last time stamp is slightly smaller than a previous one, because the events aren't sorted.
+       if ( maxtime > ( lasttime + 100000 )) {
 	 cout << " Rollover occured ! " << endl; 
        rollover=true; }
  
