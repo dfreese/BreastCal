@@ -108,7 +108,7 @@ function calibrate () {
 THISDIR=$1;
 mkfolder ${THISDIR}
 cd ./${THISDIR};
-ls ../Tech/*.root | grep DAQ | grep $1 > parselist_$1;
+ls ../Tech/*.root | grep DAQ | grep $1 | sort -V > parselist_$1;
 #chain data together
 if [ "$MODE" == "LN" ] ; then
  data=`ls -1 ../DATA/${MODE}_DAQ_BinaryData*${s}${i}*out.parse.root | head -n 1`
@@ -404,8 +404,8 @@ TIMECHECK=0
 
 echo " PIDS before calibration : ${#pids[@]} :: ${pids[@]} "
 
+#fi;  # ARG != SHORT
 
-#fixme .. fix code !! doesn't run enecal ! --- investigate.
 
 DATE=`pwd | cut -d/ -f4`
 for s in L R; do
