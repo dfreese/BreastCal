@@ -154,7 +154,7 @@ int main(int argc, Char_t *argv[])
 
 	// YOUR CODE HERE -- YOU HAVE ACCESS TO THE STRUCT DATA AND ITS MEMBERS TO DO WHATEVER CONSTRAINTS //
             
-        if ( ( (data->dtc > DTC_LOW) && ( data->dtc < DTC_HI ) ) != (RANDOMS) ) {  
+        if ( ( (data->dtc > DTC_LOW) && ( data->dtc < DTC_HI ) ) || (RANDOMS) ) {  
 
 	  if ( ( data->E1<700 ) && (data->E1> 400 ) ) {
               if ( ( data->E2<700 ) && (data->E2> 400 ) ) {

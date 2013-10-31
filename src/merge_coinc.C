@@ -29,7 +29,7 @@ int main(int argc, Char_t *argv[])
 	Char_t		filenamel[FILENAMELENGTH] = "";
 	Char_t		filenamer[FILENAMELENGTH] = "";
 	Int_t		verbose = 0, threshold=-1000;
-	Int_t		ix,ascii;
+	Int_t		ix,ascii,DELAY=0;
 	//module UNIT0,UNIT1,UNIT2,UNIT3;
         CoincEvent       *evt = new CoincEvent();
 
@@ -51,6 +51,14 @@ int main(int argc, Char_t *argv[])
 		if(strncmp(argv[ix], "-a", 2) == 0) {
 			cout << "Ascii output file generated" << endl;
 			ascii = 1;
+		}
+
+
+
+		if(strncmp(argv[ix], "-d", 2) == 0) {
+                  DELAY = atoi( argv[ix+1]);
+		  cout << "Delayed window =  " << DELAY << ". " << endl;
+                  ix++;
 		}
 
 
@@ -163,6 +171,7 @@ int main(int argc, Char_t *argv[])
         strncpy(filebase,filenamel,strlen(filenamel)-13);
         filebase[strlen(filenamel)-13]='\0';
         sprintf(rootfile,"%s",filebase);
+        if (DELAY) sprintf(rootfile,"%s.delaywindow%d",filebase,DELAY);
         strcat(rootfile,".merged.root");
         if (ascii){
 	  sprintf(asciifile,"%s.merged.ascii",filebase);
@@ -194,7 +203,8 @@ int main(int argc, Char_t *argv[])
 
        //       Double_t leftfine,rightfine;
 
-#define COARSEDIFF 10       
+#define COARSEDIFF 10
+
 
        Int_t l=0;
        Int_t car_ri=0;
@@ -291,7 +301,7 @@ int main(int argc, Char_t *argv[])
 
      
 
-       if ((TMath::Abs(lefttime-righttime) < COARSEDIFF ) && (!(skipevt))){
+       if ((TMath::Abs(lefttime+DELAY-righttime) < COARSEDIFF ) && (!(skipevt))){
 	 evt->dtc= lefttime-righttime;
          evt->dtf= EL->ft-ER->ft;
 #ifdef DEBUG2

@@ -28,21 +28,18 @@ int main(int argc, Char_t *argv[])
   Int_t MOD2=1;
   Int_t APD1=0;
   Int_t APD2=0;
-  Int_t crystalcal=1;
   Int_t uvcal=0;
   Int_t energycal=0;
   Int_t coarsetime=1; 
   Int_t crystalmean=0;
   Int_t energyspatial=0;
-  Char_t histtitle[40];
 
- Int_t DTF_low, DTF_hi, FINELIMIT,DTFLIMIT;
+  Int_t DTF_low, DTF_hi, FINELIMIT;
 
  	cout << "Welcome " << endl;
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 	Char_t		filenamel[FILENAMELENGTH] = "";
-	Char_t		plotfilename[FILENAMELENGTH] = "";
 	Int_t		verbose = 0;
 	Int_t		ix,ascii;
 	//module UNIT0,UNIT1,UNIT2,UNIT3;
@@ -174,11 +171,9 @@ int main(int argc, Char_t *argv[])
   if (!c1) c1 = new TCanvas("c1","c1",10,10,1000,1000);
    c1->SetCanvasSize(700,700);
        
-        Char_t filebase[FILENAMELENGTH],peaklocationfilename[FILENAMELENGTH],rootfile[FILENAMELENGTH]; 
-        Char_t asciifile[FILENAMELENGTH]; 
-       Char_t tmptitle[50];
-       Char_t tmpstring[50];
-        Int_t i,j,k,l;
+        Char_t filebase[FILENAMELENGTH],rootfile[FILENAMELENGTH]; 
+        Int_t i;
+	
         ifstream infile;
  
         cout << " Opening file " << filenamel << endl;
@@ -191,15 +186,14 @@ int main(int argc, Char_t *argv[])
 
         TH2F *energydependence[2];
 
-        TH1F *crystaloffset[2][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][64];
-        TF1 *fit_crystaloffset[2][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][64];
+
 
         coarsetime=0;
 
-	Int_t tt, mod, aa,ii,jj,kk;
+	Int_t ii;
 
-	if (coarsetime ) {  DTF_low = -300; DTF_hi = 300; FINELIMIT=300; DTFLIMIT=150; cout << " Using Coarse limits: " << FINELIMIT << endl;}
-        else { DTF_low = -50; DTF_hi = 50; FINELIMIT=50; DTFLIMIT=5;}
+	if (coarsetime ) {  DTF_low = -300; DTF_hi = 300; FINELIMIT=300;  cout << " Using Coarse limits: " << FINELIMIT << endl;}
+        else { DTF_low = -FINELIMIT/2; DTF_hi = FINELIMIT/2;  }
 
 	/*
    
@@ -265,7 +259,9 @@ int main(int argc, Char_t *argv[])
 
        profehist[0] = (TH1F *) energydependence[0]->ProfileX();
        profehist[0]->SetName("profehist[0]");
-       profehist[0]->Fit("profehistfit[0]");
+
+       if (verbose ) profehist[0]->Fit("profehistfit[0]");
+       else profehist[0]->Fit("profehistfit[0]","Q");
 
        c1->Clear();
        c1->Divide(1,2);
@@ -313,7 +309,11 @@ int main(int argc, Char_t *argv[])
 
        profehist[1] = (TH1F *) energydependence[1]->ProfileX();
        profehist[1]->SetName("profehist[1]");
-       profehist[1]->Fit("profehistfit[1]");
+
+       if (verbose ) profehist[1]->Fit("profehistfit[1]");
+       else profehist[1]->Fit("profehistfit[1]","Q");
+
+
 
 
        c1->Clear();
