@@ -172,8 +172,8 @@ int main(int argc, Char_t *argv[])
         if ((RANDOMS) || ( TMath::Abs(data->dtf)<FINETIMEWINDOW)) {  
 	  if ( ( data->E1<700 ) && (data->E1> 400 ) ) {
         	  if ( ( data->E2<700 ) && (data->E2> 400 ) ) {
-		    if ( (data->crystal1>0 ) && (data->crystal1<64 )) {
-           		    if ( (data->crystal2>0 ) && (data->crystal2<64 )) {
+		    if ( (data->crystal1>=0 ) && (data->crystal1<64 )) {
+           		    if ( (data->crystal2>=0 ) && (data->crystal2<64 )) {
 				//	if ( data->apd1 ) continue;
 
 
@@ -185,7 +185,7 @@ int main(int argc, Char_t *argv[])
 			      y2 -=  (( 7-TMath::Floor(data->crystal2%8) * YCRYSTALPITCH ) + 0.5  );                              
 			
 			      x1 = (XMODULEPITCH-8*XCRYSTALPITCH)/2+(data->m1-8)*XMODULEPITCH;  
-			      x2 = (XMODULEPITCH-8*XCRYSTALPITCH)/2+(8-data->m2)*XMODULEPITCH;  
+			      x2 = (XMODULEPITCH-8*XCRYSTALPITCH)/2+(7-data->m2)*XMODULEPITCH;  
 			      x1 +=  ( TMath::Floor(data->crystal1/8)  + 0.5  )*XCRYSTALPITCH;
 			      x2 +=  ( 7-TMath::Floor(data->crystal2/8)  + 0.5  )*XCRYSTALPITCH;
                               
