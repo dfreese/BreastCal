@@ -42,6 +42,10 @@ int main(int argc, char *argv[]){
   int i;
   int nrfiles=0;
   int verbose=0;
+
+      Bool_t random;
+      Int_t delay=0;
+
   for (i=0;i<argc;i++) {
     if (strncmp(argv[i],"-f",2)==0) {
       sprintf(filebase,"%s",argv[i+1]);
@@ -58,8 +62,23 @@ int main(int argc, char *argv[]){
       cout << " verbose mode " << endl;        
       }
 
+      if (strncmp(argv[i],"-r",2)==0) { 
+	random=1;
+      cout << " RANDOMS " << endl;        
+      }
+
+
+      if (strncmp(argv[i],"-d",2)==0) { 
+        i++;
+	delay=atoi(argv[i]);
+	//      cout << " RANDOMS " << endl;        
+      }
+
+
   } // argc
  
+
+  if (random && (delay==0)) { cout << " Please specify delay for randoms.-r -d XX \n Exiting.\n";}
 
   if (nrfiles==0) {
     cout << " Please specify nr of files.\n Exiting." <<endl;
@@ -69,7 +88,8 @@ int main(int argc, char *argv[]){
   TChain *m;
   Char_t chainname[40];
 
-  sprintf(outfilename,"%s_all.merged.root",filebase);
+  if (random) sprintf(outfilename,"%s_all.delaywindow%d.merged.root",filebase,delay);
+  else  sprintf(outfilename,"%s_all.merged.root",filebase);
 
   TFile *rfile = new TFile(outfilename,"RECREATE");
 
@@ -79,7 +99,8 @@ int main(int argc, char *argv[]){
 
 
 for (i=0;i<=nrfiles;i++){
-  sprintf(curfilename,"%s_part%d.merged.root",filebase,i);
+  if (random)  sprintf(curfilename,"%s_part%d.delaywindow%d.merged.root",filebase,i,delay);
+  else  sprintf(curfilename,"%s_part%d.merged.root",filebase,i);
    m->Add(curfilename);
 	 }
 
