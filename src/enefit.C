@@ -20,7 +20,7 @@ int main(int argc, Char_t *argv[])
 	Int_t		ix;
         ModuleDat *event = 0;
         ModuleCal   *calevent =  new ModuleCal();
-
+        Bool_t genplots=0;
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 	//see eg http://root.cern.ch/phpBB3/viewtopic.php?f=14&t=3498
@@ -35,6 +35,14 @@ int main(int argc, Char_t *argv[])
 			gErrorIgnoreLevel=-1;
 			verbose = 1;
 		}
+
+
+		if(strncmp(argv[ix], "-plots", 6) == 0) {
+			cout << "Generating plots " << endl;
+			genplots=1;
+
+		}
+
 
 		/* filename '-f' */
 		if(strncmp(argv[ix], "-f", 2) == 0) {
@@ -255,6 +263,9 @@ int main(int argc, Char_t *argv[])
   
   c1->SetCanvasSize(1754,1240);
 	  // plot histograms
+ 
+  if (genplots){
+
   Bool_t firstloop=1;
            m=0;i=0;j=0;
 	   //         for (m=0;m<RENACHIPS;m++){
@@ -307,7 +318,7 @@ int main(int argc, Char_t *argv[])
 
    c1->Print("crystalpeakfits_spat.ps)");
 
-
+  }
 
 	  if (verbose) {
 	    cout << "Energy Calibration parameters :: " << endl;

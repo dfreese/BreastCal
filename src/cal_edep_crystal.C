@@ -14,20 +14,12 @@
 #include "decoder.h"
 #include "CoincEvent.h"
 #include "string.h"
+#define MINMODENTRIES 1000
 
-//#define DEBUG2
-#define UNITS 16
-
-
-
-
-#define MINMODENTRIES 200
-
-Int_t drawmod(TH1F *hi[UNITS][MODULES_PER_FIN][APDS_PER_MODULE], TCanvas *ccc, Char_t filename[MAXFILELENGTH]);
+Int_t drawmod_crys2(TH1F *hi[MODULES_PER_FIN][APDS_PER_MODULE][64], TCanvas *ccc, Char_t filename[MAXFILELENGTH]);
 Int_t writ(TH1D *hi[PEAKS], TCanvas *ccc, Char_t filename[MAXFILELENGTH]);
 Int_t writ2d(TH2F *hi[PEAKS], TCanvas *ccc, Char_t filename[MAXFILELENGTH]);
 TH2F *get2dcrystal(Float_t vals[64], Char_t title[40]) ;
-Float_t calfunc(TH1F *hist, TF1 *fitfun,  Bool_t coarsetime, Bool_t gausfit);
 Float_t getmax (TSpectrum *, Int_t);
 
 int main(int argc, Char_t *argv[])
@@ -36,25 +28,28 @@ int main(int argc, Char_t *argv[])
   Int_t MOD2=1;
   Int_t APD1=0;
   Int_t APD2=0;
-  Bool_t coarsetime=1; 
+  Int_t uvcal=0;
+  Int_t energycal=0;
+  Int_t coarsetime=1; 
   Int_t crystalmean=0;
-  Int_t usegausfit=0;
+  Int_t energyspatial=0;
   Char_t histtitle[40];
 
- Int_t DTF_low, DTF_hi, FINELIMIT,DTFLIMIT;
+  Int_t DTF_low, DTF_hi, FINELIMIT=30;
 
  	cout << "Welcome " << endl;
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-	Char_t		filenamel[CALFILENAMELENGTH] = "";
+	Char_t		filenamel[FILENAMELENGTH] = "";
 	Int_t		verbose = 0;
-	Int_t		ix;
+	Int_t		ix,ascii;
 	//module UNIT0,UNIT1,UNIT2,UNIT3;
-        CoincEvent      *evt = new CoincEvent();
-        CoincEvent      *calevt = new CoincEvent();
+        CoincEvent      *evt = new CoincEvent();     
+        CoincEvent      *calevt = new CoincEvent();     
         Int_t fin1=99,fin2=99;
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
+        ascii=0;
 
 	for(ix = 1; ix < argc; ix++) {
 
@@ -66,6 +61,11 @@ int main(int argc, Char_t *argv[])
 			verbose = 1;
 		}
 
+
+		if((strncmp(argv[ix], "-a", 2) == 0)&& (strncmp(argv[ix], "-apd",4) != 0 )) {
+			cout << "Ascii output file generated" << endl;
+			ascii = 1;
+		}
 
 
 
@@ -99,15 +99,23 @@ int main(int argc, Char_t *argv[])
 		  cout << "Crystal calibration "  <<endl;
 		}
 
+		if(strncmp(argv[ix], "-uv", 3) == 0) {
+                  uvcal=1;
+		  cout << " UV calibration "  <<endl;
+		}
 
-		if(strncmp(argv[ix], "-gf", 3) == 0) {
-                  usegausfit=1;
-		  cout << " Using Gauss Fit "  <<endl;
+		if(strncmp(argv[ix], "-ec", 3) == 0) {
+                  energycal=1;
+		  cout << " Energy calibration "  <<endl;
+		}
+
+		if(strncmp(argv[ix], "-esp", 4) == 0) {
+                  energyspatial=1;
+		  cout << " Using spatials for energy calibration "  <<endl;
 		}
 
 
-
-		/* filename '-f' */
+	/* filename '-f' */
 		if(strncmp(argv[ix], "-f", 2) == 0) {
 
 		if(strncmp(argv[ix], "-ft", 3) == 0) {
@@ -123,21 +131,24 @@ int main(int argc, Char_t *argv[])
 		}
 
 
+		else {
 
-                else {
 		if(strncmp(argv[ix], "-f1", 3) == 0) {
                   fin1=atoi ( argv[ix+1]); ix++;
 		  cout << " Fin 1 :: "  <<fin1<< endl;
-		} 
-		
+		}
                 else {
-		if(strncmp(argv[ix], "-f2", 3) == 0) {
+		if(strncmp(argv[ix], "-f1", 3) == 0) {
                   fin2=atoi ( argv[ix+1]) ; ix++;
 		  cout << " Fin 2 :: " << fin2 <<endl;
 		}
 
-		else {
-			if(strlen(argv[ix + 1]) < CALFILENAMELENGTH) {
+                else {
+	       
+
+		/* filename '-f' */
+
+			if(strlen(argv[ix + 1]) < FILENAMELENGTH) {
 				sprintf(filenamel, "%s", argv[ix + 1]);
 			}
 			else {
@@ -146,146 +157,157 @@ int main(int argc, Char_t *argv[])
 				return -99;
 			}
 		}
-		}
-		}
-		}
-
 
 
 	}
-
+		}
+		}
+	}
         rootlogon(verbose);
+ if (!verbose) {
+   gErrorIgnoreLevel = kError; }
+
       gStyle->SetOptStat(kTRUE); 
   //	TStyle::SetOptStat();
-      if (!(verbose)) { gErrorIgnoreLevel=kError;}
-
-
 
    TCanvas *c1;
    c1 = (TCanvas*)gROOT->GetListOfCanvases()->FindObject("c1");
   if (!c1) c1 = new TCanvas("c1","c1",10,10,1000,1000);
    c1->SetCanvasSize(700,700);
        
-        Char_t filebase[CALFILENAMELENGTH],rootfile[CALFILENAMELENGTH]; 
-        Char_t calparfilename[CALFILENAMELENGTH];
-        Char_t tmpstring[50];
+        Char_t filebase[FILENAMELENGTH],rootfile[FILENAMELENGTH]; 
         Int_t i;
         ifstream infile;
  
-        TH1F *apdoffset[2][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
-        TF1 *fit_apdoffset[2][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
-
-	Int_t tt, mod, aa,ii;
-
-	if (coarsetime ) {  DTF_low = -300; DTF_hi = 300; FINELIMIT=400; DTFLIMIT=200; cout << " Using Coarse limits: " << FINELIMIT << endl;}
-        else { DTF_low = -50; DTF_hi = 50;  DTFLIMIT=5;}
-
-
-   
-	for (ii=0;ii<2;ii++) {
-        for (tt=0;tt<FINS_PER_CARTRIDGE;tt++) {
-	  for (mod=0;mod<MODULES_PER_FIN;mod++) {
-            for (aa=0;aa<APDS_PER_MODULE;aa++) {
-              sprintf(histtitle,"apdoffset[%d][%d][%d][%d]",ii,tt,mod,aa);
-              if ((ii==0) || (!(coarsetime)))  apdoffset[ii][tt][mod][aa]= new TH1F(histtitle,histtitle,50,DTF_low,DTF_hi);
-              else  apdoffset[ii][tt][mod][aa]= new TH1F(histtitle,histtitle,50,DTF_low+150,DTF_hi-150);
-	    }
-	  }
-	}
-	}
-
-
         cout << " Opening file " << filenamel << endl;
         TFile *rtfile = new TFile(filenamel,"OPEN");
         TTree *mm  = (TTree *) rtfile->Get("merged");
-
-        if (!mm) {
-	  cout << " Problem reading Tree merged "   << " from file " << filenamel << ". Trying tree mana." << endl;
-          mm  = (TTree *) rtfile->Get("mana"); }
-      
-        if (!mm) {
-        cout << " Problem reading Tree mana "   << " from file " << filenamel << endl;
-        cout << " Exiting " << endl;
-        return -10;}
-   
         mm->SetBranchAddress("Event",&evt);
 
+
+	//#define UNITS 2
+
+        TH2F *energydependence[2][APDS_PER_MODULE][64];
+
+	/*
+        TH1F *crystaloffset[2][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][64];
+        TF1 *fit_crystaloffset[2][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][64];
+	*/
+
+	//        coarsetime=0;
+
+	Int_t ii,jj,kk;
+
+	if (coarsetime ) {  DTF_low = -300; DTF_hi = 300; FINELIMIT=300;  cout << " Using Coarse limits: " << FINELIMIT << endl;}
+        else { DTF_low = -FINELIMIT/2; DTF_hi = FINELIMIT/2;  }
+
+	/*
+   
+	for (ii=0;ii<2;ii++) {
+	  for (jj=0;jj<FINS;jj++) {
+ 	  for (kk=0;kk<MODULES_PER_FIN;kk++) {
+          for (aa=0;aa<APDS_PER_MODULE;aa++) {
+            for (tt=0;tt<64;tt++){
+              sprintf(histtitle,"crystaloffset[%d][%d][%d][%d][%d]",ii,jj,kk,aa,tt);
+              crystaloffset[ii][jj][kk][aa][tt]= new TH1F(histtitle,histtitle,50,DTF_low,DTF_hi);
+	    }
+	  }
+	}
+	  }
+	}
+	*/
+
+
+	for (i=0;i<2;i++){
+	  for (ii=0;ii<APDS_PER_MODULE;ii++){
+	    for (jj=0;jj<64;jj++){
+	      sprintf(histtitle,"energydependence[%d][%d][%d]",i,ii,jj);
+         	energydependence[i][ii][jj] = new TH2F(histtitle,histtitle,100,400,600,100,-50,50);
+	    }
+	  }
+	}
+
        Long64_t entries = mm->GetEntries();
- 
        cout << " Total  entries: " << entries << endl; 
+
+       
        cout << " Filling crystal spectra on the left. " << endl;
+
        Long64_t checkevts=0;
 
 
         strncpy(filebase,filenamel,strlen(filenamel)-5);
         filebase[strlen(filenamel)-5]='\0';
         sprintf(rootfile,"%s",filebase);
+
         cout << " ROOTFILE = " << rootfile << endl;
 
-	for (i=0;i<entries; i++) {
-          mm->GetEntry(i);
+ 
+       for (i=0;i<entries; i++) {
+	 mm->GetEntry(i);
          if (evt->fin1>FINS_PER_CARTRIDGE) continue;
-	 if ((evt->crystal1<65)&&((evt->apd1==0)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
+	 if ((evt->crystal1<65)&&((evt->apd1==APD1)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
 	     if ((evt->E1>400)&&(evt->E1<600)) {
-	       //	     if ((evt->E2>400)&&(evt->E2<600)) {
                if (TMath::Abs(evt->dtc ) < 6 ) {
 	       if (TMath::Abs(evt->dtf ) < FINELIMIT ) {
                  checkevts++;
 		 //	    		 crystime[0][evt->m1][evt->apd1][evt->crystal1]->Fill(evt->dtf);
-		 apdoffset[0][evt->fin1][evt->m1][evt->apd1]->Fill(evt->dtf);
-	       }
+                 energydependence[0][evt->apd1][evt->crystal1]->Fill(evt->E1,evt->dtf);
                }
 	     }
 	   }
 	 }
-          // loop over entries
-
+       } // loop over entries
+	  
        cout << " Done looping over entries " << endl;
        cout << " I made " << checkevts << " calls to Fill() " << endl;         
 
-       Float_t mean_apdoffset[2][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
-       Int_t npeaks;
-       TSpectrum *s = new TSpectrum();
 
-       ii=0;
-
-        for (tt=0;tt<FINS_PER_CARTRIDGE;tt++) {
-	  for (mod=0;mod<MODULES_PER_FIN;mod++) {
-            for (aa=0;aa<APDS_PER_MODULE;aa++) {
-              mean_apdoffset[ii][tt][mod][aa] =calfunc(apdoffset[ii][tt][mod][aa],fit_apdoffset[ii][tt][mod][aa],coarsetime,usegausfit);
-              sprintf(tmpstring,"fit_apdoffset[%d][%d][%d][%d]",ii,tt,mod,aa);
-	      //              fit_apdoffset[ii][tt][mod][aa]->SetName(tmpstring);
-            }}}
-
-	c1->Clear();
-        apdoffset[0][6][2][0]->Draw();
-	//        fit_apdoffset[0][6][2][0]->Draw("same");
-        c1->Print("test.ps");
-
-	  Char_t psfile[MAXFILELENGTH];
-	  sprintf(psfile,"%s_fin1.ps",rootfile);
-        
-
-       
+       TH1F *profehist[2][APDS_PER_MODULE][64];
+       TF1 *profehistfit[2][APDS_PER_MODULE][64];
 
 
-       drawmod(apdoffset[0],c1,psfile);
-      
-      
-      ofstream calpars;
-      sprintf(calparfilename,"%s_calpar_0.txt",rootfile);
 
-      calpars.open(calparfilename);
+	for (i=0;i<2;i++){
+	  for (ii=0;ii<APDS_PER_MODULE;ii++){
+	    for (jj=0;jj<64;jj++){
+	      sprintf(histtitle,"profehistfit[%d][%d][%d]",i,ii,jj);
+	      profehistfit[i][ii][jj] = new TF1(histtitle,"pol1",400,620);
+	    }
+	  }
+	}
 
-      for (tt=0;tt<FINS_PER_CARTRIDGE;tt++) {
-	  for (mod=0;mod<MODULES_PER_FIN;mod++) {
-             for (aa=0;aa<APDS_PER_MODULE;aa++) {
-      
-	       calpars <<  std::setw(4) << mean_apdoffset[ii][tt][mod][aa] << " ";}
-	     //  if (mod%2) cout << "| ";
-           }
-	  calpars << endl;}
-      calpars.close();
+
+
+	  for (ii=0;ii<APDS_PER_MODULE;ii++){
+	    for (jj=0;jj<64;jj++){
+	      sprintf(histtitle,"profehist[%d][%d][%d]",i,ii,jj);
+	      profehist[0][ii][jj] = (TH1F *) energydependence[0][ii][jj]->ProfileX();
+	      profehist[0][ii][jj]->SetName(histtitle);
+	      sprintf(histtitle,"profehistfit[%d][%d][%d]",0,ii,jj);
+              if (!verbose) profehist[0][ii][jj]->Fit(histtitle,"Q");
+              else profehist[0][ii][jj]->Fit(histtitle);
+	    }
+	  }
+
+
+        Char_t psfile[MAXFILELENGTH];
+
+	  for (jj=0;jj<64;jj++){
+       c1->Clear();
+       c1->Divide(2,2);
+       for (ii=0;ii<2;ii++){
+       c1->cd(2*ii+1);
+       energydependence[0][ii][jj]->Draw("colz");
+       c1->cd(2*ii+2);
+       profehist[0][ii][jj]->Draw();
+       }
+       sprintf(psfile,"%s_edep_panel1.ps",rootfile);
+       if (jj==0) strcat(psfile,"(");
+       if (jj==63) strcat(psfile,")");
+       //       cout << psfile << endl;
+       c1->Print(psfile);
+       }
 
        cout << " Filling crystal spectra on the right. " << endl;
 	checkevts=0;
@@ -303,7 +325,7 @@ int main(int argc, Char_t *argv[])
 	       if (TMath::Abs(evt->dtf ) < FINELIMIT ) {
                  checkevts++;
 		 //	    		 crystime[0][evt->m1][evt->apd1][evt->crystal1]->Fill(evt->dtf);
-		 apdoffset[1][evt->fin2][evt->m2][evt->apd2]->Fill(evt->dtf- mean_apdoffset[0][evt->fin1][evt->m1][evt->apd1]);
+                 energydependence[1][evt->apd2][evt->crystal2]->Fill(evt->E2,evt->dtf-profehistfit[0][evt->apd1][evt->crystal1]->Eval(evt->E1));
                }
 	     }
 	   }
@@ -315,85 +337,78 @@ int main(int argc, Char_t *argv[])
        cout << " Done looping over entries " << endl;
        cout << " I made " << checkevts << " calls to Fill() " << endl;         
 
-ii=1;
+
+       ii=1;
 
 
 
-        for (tt=0;tt<FINS_PER_CARTRIDGE;tt++) {
-	  for (mod=0;mod<MODULES_PER_FIN;mod++) {
-            for (aa=0;aa<APDS_PER_MODULE;aa++) {
-              sprintf(tmpstring,"fit_apdoffset[%d][%d][%d][%d]",ii,tt,mod,aa);
-              mean_apdoffset[ii][tt][mod][aa] =calfunc(apdoffset[ii][tt][mod][aa],fit_apdoffset[ii][tt][mod][aa],coarsetime,usegausfit);
-	    }}}
+	  for (ii=0;ii<APDS_PER_MODULE;ii++){
+	    for (jj=0;jj<64;jj++){
+	      sprintf(histtitle,"profehist[%d][%d][%d]",i,ii,jj);
+	      profehist[1][ii][jj] = (TH1F *) energydependence[1][ii][jj]->ProfileX();
+	      profehist[1][ii][jj]->SetName(histtitle);
+	      sprintf(histtitle,"profehistfit[%d][%d][%d]",1,ii,jj);
+              if (verbose) profehist[1][ii][jj]->Fit(histtitle);
+              else profehist[1][ii][jj]->Fit(histtitle,"Q");
+	    }
+	  }
 
-	  sprintf(psfile,"%s_fin2.ps",rootfile);
 
 
-        drawmod(apdoffset[1],c1,psfile);
+	  for (jj=0;jj<64;jj++){
+       c1->Clear();
+       c1->Divide(2,2);
+       for (ii=0;ii<2;ii++){
+       c1->cd(2*ii+1);
+       energydependence[1][ii][jj]->Draw("colz");
+       c1->cd(2*ii+2);
+       profehist[0][ii][jj]->Draw();
 
-      
+       sprintf(psfile,"%s_edep_panel2.ps",rootfile);
+       if (jj==0) strcat(psfile,"(");
+       if (jj==63) strcat(psfile,")");
+       c1->Print(psfile);
+       }}
 
-      sprintf(calparfilename,"%s_calpar_1.txt",rootfile);
 
-	calpars.open(calparfilename);
 
-      for (tt=0;tt<FINS_PER_CARTRIDGE;tt++) {
-	  for (mod=0;mod<MODULES_PER_FIN;mod++) {
-             for (aa=0;aa<APDS_PER_MODULE;aa++) {
 
-	       calpars << setw(4) << mean_apdoffset[ii][tt][mod][aa] << " ";}
-	     // if (mod%2) cout << "| ";
-             }
-	  calpars << endl;}
-      calpars.close();
 
-  
+        strcat(rootfile,".edepcryscal.root");
 
-        strcat(rootfile,".apdoffcal.root");
-
-    TH1F *tres = new TH1F("tres","Time Resolution After Time walk correction",100,-25,25);
+      TH1F *tres = new TH1F("tres","Time Resolution After Time walk correction",100,-25,25);
        
       cout << " Opening file " << rootfile << " for writing " << endl;
       TFile *calfile = new TFile(rootfile,"RECREATE");
       TTree *merged = new  TTree("merged","Merged and Calibrated LYSO-PSAPD data ");
-      //   merged->SetDirectory(0);
+
       merged->Branch("Event",&calevt);
 
 
-      //      merged->Branch("event",&calevt->dtc,"dtc/L:dtf/D:E1/D:Ec1/D:Ech1/D:ft1/D:E2/D:Ec2/D:Ech2/D:ft2/D:x1/D:y1/D:x2/D:y2/D:chip1/I:fin1/I:m1/I:apd1/I:crystal1/I:chip2/I:fin2/I:m2/I:apd2/I:crystal2/I:pos/I");
-
-     checkevts=0;
       cout << "filling new Tree :: " << endl;
 
         for (i=0;i<entries; i++) {
 	 mm->GetEntry(i);
-	 calevt=evt;
+	 //         if ((i%10000)==0 ) cout << " Processed " << i << " entries." << endl;
+	   calevt=evt;
          if (evt->fin1>FINS_PER_CARTRIDGE) continue;
          if (evt->fin2>FINS_PER_CARTRIDGE) continue;
-	 if ((evt->crystal1<65)&&((evt->apd1==APD1)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
-	 if ((evt->crystal2<65)&&((evt->apd2==APD1)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
+	 if ((evt->crystal1<65)&&(evt->crystal1>-1)&&((evt->apd1==APD1)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
+	   if ((evt->crystal2<65)&&(evt->crystal2>-1)&&((evt->apd2==APD1)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
 
-           calevt->dtf-= mean_apdoffset[0][evt->fin1][evt->m1][evt->apd1] ;
-           calevt->dtf-= mean_apdoffset[1][evt->fin2][evt->m2][evt->apd2] ; 
-           if (evt->E1>400&&evt->E1<600&&evt->E2>400&&evt->E2<600) {
-	     tres->Fill(calevt->dtf);}
+           calevt->dtf-= profehistfit[0][evt->apd1][evt->crystal1]->Eval(evt->E1);
+           calevt->dtf-= profehistfit[1][evt->apd2][evt->crystal2]->Eval(evt->E2);
+             if (evt->E1>400&&evt->E1<600&&evt->E2>400&&evt->E2<600) {
+	       tres->Fill(calevt->dtf); }
 	 }
 	 }
-         checkevts++;
          merged->Fill();
 	}
     
 
-	cout << " New Tree filled with " << checkevts << " events. " << endl;
-
 	merged->Write();
-      calfile->Close();
 
- // crystime[0][MOD1][APD1][0]->Draw(); c1->Print("testje2.ps");
- // cout << crystime[0][MOD1][APD1][0]->GetEntries() << endl;
- // TFile *ff = new TFile("test.root");
- // crystime[0][0][0][0]->Write();
- // ff->Close();
+      calfile->Close();
 
 
       tres->Fit("gaus","","",-10,10);
@@ -401,10 +416,16 @@ ii=1;
 
       c1->Clear();
       tres->Draw();
-      sprintf(psfile,"%s.tres.apdoffset.ps",rootfile);
+      sprintf(psfile,"%s.tres.edepcryscal.ps",rootfile);
 
       c1->Print(psfile);
 
+
+	     // crystime[0][MOD1][APD1][0]->Draw(); c1->Print("testje2.ps");
+	     // cout << crystime[0][MOD1][APD1][0]->GetEntries() << endl;
+ // TFile *ff = new TFile("test.root");
+ // crystime[0][0][0][0]->Write();
+ // ff->Close();
 
 
       return 0;}
@@ -430,10 +451,10 @@ Float_t getmax(TSpectrum *s,Int_t npeaks){
   
 
 
-Int_t drawmod(TH1F *hi[FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE], TCanvas *ccc, Char_t filename[MAXFILELENGTH])
+Int_t drawmod_crys2(TH1F *hi[MODULES_PER_FIN][APDS_PER_MODULE][64], TCanvas *ccc, Char_t filename[MAXFILELENGTH])
 {
         /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-  Int_t   i,k;
+  Int_t   i,k,kk,j;
         Char_t  filenameo[MAXFILELENGTH+1], filenamec[MAXFILELENGTH+1];
         /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -449,20 +470,20 @@ Int_t drawmod(TH1F *hi[FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE], TC
           * TCanvas *ccc = new TCanvas("ccc","Energy Spectra",10,10,1000,900);
          */
         ccc->Clear();
-        ccc->Divide(4, 8);
+        ccc->Divide(4, 4);
 
-        for(k = 0; k < FINS_PER_CARTRIDGE ; k++) {
-	  for(i = 0 ;i < MODULES_PER_FIN; i++ ) {
-             ccc->cd(1+2*(i));
-             hi[k][i][0]->Draw("E");
-             ccc->cd(2+2*(i));
-             hi[k][i][1]->Draw("E");
+	for (kk =0;kk<MODULES_PER_FIN ;kk++){
+        for(k = 0; k < APDS_PER_MODULE ; k++) {
+	  for(i = 0 ;i < 4; i++ ) {
+	    for (j=0;j<16;j++){
+	      ccc->cd(j+1);
+             hi[kk][k][i*16+j]->Draw("E");
 	  }
-           if(k == 0) {
+	    if((kk == 0)&&(k==0)&&(i==0)) {
               ccc->Print(filenameo);
                         }
            else {
-	     if(k == (FINS_PER_CARTRIDGE-1)) {
+	     if((kk == (MODULES_PER_FIN-1))&&(k==1)&&(i==3)) {
               ccc->Print(filenamec);
              }
              else {
@@ -470,11 +491,11 @@ Int_t drawmod(TH1F *hi[FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE], TC
                   }
           }
            ccc->Clear();
-           ccc->Divide(4, 8);
-
+           ccc->Divide(4, 4);
+	  }
                         /* } */
                 }
-  
+        }
 
         return 0;
 }
@@ -623,36 +644,3 @@ TH2F *get2dcrystal(Float_t vals[64], Char_t title[40]="area") {
   
 
   return thispar;}
-
-Float_t calfunc(TH1F *hist,  TF1 *fitfun, Bool_t coarsetime, Bool_t gausfit){
-  //   TF1 *fitfun;
-   Int_t npeaks;
-   TSpectrum *s = new TSpectrum();
-   if (gausfit) {
-     if ( hist->GetEntries() > MINMODENTRIES ) {
-     if (coarsetime){ 
-       fitfun = new TF1("fitfun", "gaus+pol0",-75,75);
-       fitfun->SetParameter(0,200);
-       fitfun->SetParameter(1,0);
-       fitfun->SetParameter(2,90);
-       fitfun->SetParameter(4,100); 
-       hist->Fit(fitfun,"RQ");
-       return fitfun->GetParameter(1); 
-      }
-     else  {
-       fitfun=fitgaus_peak(hist,1) ;
-       return fitfun->GetParameter(1);}
-     }
-     // else  // not enough entries to fit 
-     //  return 0;
-   } // gausfit 
-   //else {    // just peak search 
-       npeaks = s->Search(hist,3,"",0.2);
-       if (npeaks){  return getmax(s,npeaks); }
-       else return 0;
-   
-   
-
-}
-
-

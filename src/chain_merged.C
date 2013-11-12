@@ -43,7 +43,7 @@ int main(int argc, char *argv[]){
   int nrfiles=0;
   int verbose=0;
 
-      Bool_t random;
+      Bool_t random=0;
       Int_t delay=0;
 
   for (i=0;i<argc;i++) {
@@ -78,7 +78,7 @@ int main(int argc, char *argv[]){
   } // argc
  
 
-  if (random && (delay==0)) { cout << " Please specify delay for randoms.-r -d XX \n Exiting.\n";}
+  if (random && (delay==0)) { cout << " Please specify delay for randoms.-r -d XX \n Exiting.\n"; return -2; }
 
   if (nrfiles==0) {
     cout << " Please specify nr of files.\n Exiting." <<endl;

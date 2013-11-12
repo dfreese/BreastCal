@@ -35,6 +35,8 @@ int main(int argc, Char_t *argv[])
   Int_t energyspatial=0;
 
   Int_t DTF_low, DTF_hi, FINELIMIT;
+  Bool_t common=0;
+
 
  	cout << "Welcome " << endl;
 
@@ -67,6 +69,11 @@ int main(int argc, Char_t *argv[])
 		}
 
 
+
+                if(strncmp(argv[ix],"-c",2) ==0 ) { 
+		  cout << " Using common for energy dependence " << endl ;
+                  common = 1;
+                }
 
 		if(strncmp(argv[ix], "-apd1", 5) == 0) {
                   APD1 = atoi( argv[ix+1]);
@@ -240,7 +247,8 @@ int main(int argc, Char_t *argv[])
 	       if (TMath::Abs(evt->dtf ) < FINELIMIT ) {
                  checkevts++;
 		 //	    		 crystime[0][evt->m1][evt->apd1][evt->crystal1]->Fill(evt->dtf);
-                 energydependence[0]->Fill(evt->E1,evt->dtf);
+		 if (common)                   energydependence[0]->Fill(evt->Ec1,evt->dtf);
+                 else  energydependence[0]->Fill(evt->E1,evt->dtf);
                }
 	     }
 	   }
@@ -292,7 +300,7 @@ int main(int argc, Char_t *argv[])
 	       if (TMath::Abs(evt->dtf ) < FINELIMIT ) {
                  checkevts++;
 		 //	    		 crystime[0][evt->m1][evt->apd1][evt->crystal1]->Fill(evt->dtf);
-                 energydependence[1]->Fill(evt->E2,evt->dtf-profehistfit[0]->Eval(evt->E1));
+                 energydependence[1]->Fill(evt->Ec2,evt->dtf-profehistfit[0]->Eval(evt->Ec1));
                }
 	     }
 	   }
@@ -341,7 +349,7 @@ int main(int argc, Char_t *argv[])
       cout << " Opening file " << rootfile << " for writing " << endl;
       TFile *calfile = new TFile(rootfile,"RECREATE");
       TTree *merged = new  TTree("merged","Merged and Calibrated LYSO-PSAPD data ");
-      //      merged->Branch("event",&calevt.dtc,"dtc/L:dtf/D:E1/D:Ec1/D:Ech1/D:ft1/D:E2/D:Ec2/D:Ech2/D:ft2/D:x1/D:y1/D:x2/D:y2/D:chip1/I:fin1/I:m1/I:apd1/I:crystal1/I:chip2/I:fin2/I:m2/I:apd2/I:crystal2/I:pos/I");
+
       merged->Branch("Event",&calevt);
 
 
@@ -356,8 +364,8 @@ int main(int argc, Char_t *argv[])
 	 if ((evt->crystal1<65)&&((evt->apd1==APD1)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
 	 if ((evt->crystal2<65)&&((evt->apd2==APD1)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
 
-           calevt->dtf-= profehistfit[0]->Eval(evt->E1);
-           calevt->dtf-= profehistfit[1]->Eval(evt->E2);
+           calevt->dtf-= profehistfit[0]->Eval(evt->Ec1);
+           calevt->dtf-= profehistfit[1]->Eval(evt->Ec2);
              if (evt->E1>400&&evt->E1<600&&evt->E2>400&&evt->E2<600) {
 	       tres->Fill(calevt->dtf); }
 	 }

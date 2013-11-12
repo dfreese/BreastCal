@@ -25,8 +25,9 @@ Int_t drawmod_crys2(TH1F *hi[MODULES_PER_FIN][APDS_PER_MODULE][64], TCanvas *ccc
 Int_t writ(TH1D *hi[PEAKS], TCanvas *ccc, Char_t filename[MAXFILELENGTH]);
 Int_t writ2d(TH2F *hi[PEAKS], TCanvas *ccc, Char_t filename[MAXFILELENGTH]);
 TH2F *get2dcrystal(Float_t vals[64], Char_t title[40]) ;
-Float_t getmax (TSpectrum *, Int_t);
-Float_t cryscalfunc(TH1F *hist, Bool_t gausfit);
+Float_t getmax (TSpectrum *, Int_t,Int_t);
+Float_t cryscalfunc(TH1F *hist, Bool_t gausfit,Int_t verbose);
+Int_t writval(Float_t mean_crystaloffset[FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][64] ,Char_t outfile[MAXFILELENGTH]);
 
 int main(int argc, Char_t *argv[])
 { 
@@ -132,6 +133,11 @@ int main(int argc, Char_t *argv[])
 
 	}
 
+  if (!verbose) {
+        gErrorIgnoreLevel = kError;
+
+                }
+
         rootlogon(verbose);
       gStyle->SetOptStat(kTRUE); 
   //	TStyle::SetOptStat();
@@ -161,7 +167,7 @@ int main(int argc, Char_t *argv[])
 	Int_t tt,  aa,ii,jj,kk;
 
 	if (coarsetime ) {  DTF_low = -100; DTF_hi = 100; FINELIMIT=100; DTFLIMIT=50; cout << " Using Coarse limits: " << FINELIMIT << endl;}
-        else { DTF_low = -50; DTF_hi = 50; DTFLIMIT=5;}
+        else { DTF_low = -FINELIMIT; DTF_hi = FINELIMIT; DTFLIMIT=5;}
 
 
    
@@ -222,24 +228,18 @@ int main(int argc, Char_t *argv[])
 	 for (kk=0;kk<MODULES_PER_FIN;kk++) { 
           for (aa=0;aa<APDS_PER_MODULE;aa++) {
             for (tt=0;tt<64;tt++) {
-           mean_crystaloffset[ii][jj][kk][aa][tt]=cryscalfunc(crystaloffset[ii][jj][kk][aa][tt], usegausfit) ;
+	      mean_crystaloffset[ii][jj][kk][aa][tt]=cryscalfunc(crystaloffset[ii][jj][kk][aa][tt], usegausfit,verbose) ;
             }}}}
 
 	  Char_t psfile[MAXFILELENGTH];
-	  sprintf(psfile,"%s_fin1.ps",rootfile);
+          for (jj=0;jj<FINS_PER_CARTRIDGE;jj++){
+	    sprintf(psfile,"%s_fin%d.ps",rootfile,jj);
+          drawmod_crys2(crystaloffset[0][jj],c1,psfile);
+	  }
 
-       drawmod_crys2(crystaloffset[0][1],c1,psfile);
-  
-       for (jj=0;jj<FINS_PER_CARTRIDGE;jj++){
-       for (kk=0;kk<MODULES_PER_FIN;kk++){
-        for (aa=0;aa<APDS_PER_MODULE;aa++) {
-          for (tt=0;tt<64;tt++) {
-	       cout << mean_crystaloffset[ii][jj][kk][aa][tt] << " ";}
-	  cout << endl;}
-       }
-       }
-           cout << endl;
-
+       Char_t calparfilename[MAXFILELENGTH];
+       sprintf(calparfilename,"%s_calpar_0.txt",rootfile);
+       writval(mean_crystaloffset[0],calparfilename);
 
        cout << " Filling crystal spectra on the right. " << endl;
 	checkevts=0;
@@ -276,7 +276,7 @@ int main(int argc, Char_t *argv[])
 	 for (kk=0;kk<MODULES_PER_FIN;kk++) { 
           for (aa=0;aa<APDS_PER_MODULE;aa++) {
             for (tt=0;tt<64;tt++) {
-           mean_crystaloffset[ii][jj][kk][aa][tt]=cryscalfunc(crystaloffset[ii][jj][kk][aa][tt], usegausfit) ;
+	      mean_crystaloffset[ii][jj][kk][aa][tt]=cryscalfunc(crystaloffset[ii][jj][kk][aa][tt], usegausfit,verbose) ;
             }}}}
 
 
@@ -285,16 +285,10 @@ int main(int argc, Char_t *argv[])
 
 
        drawmod_crys2(crystaloffset[0][1],c1,psfile);
-  
-       for (jj=0;jj<FINS_PER_CARTRIDGE;jj++){
-       for (kk=0;kk<MODULES_PER_FIN;kk++){
-        for (aa=0;aa<APDS_PER_MODULE;aa++) {
-          for (tt=0;tt<64;tt++) {
-	       cout << mean_crystaloffset[ii][jj][kk][aa][tt] << " ";}
-	  cout << endl;}
-       }
-       }
-           cout << endl;
+
+       sprintf(calparfilename,"%s_calpar_1.txt",rootfile);
+       writval(mean_crystaloffset[1],calparfilename);
+
 
     TH1F *tres = new TH1F("tres","Time Resolution After Time walk correction",100,-25,25);
 
@@ -353,12 +347,12 @@ int main(int argc, Char_t *argv[])
 
 
 
-Float_t getmax(TSpectrum *s,Int_t npeaks){
+Float_t getmax(TSpectrum *s,Int_t npeaks,Int_t verbose){
   Int_t maxpeakheight=-1000000;
   Float_t maxpos = 0;
   if (npeaks>1 ) {
     for (Int_t i=0;i<npeaks;i++) { 
-      cout << " Peak " << i << " :  " << *(s->GetPositionX()+i) << " " << *(s->GetPositionY()+i) << endl;
+      if (verbose)  cout << " Peak " << i << " :  " << *(s->GetPositionX()+i) << " " << *(s->GetPositionY()+i) << endl;
     }
   }
 
@@ -567,33 +561,55 @@ TH2F *get2dcrystal(Float_t vals[64], Char_t title[40]="area") {
   return thispar;}
 
 
-Float_t cryscalfunc(TH1F *hist,   Bool_t gausfit){
+Float_t cryscalfunc(TH1F *hist,   Bool_t gausfit,Int_t verbose){
    TF1 *fitfun;
    Int_t npeaks;
    TSpectrum *s = new TSpectrum();
 
   if (gausfit) {
      if ( hist->GetEntries() > 70 ) {     
-       fitfun=fitgaus(hist,1) ;
+       fitfun=fitgaus(hist,0) ;
        return fitfun->GetParameter(1);}
-     }
    else { 
      if ( hist->GetEntries() > 50 ) {
        return hist->GetMean();
      } 
-     else return 0;} 
-     // else  // not enough entries to fit 
-     //  return 0;
-    // gausfit 
-   //else {    // just peak search 
+     else return 0. ;}
+  } // gausfit
+
+  else {    // just peak search 
  
       npeaks = s->Search(hist,3,"",0.2);
-       if (npeaks){  return getmax(s,npeaks); }
-       else return 0;
-   
+      if (npeaks){  return getmax(s,npeaks,verbose); }
+       else return 0.;
+  } // ! gausfit 
    
 
 }
+
+
+
+Int_t writval(Float_t mean_crystaloffset[FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][64] ,Char_t outfile[MAXFILELENGTH]){
+	   ofstream parfile;
+	   Int_t jj,kk,aa,tt;
+	   parfile.open(outfile);
+       for (jj=0;jj<FINS_PER_CARTRIDGE;jj++){
+       for (kk=0;kk<MODULES_PER_FIN;kk++){
+        for (aa=0;aa<APDS_PER_MODULE;aa++) {
+	  //	  parfile << "F" << jj << "M" << kk <<"A" << aa << "::" << endl;
+          for (tt=0;tt<64;tt++) {
+	    if ((tt%8)==0) parfile << "F" << jj << "M" << kk <<"A" << aa << "R" << TMath::Floor(tt/8) << " " ;
+	    parfile << setw(6) << setprecision(3) << mean_crystaloffset[jj][kk][aa][tt] << " ";
+               if ((tt%8)==7) parfile << endl; }
+	  parfile << endl;}
+       }
+       }
+           parfile << endl;
+
+	   parfile.close();
+	   return 0;
+	 }
+
 
 
 	      //              sprintf(tmpstring,"fit_crystaloffset[%d][%d][%d]",ii,aa,tt);
