@@ -7,6 +7,19 @@
 Int_t plot_glob(string s, Int_t DAQ){
   ifstream infile;
  
+
+  pphisto_0->SetXTitle("Module Nr");
+  pphisto_0->SetYTitle("Fin Nr");
+
+  pphisto_1->SetXTitle("Module Nr");
+  pphisto_1->SetYTitle("Fin Nr");
+
+  ereshisto_0->SetXTitle("Module Nr");
+  ereshisto_0->SetYTitle("Fin Nr");
+
+  ereshisto_1->SetXTitle("Module Nr");
+  ereshisto_1->SetYTitle("Fin Nr");
+
   cout << " Opening file " << s << endl;
 
  infile.open(s.c_str());
@@ -28,13 +41,19 @@ Int_t plot_glob(string s, Int_t DAQ){
    j++;
    sscanf(dummy,"R%dM%dA%d",&chipnr,&unitnr,&apdnr);
 
-   finnr=2*(TMath::Floor(chipnr/2));
+
+
+   finnr=(3-(TMath::Floor(chipnr/2)))*2;
    modnr=unitnr+4*(chipnr%2);
  
-   if (DAQ%2) finnr++;
-   if (DAQ/2) modnr+=8;
- 
-   finnr=7-finnr;
+
+   if (DAQ>=2) finnr++;
+   if (DAQ%2) modnr+=8;
+
+   //finnr=7-finnr;
+
+   //  cout << " DAQ BOARD : " << DAQ << " RENA : " << chipnr << " FIN : " << finnr << " MODULE : " << modnr << endl; 
+  
 
    if ( apdnr==1 ){ 
     ereshisto_1->SetBinContent( modnr+1, finnr+1,eres);

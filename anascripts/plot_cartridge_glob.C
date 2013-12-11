@@ -43,8 +43,8 @@ plot_glob("./L3/PT_DAQ_1309181722_L3_globfits_spat.txt",3);
 
 
 
- TCanvas *c1 = new TCanvas("c1","Left",1400,400);
-c1->Divide(2,2);
+ TCanvas *c1 = new TCanvas("c1","Left",400,800);
+c1->Divide(1,4);
 c1->cd(1);
 Left_0->Draw("colz");
 c1->cd(2);
@@ -66,7 +66,7 @@ for (Int_t i=0; i<4;i++){
  plot_glob(filename,i);
  }
 
-/*
+/* 
 plot_glob("./R0/PT_DAQ_1309181722_R0_globfits_spat.txt",0);
 plot_glob("./R1/PT_DAQ_1309181722_R1_globfits_spat.txt",1);
 plot_glob("./R2/PT_DAQ_1309181722_R2_globfits_spat.txt",2);
@@ -88,8 +88,8 @@ plot_glob("./R3/PT_DAQ_1309181722_R3_globfits_spat.txt",3);
  Rightpp_1->SetTitle("Global PP RIGHT APD1");
 
 
- TCanvas *c2 = new TCanvas("c2","Right",1400,400);
-c2->Divide(2,2);
+ TCanvas *c2 = new TCanvas("c2","Right",400,800);
+c2->Divide(1,4);
 c2->cd(1);
 Right_0->Draw("colz");
 c2->cd(2);
