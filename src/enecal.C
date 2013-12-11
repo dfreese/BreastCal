@@ -8,6 +8,8 @@ This program fills the energy histograms for every crystal, needed to do energy 
 
 
 #include "enecal.h" 
+//#include "TProof.h"
+//#include "TChain.h"
 //void usage(void);
 
 //void usage(void){
@@ -21,10 +23,13 @@ int main(int argc, Char_t *argv[])
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 	Char_t		filename[FILENAMELENGTH] = "";
+	Char_t		tmpstring[FILENAMELENGTH] = "";
 	Int_t		verbose = 0;
 	Int_t		ix;
         Bool_t          fileset=0;
+        Bool_t          floodlut=kFALSE;
         ModuleDat *event = 0;
+        TH2S *floodmap[RENACHIPS][MODULES][APDS_PER_MODULE];
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 	for(ix = 1; ix < argc; ix++) {
@@ -36,6 +41,15 @@ int main(int argc, Char_t *argv[])
 			cout << "Verbose Mode " << endl;
 			verbose = 1;
 		}
+
+		/*
+		 * Verbose '-map'
+		 */
+		if(strncmp(argv[ix], "-map", 4) == 0) {
+			cout << "Using Flood Map " << endl;
+			floodlut = kTRUE;
+		}
+
 		/* filename '-f' */
 		if(strncmp(argv[ix], "-f", 2) == 0) {
 			if(strlen(argv[ix + 1]) < FILENAMELENGTH) {
@@ -105,16 +119,35 @@ int main(int argc, Char_t *argv[])
        }
       } // verbose
 
+      //	TChain *block;
+      //  TProof::Open("");
+      TTree *block;
+	   //          block = new TChain("mdata","Chain of 1");
+	   //          block->Add(filename);
+	   //          block->SetProof();  
+
+
+      TFile *lutfile;
+
+      sprintf(filename,"%s.floodmap.root",filebase);
+
+      if (floodlut){ lutfile =  new TFile(filename,"OPEN");	}
 
 	for (m=0;m<RENACHIPS;m++){
         for (j=0;j<4;j++){
 	  for (i=0;i<2;i++){
 	     validpeaks[m][j][i]=0;
+             if (floodlut) {
+            sprintf(tmpstring,"floodmap[%d][%d][%d]",m,j,i);
+            floodmap[m][j][i] = (TH2S *)    lutfile->Get(tmpstring);
+	    if ( floodmap[m][j][i]->GetEntries() ) validpeaks[m][j][i]=1;
+             }//floodmap
+             else {
 	     sprintf(peaklocationfilename,"./CHIPDATA/%s.RENA%d.unit%d_apd%d_peaks",filebase,m,j,i);
              strcat(peaklocationfilename,".txt");
              infile.open(peaklocationfilename);
              lines = 0;
-              while (1){
+              while (1){ 
                if (!infile.good()) break;
                infile >> k >>  aa >> bb;
                if (k < 64) { U_x[m][j][i][k]=aa; U_y[m][j][i][k]=bb;}
@@ -124,11 +157,13 @@ int main(int argc, Char_t *argv[])
 	      if (verbose) cout << "Found " << lines-1 << " peaks in  file " << peaklocationfilename << endl;
        infile.close();
        if (lines==65){ if (verbose) cout << "Setting Validpeaks " << endl; validpeaks[m][j][i]=1; }
+	     } // else floodmap
 	}
 	}
 	}
 
 
+	/*
 	if (verbose){
 	  for (m=0;m<RENACHIPS;m++){
         for (j=0;j<4;j++){
@@ -137,7 +172,7 @@ int main(int argc, Char_t *argv[])
 	  }}
 	}
 	}
-
+	*/
 
 
 
@@ -152,7 +187,7 @@ int main(int argc, Char_t *argv[])
 	 cout << "Creating New Root file : " << newrootfile << endl;}
        f = new TFile(newrootfile,"RECREATE");
 
-	TTree *block;
+
 	/* loop over the chips !! */
 
 	for (m=0;m<RENACHIPS;m++){
@@ -181,8 +216,9 @@ int main(int argc, Char_t *argv[])
           else  block = (TTree *) rfile->Get("block2");
 	  */
 
-	 sprintf(treename,"mdata");
-         block = (TTree *) rfile->Get(treename);
+	  sprintf(treename,"mdata");
+          block = (TTree *) rfile->Get(treename);
+
          if (!block) {
 	   cout << " Problem reading Tree " << treename  << " from file " << filename << endl;
            cout << " Exiting " << endl;
@@ -190,43 +226,36 @@ int main(int argc, Char_t *argv[])
 	 //	 entries=block->GetEntries();
 
 	 if (verbose)	 cout << " Looping over " << block->GetEntries() << " entries." ;
-	block->SetBranchAddress("eventdata",&event);
-	   /*
-          block->SetBranchAddress("ct",&event.ct);
-	  block->SetBranchAddress("chip",&event.chip);
-	  block->SetBranchAddress("module",&event.module);
-	  block->SetBranchAddress("apd",&event.apd);
-	  block->SetBranchAddress("Ec",&event.Ec);
-	  block->SetBranchAddress("Ech",&event.Ech);
-	  block->SetBranchAddress("x",&event.x);
-	  block->SetBranchAddress("y",&event.y);
-	  block->SetBranchAddress("E",&event.E);
-	  block->SetBranchAddress("ft",&event.ft);
-	  block->SetBranchAddress("a",&event.a);
-	  block->SetBranchAddress("b",&event.b);
-	  block->SetBranchAddress("c",&event.c);
-	  block->SetBranchAddress("d",&event.d);
-	  block->SetBranchAddress("id",&event.id);
-	  block->SetBranchAddress("pos",&event.pos);
-	   */
-
+ 	block->SetBranchAddress("eventdata",&event);
          strncpy(filebase,filename,strlen(filename)-5);
          filebase[strlen(filename)-5]='\0';
   
 	 if (verbose) cout << "\n. Cloning Tree " << endl;
-          TTree *calblock = block->CloneTree(0);
-	  sprintf(treename,"calblock");// Energy calibrated event data ");
+	 //	 TTree *calblock = (TTree *)block->GetTree()->CloneTree(0);
+	 TTree *calblock = block->CloneTree(0);
+
+        sprintf(treename,"calblock");// Energy calibrated event data ");
+	//        TTree *calblock =  new TTree(treename,"PET Data, crystal id determined");
+	// calblock->Branch("eventdata",&event);
+
+
 	  /*
          if (m==0) calblock->SetName("calblock1");
          else calblock->SetName("calblock2");
 	  */
-          calblock->SetName(treename);
+	          calblock->SetName(treename);
 
           int chip;
           int module;
           int apd;
 
+
+
+
+
+
           cout << " Looping over data .. ";
+          if (verbose) cout << endl;
 	  for (i=0;i<block->GetEntries();i++){
 	    //	    if ((i%100000)==0) fprintf(stdout,"%d Events Processed\r",i);
 	   //      	  for (i=0;i<1e5;i++){
@@ -242,8 +271,11 @@ int main(int argc, Char_t *argv[])
 	    if (validpeaks[chip][module][apd]){
                
 	      // if (validpeaks[m][0][0]&&UNIT0.com1h<threshold)
-	        event->id=getcrystal(event->x,event->y,U_x[chip][module][apd],U_y[chip][module][apd],verbose);
-		if ((event->id)>=0){  
+	      if (floodlut)
+                { event->id=floodmap[chip][module][apd]->GetBinContent(floodmap[chip][module][apd]->FindBin(event->x,event->y));}
+              else 
+		{   event->id=getcrystal(event->x,event->y,U_x[chip][module][apd],U_y[chip][module][apd],verbose);}
+	      if ((event->id>=0)&&(event->id< 64)){  
                     Ehist[chip][module][apd][event->id]->Fill(event->E); 
                     Ehist_com[chip][module][apd][event->id]->Fill(-event->Ec); 
 		} // if valid crystalid 
