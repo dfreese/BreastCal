@@ -338,6 +338,9 @@ else
 # if [ "$MODE" == "PT" ] ; then
 #  sh ${CODEVERSION}runall.sh files 
 # else   
+
+NOHIT=-50;
+
   while read data ped ; do 
    if [ "$MODE" == "PT" ] ; then 
       pos=`echo $data | cut -f1 -d 'u' |  sed 's/.*[^0-9]\([0-9]\+\)[^0-9]*$/\1/'`
@@ -347,8 +350,8 @@ else
    if [ $RUNNINGJOBS -lt $CORES ]; then 
     (( c++ ));
     echo -n " SUBMITTING JOB "
-    echo "${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 -pos $pos ; "
-    ${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 -pos $pos > $data.conv.out &
+    echo "${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 -pos $pos -n $NOHIT; "
+    ${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 -pos $pos -n  $NOHIT > $data.conv.out &
 #    pedconv $i pedconv_$j.out &
     pids+=($!);
     (( RUNNINGJOBS++ ));
@@ -356,8 +359,8 @@ else
 #    echo " RUNNINGJOBS : $RUNNINGJOBS"
     waitsome $pids 1
     echo -n " SUBMITTING JOB "
-    echo "${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 -pos $pos ; "
-    ${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 -pos $pos > $data.conv.out &
+    echo "${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 -pos $pos -n  $NOHIT; "
+    ${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 -pos $pos -n  $NOHIT > $data.conv.out &
     pids+=($!);
     (( RUNNINGJOBS++ ));
     RUNNINGJOBS=${#pids[@]}
