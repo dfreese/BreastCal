@@ -13,16 +13,20 @@
 #include "TPaletteAxis.h"
 #include "TMath.h"
 
-#include "./decoder.h"
-#include "./DetCluster.h"
-#include "./FindNext.h"
+#include "decoder.h"
+#include "DetCluster.h"
+#include "FindNext.h"
 
 //#include "./convertconfig.h"
 
 #include "Apd_Sort16_v2.h"
  
 //#define CHIPS 2
-//#define DEVELOP
+
+// this parameter is used to check if the segmentation is valid ::
+#define COSTTHRESHOLD 300
+
+#define DEVELOP
 // wil generate some more eps style floods
 //#define PUBPLOT
 
@@ -60,6 +64,12 @@ Int_t main(int argc, Char_t *argv[])
 	Char_t		filename[FILENAMELENGTH] = "";
 	Int_t		verbose = 0;
 	Int_t		ix;
+        Int_t           RENACHIP,MODULE,APD;
+        Int_t           firstchip=0,lastchip=RENACHIPS;
+        Int_t           firstmodule=0,lastmodule=3;
+        Int_t           firstapd=0,lastapd=1;
+
+
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 	for(ix = 1; ix < argc; ix++) {
@@ -67,6 +77,38 @@ Int_t main(int argc, Char_t *argv[])
 		/*
 		 * Verbose '-v'
 		 */
+		if(strncmp(argv[ix], "-r", 2) == 0) {
+                  ix++;
+		  RENACHIP = atoi(argv[ix]);
+                  if (RENACHIP < RENACHIPS){
+                     firstchip=RENACHIP;lastchip=firstchip+1;
+		     cout << "Looking at RENA chip " << RENACHIP <<endl;  }
+		  else { cout << " ignoring request for chip " << RENACHIP << endl;}
+		}
+
+
+		if(strncmp(argv[ix], "-m", 2) == 0) {
+                  ix++;
+		  MODULE = atoi(argv[ix]);
+                  if (MODULE <=3 ) { 
+                    firstmodule=MODULE;lastmodule=firstmodule;
+		    cout << "Looking at MODULE " << MODULE <<endl;; }
+		  else { cout << " ignoring request for module " << MODULE << endl;}
+		}
+
+		if(strncmp(argv[ix], "-a", 2) == 0) {
+                  ix++;
+		  APD = atoi(argv[ix]);
+                  if ((APD==0)||(APD==1)){
+                    firstapd=APD;lastapd=firstapd;
+		    cout << "Looking at APD " << APD <<endl;; }
+		  else { cout << " ignoring request for apd " << APD << endl;}
+
+
+		}
+
+
+
 		if(strncmp(argv[ix], "-v", 2) == 0) {
 			cout << "Verbose Mode " << endl;
 			verbose = 1;
@@ -81,13 +123,13 @@ Int_t main(int argc, Char_t *argv[])
 				cout << "Exiting.." << endl;
 				return -99;
 			}
-		}
+			ix++;}
 	}
 
 	cout << " Inputfile : " << filename << "." << endl; 
 
         rootlogon(verbose);
-        set2dcolor(4);
+        set2dcolor(2);
 
 
 
@@ -135,10 +177,10 @@ Int_t main(int argc, Char_t *argv[])
 
 	/* Read in the flood and energy histograms */
 	for (m=0;m<RENACHIPS;m++){
-        if (verbose)   cout << " Analyzing chip " << m << endl;
+	  //        if (verbose)   cout << " Analyzing chip " << m << endl;
             chipevents[m]=0;
        for (j=0;j<2;j++){
-         if (verbose)   cout << " Analyzing apd " << j << endl;
+	 //         if (verbose)   cout << " Analyzing apd " << j << endl;
 	 //	 c1->Clear();
 	 // c1->Divide(2,2); 
         for (i=0;i<4;i++){
@@ -149,12 +191,12 @@ Int_t main(int argc, Char_t *argv[])
                                 continue; }
             if ( E[m][i][j]->GetEntries() > MINHISTENTRIES ) modevents[m][i][j]=true;
             else modevents[m][i][j]=false;
-	    if (verbose) {cout << " E hist read; " ;}
+	    //	    if (verbose) {cout << " E hist read; " ;}
 	    sprintf(tmpstring,"floods[%d][%d][%d]",m,i,j);
-		 if (verbose) { cout << " -- Getting TH2F :: ( i = " << i << ", j = " << j << ") --" ;}
+	    //		 if (verbose) { cout << " -- Getting TH2F :: ( i = " << i << ", j = " << j << ") --" ;}
             floods[m][i][j]= (TH2F *) rfile->Get(tmpstring);
 	    //   if (!(floods[i][j])) floods[i][j] = new TH2F();
-	    if (verbose) cout << " flood hist read; " <<endl;
+	    //   if (verbose) cout << " flood hist read; " <<endl;
         }
        } // j - loop
 	} // m-loop
@@ -189,18 +231,19 @@ Int_t main(int argc, Char_t *argv[])
          for (j=0;j<2;j++){
             validsegment[m][i][j]=0; }}}
 
-
-       for (m=0;m<RENACHIPS;m++){
-      //                     for (m=6;m<7;m++){
-           // m=6;{
+      if (verbose)      cout << " firstchip = " << firstchip << " , lastchip = " << lastchip << endl;
+       for (m=firstchip;m<lastchip;m++){
+	 //	               for (m=7;m<8;m++){
+		//         m=4;{
 		 // m=5;{
 	  //         if (!chipevents[m]) continue;
          if (verbose)  cout << " Analyzing chip .. " << m << endl;   
 
-          for (i=0;i<4;i++){
-	      // i=2;{
-          for (j=0;j<2;j++){
-	 //  i=2; j=0; {{
+	 for (i=firstmodule;i<=lastmodule;i++){
+	 //	       i=2; {
+          for (j=firstapd;j<=lastapd;j++){
+	    //	 i=3; j=1; {{
+
 #ifdef TIMING
       startloop = time(NULL);    
 #endif
@@ -226,6 +269,9 @@ Int_t main(int argc, Char_t *argv[])
  
        } 
          
+
+	if (verbose)	cout << "R"<<m<<"M"<<i<<"A"<<j<< endl;
+
      /* Look for the 64 crystal positions */
      nfound=0;
 
@@ -260,7 +306,7 @@ Int_t main(int argc, Char_t *argv[])
      /* NEED TO REWRITE ALL THIS CODE :: */
 
   c1->Clear();
-  //  set2dcolor(4);
+    set2dcolor(4);
   c1->Divide(2,2);
    
    c1->cd(1);
@@ -364,11 +410,33 @@ TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validfl
    if (verbose) cout << " welcome to PeakSearch " << endl;
    projX = (TH1D*) flood->ProjectionX("",120,136);
    projX->SetName("projX");
-   projY = (TH1D*) flood->ProjectionY("",120,136);
-   projY->SetName("projY");
 
    if (verbose)     cout << " finding X center " << endl;
    meanX = findmean8(projX,verbose,1,APD);
+
+
+
+      Int_t xlowbin,xhighbin; 
+
+    if (meanX!=12345) {
+      xlowbin= projX->FindBin(meanX)-5;
+     xhighbin= projX->FindBin(meanX)+5;
+    } else {
+      xlowbin=120;
+      xhighbin=136;
+    }
+
+   projY = (TH1D*) flood->ProjectionY("",xlowbin,xhighbin);
+   projY->SetName("projY");
+
+   if (( projY->GetEntries() < 1000 ) && ( meanX!=12345) ){
+       projY->Reset();
+       projY = (TH1D*) flood->ProjectionY("",xlowbin-5,xhighbin+5);
+       projY->SetName("projY");
+   }    
+    
+  if ((  projY->GetEntries()/projY->GetNbinsX() ) < 5 ) projY->Rebin(2);
+
      if (verbose)  cout << " finding Y center " << endl;
      meanY = findmean8(projY,verbose,0,APD);
 
@@ -395,9 +463,12 @@ TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validfl
 
    projX->SetAxisRange(-.25,.25);
    projY->SetAxisRange(-.25,.25);
+   midbinx=flood->GetXaxis()->FindBin(meanX);
+   midbiny=flood->GetYaxis()->FindBin(meanY);
+   /*
    midbinx=projX->FindBin(meanX);
    midbiny=projY->FindBin(meanY);
-
+   */
 
    if (verbose){
    cout << " midbinx  = "  << midbinx ;
@@ -426,7 +497,7 @@ TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validfl
    lineY->SetY1(meanY);
    lineY->SetY2(meanY);
    c1->Clear();
-   flood->Draw("colz"); //lineX->Draw(); lineY->Draw(); 
+   flood->Draw("colz"); lineX->Draw(); lineY->Draw(); 
    c1->Print("split.ps");
 #endif 
   
@@ -481,31 +552,40 @@ case 2:
   }  // loop k
   // FIXME :: yval should be yval= projY()->GetBinCenter(l); --> FIXED 5-3-2012
 
- for (k=0;k<(projX->GetNbinsX());k++){
-     for (l=0;l< (projY->GetNbinsX());l++){
+ for (k=0;k<(flood->GetNbinsX());k++){
+     for (l=0;l< (flood->GetNbinsY());l++){
+           xval = flood->GetBinCenter(k); 
+           yval = flood->GetBinCenter(l); 
+           curbin = flood->FindBin(xval,yval);
+           value =  flood->GetBinContent(k,l);
+
        if (k > midbinx) {
          if (l > midbiny) {
+	   i=0;  
+           newbin = floodsq[0]->FindBin(xval,yval);
+	   /*             
            xval = projX->GetBinCenter(k); 
            yval = projY->GetBinCenter(l); 
            curbin = flood->FindBin(xval,yval);
-           value =  flood->GetBinContent(curbin);
-           newbin = floodsq[0]->FindBin(xval,yval);
+           value =  flood->GetBinContent(curbin);*/
            //      cout << " x = " << xval << " y = " << yval;
            //      cout << " curbin = " << curbin << " newbin = " << newbin;
            //      cout << " value = " << value <<endl;
-           floodsq[0]->SetBinContent(newbin,value);
+
            }
-         else {
+         else {/*
            xval = projX->GetBinCenter(k); 
            yval = projY->GetBinCenter(l); 
            curbin = flood->FindBin(xval,yval);
            value = flood->GetBinContent(curbin);
            newbin = floodsq[1]->FindBin(xval,-yval);
-           floodsq[1]->SetBinContent(newbin,value);
+           floodsq[1]->SetBinContent(newbin,value);*/
+	   i=1;
+           newbin = floodsq[1]->FindBin(xval,-yval);
          } 
        } // k > midbinx
        else {
-         if (l > midbiny) {
+         if (l > midbiny) {/*
            xval = projX->GetBinCenter(k); 
            yval = projY->GetBinCenter(l); 
            curbin = flood->FindBin(xval,yval);
@@ -514,17 +594,22 @@ case 2:
            //      cout << " x = " << xval << " y = " << yval;
            //      cout << " curbin = " << curbin << " newbin = " << newbin;
            //      cout << " value = " << value <<endl;
-           floodsq[3]->SetBinContent(newbin,value);
+           floodsq[3]->SetBinContent(newbin,value);*/
+           newbin = floodsq[3]->FindBin(-xval,yval);
+	   i=3;
            }
-         else {
+         else {/*
            xval = projX->GetBinCenter(k); 
            yval = projY->GetBinCenter(l); 
            curbin = flood->FindBin(xval,yval);
            value = flood->GetBinContent(curbin);
            newbin = floodsq[2]->FindBin(-xval,-yval);
-           floodsq[2]->SetBinContent(newbin,value);
+           floodsq[2]->SetBinContent(newbin,value);*/
+           newbin = floodsq[2]->FindBin(-xval,-yval);
+           i=2;
          } 
        } // else k
+      floodsq[i]->SetBinContent(newbin,value);
      } // loop l
  } // loop k
 
@@ -589,7 +674,7 @@ Int_t setstone[15];
        totcost[k]=0;
  }
 
-genfuncs(cf_length,cf_angle);
+
 
 
  for (k=0;k<4;k++){ peaks[k] = new TSpectrum2();}
@@ -601,11 +686,13 @@ genfuncs(cf_length,cf_angle);
      cout << "               Searching Peaks in Quadrant " << k << endl;
      cout << " ===============================================================" <<endl;}
 
+
+
 #ifdef SRT16
  
  // Loop over four quadrants 
 
-
+  
    
    npeaks_q[k]=peaks[k]->Search(floodsq[k],1.2,"noMarkov",0.15);
    if (verbose) cout << " Peaks in quadrant " << k  << ": " << npeaks_q[k] <<endl;
@@ -682,7 +769,25 @@ if (npeaks_q[k] != 16 ) {
 
    //   for (k=0;k<4;k++){
      if ((validflag&(1<<k))==0) {
-       if (verbose)     cout << " Trying Pictorial Structures " << endl; 
+      if (verbose)     cout << " Trying Pictorial Structures. Nr of entries in histogram ::  " << floodsq[k]->Integral(0,floodsq[k]->GetNbinsX(),0,floodsq[k]->GetNbinsY()) << endl; 
+ 
+   /* reset genfuncs to original */
+    genfuncs(cf_length,cf_angle,1);
+
+   Float_t FIRST_CLUSTER_SEARCH_TH=0.25;
+    Int_t LENGTHFACTOR=20;
+    Int_t ANGLEFACTOR=20;
+    Int_t MATCHFACTOR=1;
+    Float_t HARDTHRESHOLD=1.;
+    Bool_t ENABLEVETO=kTRUE;
+
+	if (floodsq[k]->Integral(0,128,0,128) < 1000 ) { 
+                if (verbose) cout << "adjusting threshold first cluster ." << endl ; 
+		FIRST_CLUSTER_SEARCH_TH=0.2; MATCHFACTOR=1; HARDTHRESHOLD=0.5;ENABLEVETO=kFALSE;
+             }
+
+
+
        nosegupdate=0;
      input[k] = (TH2F *) floodsq[k]->Clone();
       sprintf(histname,"input[%d]",k);
@@ -695,7 +800,7 @@ if (npeaks_q[k] != 16 ) {
       inp[k]->SetName(histname);
       //   input[k]->Rebin2D(2,2);
      normalise_1(inp[k]);
-     hist_threshold(inp[k],0.25) ;
+     hist_threshold(inp[k],FIRST_CLUSTER_SEARCH_TH) ;
 
      penalty[k] = (TH2F *) input[k]->Clone();
       sprintf(histname,"penalty[%d]",k);
@@ -713,8 +818,8 @@ if (npeaks_q[k] != 16 ) {
         for  (i=1;i<=j;i++) { 
 	  if (verbose) cout <<  inp[k]->GetBinContent(i,j) <<  "  " << inp[k]->GetBinContent(j,i) << "  "; 
 	    // .25 used to be 1e-10 
-            if ((inp[k]->GetBinContent(i,j) > .25 )|| (inp[k]->GetBinContent(j,i) > .25 )) { 
-              if (inp[k]->GetBinContent(i,j) > .25 ){ binx=i; biny=j;}
+            if ((inp[k]->GetBinContent(i,j) >= FIRST_CLUSTER_SEARCH_TH )|| (inp[k]->GetBinContent(j,i) >= FIRST_CLUSTER_SEARCH_TH )) { 
+              if (inp[k]->GetBinContent(i,j) >= FIRST_CLUSTER_SEARCH_TH ){ binx=i; biny=j;}
               else { binx=j; biny=i;}
               j=inp[k]->GetNbinsX(); 
               break; }}  
@@ -765,6 +870,18 @@ if (npeaks_q[k] != 16 ) {
        while (1) {
 	 if(verbose){ cout << " Getting Spring ll = " << ll << "; xxx = " << xxx << ", yyy = " << yyy << endl;}
 	 loopcount++;
+	 if (setstone[10]){ /* spring 6 was found, as well as its valid corresponding "L", so now we evaluate stretch */
+           Double_t  stretch=TMath::Sqrt(TMath::Power(xx[0]-xx[7],2)+TMath::Power(yy[0]-yy[7],2)) ;
+           Double_t ratio = stretch/( cf_length[6]->GetParameter(1 ));
+           if (verbose){
+           cout << " STRETCH EVAL (k=" << k << ") :: length spring 6 :: " ;
+           cout << stretch << " Average :: " << cf_length[6]->GetParameter(1) ;
+           cout << ", Ratio : " << ratio  << endl;
+	   }
+	   if ((ratio-1)> 0.25 ) genfuncs(cf_length,cf_angle,ratio) ;
+	 }
+
+
           for (i=1;i<=costfunc[k]->GetNbinsX();i++) { 
 	    // COST  = DEFORM + MATCH 
 
@@ -775,26 +892,26 @@ if (npeaks_q[k] != 16 ) {
 	      /* higher threshold for points closer to the center */
       	if (ll<12){
 	  if ( ( ll==2) || (ll==5) || (ll==8) || (ll==10 )) {
-              if (input[k]->GetBinContent(i,j)>0.1) {
+	    if (input[k]->GetBinContent(i,j)> (HARDTHRESHOLD*0.1)) {
                   costfunc[k]->SetBinContent(i,j,deformfunc[k]->GetBinContent(i,j)+20*input[k]->GetBinContent(i,j));}
                 else{ costfunc[k]->SetBinContent(i,j,0);}
 	   
 		}  else { 
 	    // these thresholds should probably be dynamic
-	      if (input[k]->GetBinContent(i,j)>0.3) {
+	    if (input[k]->GetBinContent(i,j)> (HARDTHRESHOLD*0.3)) {
                   costfunc[k]->SetBinContent(i,j,deformfunc[k]->GetBinContent(i,j)+15*input[k]->GetBinContent(i,j));}
                 else{ costfunc[k]->SetBinContent(i,j,0);}
 	     }  
           if (ll==11) {
 	    // at l=11 we're pretty far down the array.
-               if (input[k]->GetBinContent(i,j)>0.2) {
+	    if (input[k]->GetBinContent(i,j)> (HARDTHRESHOLD*0.2)) {
                   costfunc[k]->SetBinContent(i,j,deformfunc[k]->GetBinContent(i,j)+15*input[k]->GetBinContent(i,j));}
                 else{ costfunc[k]->SetBinContent(i,j,0);}
 	   
 	  }
 	}
 		else {// case where (ll>=12)
-	      if (input[k]->GetBinContent(i,j)>0.1) {
+		  if (input[k]->GetBinContent(i,j)> (HARDTHRESHOLD*0.1)) {
                   costfunc[k]->SetBinContent(i,j,deformfunc[k]->GetBinContent(i,j)+25*input[k]->GetBinContent(i,j));}
                 else{ costfunc[k]->SetBinContent(i,j,0);}
 		}//}
@@ -846,9 +963,9 @@ Some debugging Crap
             length=TMath::Sqrt( TMath::Power(xmaxbin[m]-xx[start],2)+TMath::Power(ymaxbin[m]-yy[start],2));
             angle=TMath::ATan2(ymaxbin[m]-yy[start],xmaxbin[m]-xx[start]);
 	    //            lengthmatch=3*cf_length[ll]->Eval(length);
-            lengthmatch=20*cf_length[ll]->Eval(length);
+            lengthmatch=LENGTHFACTOR*cf_length[ll]->Eval(length);
             // anglematch=3*cf_angle[k]->Eval(angle);
-            anglematch=20*cf_angle[ll]->Eval(angle);
+            anglematch=ANGLEFACTOR*cf_angle[ll]->Eval(angle);
             vetoangle[m]=0;
 	  // double check angle
           // THIS IS NOT RIGHT 60 degrees is too flexible, should be 70 !
@@ -869,6 +986,7 @@ Some debugging Crap
 	      // so ll==6 or ll==11 or ll==14, angle around 45 degrees 
 	    }
 	  }
+ vetoangle[m]&=ENABLEVETO;
             if (verbose){
             cout <<  m  << " :: " <<  maxbin_content[m] ;
             cout << " x: " << xmaxbin[m];
@@ -930,7 +1048,7 @@ Some debugging Crap
 	  if (verbose){
 	    //	  hist_threshold(costfunc[k],0.1);
 	  hist_threshold(costfunc[k],0.1);
-          c1->cd(1);  costfunc[k]->Draw("colz");
+          c1->cd(1);  costfunc[k]->Draw("histcolz");
 	  //	           c1->cd(2);  hist_threshold(deformfunc[k],-5.);deformfunc[k]->Draw("colz");
 		    c1->cd(2);  hist_threshold(deformfunc[k],-150.);deformfunc[k]->Draw("colz");
           c1->cd(3);  input[k]->Draw("colz");
@@ -1050,7 +1168,7 @@ Some debugging Crap
 
 
      cout << "Totcost quadrant " << k << " = " << totcost[k] <<endl;}
-     if (totcost[k] > 550 )  {validflag |= ( 1 << k) ;
+     if (totcost[k] > COSTTHRESHOLD )  {validflag |= ( 1 << k) ;
 	  if (nosegupdate==0) updatesegmentation(input[k],xx,yy,peaks_remapped[k],verbose); }
 
 
@@ -1128,7 +1246,8 @@ Double_t findmean8( TH1D * h1, Int_t verbose,Int_t X, Bool_t APD){
 
 
   nfound = s->Search(h1);
-
+  
+  if (nfound !=8 ) nfound = s->Search(h1,1.5,"",0.05);
 
   if (verbose) cout << nfound << " peaks found in findmean8 " << endl;
   if (nfound==8){
@@ -1169,7 +1288,7 @@ Double_t findmean8( TH1D * h1, Int_t verbose,Int_t X, Bool_t APD){
     if ( X==0){
       if (verbose) cout << "looking at Y" << endl;
       if (APD) {
-       while (meanloc[ind2[i]]<0.01) { 
+       while (meanloc[ind2[i]]<0.0075) { 
        if (verbose) { cout <<  " candidate :: " << meanloc[ind2[i]] << endl;}
        if ( i< ( nfound-2) ) i++; else return 12345;}
        if ( verbose ) cout << " returning : " << meanloc[ind2[i]] << endl;      
@@ -1424,7 +1543,8 @@ Int_t updatesegmentation(TH2F *hist, Double_t x[16], Double_t y[16], TGraph *upd
 Int_t updatesegpoint(TH2F *hist, Double_t x, Double_t y, Double_t &xxx, Double_t &yyy,Int_t verbose) {
   // hist is our histogram, start by cloning it
 
-  if (verbose) { cout << " ==== Welcome to Update Seg Point === " << endl; } 
+  if (verbose) { cout << " ==== Welcome to Update Seg Point === " << endl; 
+    cout << "     original point :: x= " << x <<", y=" << y << endl;} 
 
   Int_t updated;
   //  Float_t xxx,yyy;

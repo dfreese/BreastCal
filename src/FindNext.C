@@ -51,7 +51,7 @@ Double_t costfun(Double_t *x,Double_t *par){
  
 
 
-Int_t genfuncs(TF1 *cf_length[],TF1 *cf_angle[]){
+Int_t genfuncs(TF1 *cf_length[],TF1 *cf_angle[],Double_t scale=1.){
 //  Int_t genfuncs(void){
 Double_t angs[15],angs_rms[15];
 Double_t lengs[15],lengs_rms[15];
@@ -205,11 +205,17 @@ lengs_rms[12] = 0.0204735;
 lengs_rms[13] = 0.023514; 
 lengs_rms[14] = 0.0436819; 
 */
+
+
  Int_t i;
+
+
+
  Char_t title[50];
  Double_t mean,a,b;
 
  for (i=0;i<15;i++){
+   lengs[i]*=scale;
     sprintf(title,"cf_angle[%d]",i);
     //    cf_angle[i] = new TF1(title,"gaus(0)+pol2(3)",-TMath::Pi()/2.,TMath::Pi());
     cf_angle[i] = new TF1(title,costfun,-TMath::Pi()/2.,TMath::Pi(),8);
