@@ -1,0 +1,10 @@
+#ifndef _WRITEFLOODMAP_INC
+#define _WRITEFLOODMAP_INC
+
+TH2S *floodmap[RENACHIPS][MODULES][APDS_PER_MODULE];
+#define FLOODMIN -0.85
+#define FLOODMAX 0.85
+#define FLOODBINS 340
+
+
+#endif
