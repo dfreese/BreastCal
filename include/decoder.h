@@ -28,17 +28,29 @@ unsigned long long int byteCounter;
 #define MODULE_BASED_READOUT true
 //#define NUM_RENA_PER_DAQ 8
 
-#define CHANPERMODULE 8
-#define MODULES 4
-#define NUM_RENA_PER_4UPBOARD 8
-#define FOURUPBOARDS_PER_DAQ 1
-#define RENACHIPS NUM_RENA_PER_4UPBOARD*FOURUPBOARDS_PER_DAQ
+//#define CHANPERMODULE 8
+
+
+
 #define MINENTRIES 10000
 #define MINEHISTENTRIES 10
 
+#define CARTRIDGES_PER_PANEL 1
+#define FINS_PER_CARTRIDGE 8
+#define FOURUPBOARDS_PER_CARTRIDGE 4
+#define RENAS_PER_FOURUPBOARD 8
+#define RENAS_PER_CARTRIDGE RENAS_PER_FOURUPBOARD*FOURUPBOARDS_PER_CARTRIDGE
+#define MODULES_PER_RENA 4
+#define CHANNELS_PER_MODULE 8
+
 #define MODULES_PER_FIN 16
 #define APDS_PER_MODULE 2
-#define FINS_PER_CARTRIDGE 8
+#define CARTRIDGES_PER_PANEL 1
+
+
+// FIXME
+#define RENACHIPS 8
+#define MODULES 4
 
 #define MAXFILELENGTH      160
 #define E_up 3000
@@ -83,77 +95,25 @@ unsigned long long int byteCounter;
 #define UVFREQUENCY 980e3
 
 
-//TROOT::gErrorIgnoreLevel=1001;
-  //TROOT::gErrorIgnoreLevel = 1001;
-
-
-			     /*
-struct modulecal
-{ Long64_t ct;
-  Short_t chip;
-  Short_t module;
-  Short_t apd;
-  Float_t Ecal;
-  Float_t E;
-  Float_t Ec;
-  Float_t Ech;
-  Float_t x;
-  Float_t y;
-  Float_t ft;
-  Int_t pos;
-  Short_t id;
-  //  Double_t ft2;
-  //  Short_t id;
-  //  Int_t apd;
-
- };
+// Energy histograms ::
+  TH1F *E[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
+  TH1F *E_com[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
 
 
 
-struct modmerge
-{ Long64_t ct;
-  Double_t ft;
-  Double_t E;
-  Double_t Ec;
-  Double_t Ech;
-  Double_t x;
-  Double_t y;
-  Int_t chip;
-  Int_t fin;
-  Int_t m;
-  Int_t apd;
-  Int_t id;
-  Int_t pos;
- };
+   // U - V vectors
+#include "TVector.h"
+TVector *uu_c[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE];
+TVector *vv_c[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE];
+Long64_t uventries[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][2]={{{{0}}}};
 
-*/
 
- /*
-struct modmerge
-{ Long64_t ct;
- // these all can be Floats 
-  Double_t ft;
-  Float_t E;
-  Float_t Ec;
-  Float_t Ech;
-  Float_t x;
-  Float_t y;
- // Chip can be short for one panel 
-  Short_t chip;
-// These can be shorts ( short goes to  128 ) 
-  Short_t fin;
-  Short_t m;
-  Short_t apd;
-  Short_t id;
-// Has to be Int_t 
-  Int_t pos;
- };
- */
+TDirectory *subdir[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE];
 
 struct chipevent
 { Long64_t ct;
-  Int_t pos;
   Short_t chip;
+  Short_t cartridge;
   Short_t module;
   Short_t com1;
   Short_t com2;
@@ -171,29 +131,10 @@ struct chipevent
   Short_t b;
   Short_t c;
   Short_t d;
-
+  Int_t pos;
 };
 
 
-/*
-#include "TCanvas.h"
-#include "TH1F.h"
-#include "TH2F.h"
-#include "TTree.h"
-#include "TFile.h"
-#include "TLine.h"
-
-#include "device.h"
-#include "param.h"
-#include "config.h"
-#include "moduleevent.h"
-#include "calibrator.h"
-#include "moduleprocessor.h"
-#include "circularbuffer.h"
-#include "qsingleitemsquarelayout.h"
-#include "chipeventratedisplay.h"
-//#include "modulehist.h"
-*/
 
 namespace Ui {
     class RootPlotter;

@@ -1,6 +1,8 @@
 
 CURDIR=$1
 
+echo " Adding $CURDIR to path"
+
 if [[ $PATH != ?(*:)${CURDIR}/bin?(:*) ]]; then
  export PATH=$PATH:$CURDIR/bin
 fi

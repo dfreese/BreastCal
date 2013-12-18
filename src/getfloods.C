@@ -1,5 +1,7 @@
 #include <stdlib.h>
 #include "getfloods.h"
+#include "TTreePerfStats.h"
+#include "TChain.h"
 
 Int_t main(int argc, Char_t *argv[])
 {
@@ -58,20 +60,31 @@ Int_t main(int argc, Char_t *argv[])
 		}
        
 
-        TVector ppVals(8*RENACHIPS);
-        TVector ppVals_com(8*RENACHIPS);
+        TVector *ppVals[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE];
+        TVector *ppVals_com[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE];
+        TH1F *E[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
+        TH1F *E_com[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
+        TH2F *floods[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
+
+
+        Int_t c,f,i,j;
+        for (c=0;c<CARTRIDGES_PER_PANEL;c++){ 
+	  for (f=0;f<FINS_PER_CARTRIDGE;f++){
+            ppVals[c][f] = new TVector(APDS_PER_MODULE*MODULES_PER_FIN);
+            ppVals_com[c][f] = new TVector(APDS_PER_MODULE*MODULES_PER_FIN);
+	  }
+	}
+
 	TFile *rfile = new TFile(filename,"UPDATE");
         if (!rfile || rfile->IsZombie()) {  
          cout << "problems opening file " << filename << "\n.Exiting" << endl; 
          return -11;}
         TTree *block;
-        TH1F *E[RENACHIPS][MODULES][2];
-        TH1F *E_com[RENACHIPS][MODULES][2];
-        TH2F *floods[RENACHIPS][MODULES][2];
+
         Char_t tmpstring[60],titlestring[60];
 	//,cutstring[120],cutstring2[120];
-        Char_t filebase[FILENAMELENGTH],pngstring[FILENAMELENGTH];
-        Int_t i,j,l,entries;
+        Char_t filebase[FILENAMELENGTH];
+        Int_t l,entries;
         TCanvas *c1;
         Char_t treename[20];
  
@@ -79,8 +92,18 @@ Int_t main(int argc, Char_t *argv[])
 	//        for (Int_t kk=0;kk<RENACHIPS;kk++){
 
 	  //         cout << " Analyzing chip " << kk << endl;
-	 sprintf(treename,"mdata");
-         block = (TTree *) rfile->Get(treename);
+	 sprintf(treename,"mdata");         
+         block = (TTree *)  rfile->Get(treename);
+	 /* Perf ana code
+         TChain *blockchain;
+         blockchain = (TChain *) rfile->Get(treename);
+         blockchain->Merge("mergedchain.root");
+         TFile *mc = new TFile("mergedchain.root");
+         block = (TTree *)  mc->Get("mdata");
+*/
+         block->SetCacheSize(300000000);
+         block->AddBranchToCache("*");
+         TTreePerfStats *ps = new TTreePerfStats("ioperf",block);
          if (!block) {
 	   cout << " Problem reading Tree " << treename  << " from file " << filename << endl;
            cout << " Exiting " << endl;
@@ -97,20 +120,6 @@ Int_t main(int argc, Char_t *argv[])
 
 	 block->SetBranchAddress("eventdata",&event);
 
-	 /*
-          block->SetBranchAddress("ct",&event.ct);
-	  block->SetBranchAddress("chip",&event.chip);
-	  block->SetBranchAddress("module",&event.module);
-	  block->SetBranchAddress("apd",&event.apd);
-	  block->SetBranchAddress("Ec",&event.Ec);
-	  block->SetBranchAddress("Ech",&event.Ech);
-	  block->SetBranchAddress("x",&event.x);
-	  block->SetBranchAddress("y",&event.y);
-	  block->SetBranchAddress("E",&event.E);
-	  //	  block->SetBranchAddress("ft",&event.ft);
-	  //	  block->SetBranchAddress("id",&event.id);
-	  //	  block->SetBranchAddress("pos",&event.pos);
-	  */
 
         strncpy(filebase,filename,strlen(filename)-5);
         filebase[strlen(filename)-5]='\0';
@@ -123,76 +132,49 @@ Int_t main(int argc, Char_t *argv[])
       	 c1->Clear();
 
 
-      for (int kk=0;kk<RENACHIPS;kk++){
-           if (verbose) cout << " Obtaining histograms RENA " << kk << endl;
-          for (j=0;j<2;j++){
-	 //
-	 //	 c1->Divide(2,2); 
-            for (i=0;i<4;i++){
-	      sprintf(tmpstring,"RENA%d/E[%d][%d][%d]",kk,kk,i,j);
-	     //    	     sprintf(titlestring,"E RENA %d, Module %d, PSAPD %d",kk,i,j);
-             E[kk][i][j]= (TH1F *) rfile->Get(tmpstring); //new TH1F(tmpstring,titlestring,Ebins,E_low,E_up);
-             sprintf(tmpstring,"RENA%d/E_com[%d][%d][%d]",kk,kk,i,j);
-	     //    	     sprintf(titlestring,"ECOM RENA %d, Module %d, PSAPD %d",kk,i,j);
-             E_com[kk][i][j]= (TH1F *) rfile->Get(tmpstring); //new TH1F(tmpstring,titlestring,Ebins_com,E_low_com,E_up_com);
+	 for (c=0;c<CARTRIDGES_PER_PANEL;c++){
+	   for (f=0;f<FINS_PER_CARTRIDGE;f++){
+           if (verbose) cout << " Obtaining histograms FIN " << f << endl;
+            for (i=0;i<MODULES_PER_FIN;i++){
+	      for (j=0;j<APDS_PER_MODULE;j++){
+		sprintf(tmpstring,"C%dF%d/E[%d][%d][%d][%d]",c,f,c,f,i,j);
+                E[c][f][i][j]= (TH1F *) rfile->Get(tmpstring); //new TH1F(tmpstring,titlestring,Ebins,E_low,E_up);
+ 	        sprintf(tmpstring,"C%dF%d/E_com[%d][%d][%d][%d]",c,f,c,f,i,j);
+                E_com[c][f][i][j]= (TH1F *) rfile->Get(tmpstring); //new TH1F(tmpstring,titlestring,Ebins_com,E_low_com,E_up_com);
 
-	    //   sprintf(tmpstring,"UNIT%d.E>>E[%d][%d][%d]",i,kk,i,j);
-	    //   sprintf(cutstring,"UNIT%d.com%dh<%d",i,j+1,threshold);
-	    // if (verbose){
-	    //  cout << "Drawstring = " << tmpstring << endl;
-            //cout << "Condition  = " << cutstring << endl;}
-	    //	    c1->cd(i+1);
-	    //	    block->Draw(tmpstring,cutstring);
-     	      }
-	//	sprintf(pngstring,"%s.Emod%d",filebase,j);
-	//       strcat(pngstring,".png");
-	//	c1->Print(pngstring);
+     	      } // i
             } // j
-	 }//kk
+	 }//f
+	 } //c
 
 
 
-      //    cout << " E[3][0][1]->GetEntries() :: " <<       E[3][0][1]->GetEntries()  << endl;
-
-
-       //       TSpectrum *sp = new TSpectrum();
-       //       Int_t npeaks,efound;
        Double_t pp_right,pp_low,pp_up;
-       Double_t ppeaks[RENACHIPS][MODULES][2];
+       Double_t ppeaks[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
+       Double_t ppeaks_com[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
        Double_t pp_right_com,pp_low_com,pp_up_com;
-       Double_t ppeaks_com[RENACHIPS][MODULES][2];
 
 
-       if (verbose) cout << " Filling Energy Histograms " << endl;
-       /*
-       for(l=0;l<block->GetEntries();l++){
-	 block->GetEntry(l);
-         if ( ((l%(entries/5))==0)&&(l>0)) {
-           cout << l/1e6 << " Million Events processed ( = " <<  (double) 100*(l)/entries  << " %)"<<endl;}
-         E[event->chip][event->module][event->apd]->Fill(event->E);  
-         E_com[event->chip][event->module][event->apd]->Fill(-event->Ec);  
-       } // l 
 
-       */
+       if (verbose) cout << " Determining photopeak position " << endl;
 
-       for (int kk=0;kk<RENACHIPS;kk++){
-        for (j=0;j<2;j++){
-          c1->Clear();
-           for (i=0;i<4;i++){
-   
-            pp_low= PP_LOW_EDGE;
-            pp_up= PP_UP_EDGE;
-            pp_low_com= PP_LOW_EDGE_COM;
-            pp_up_com= PP_UP_EDGE_COM;
+       for (c=0;c<CARTRIDGES_PER_PANEL;c++){
+	 for (f=0;f<FINS_PER_CARTRIDGE;f++){
+           for (i=0;i<MODULES_PER_FIN;i++){
+	     for (j=0;j<APDS_PER_MODULE;j++){
+	       pp_low= PP_LOW_EDGE;
+	       pp_up= PP_UP_EDGE;
+	       pp_low_com= PP_LOW_EDGE_COM;
+	       pp_up_com= PP_UP_EDGE_COM;
 
   
 	 if (verbose) { 
             cout << " ******************************************************* "  << endl; 
-            cout << " * Determining Photopeak postion RENA " << kk << " MODULE " << i << " APD " << j << " *"<<endl;
+            cout << " * Determining Photopeak postion CARTRIDGE " << c << " FIN " << f << " MODULE " << i << " APD " << j << " *"<<endl;
             cout << " ******************************************************* "  << endl;  } 
 
-	 if ( E[kk][i][j]->GetEntries() > MINHISTENTRIES ) {
-           pp_right=GetPhotopeak_v1(E[kk][i][j],pp_low,pp_up,verbose,12);
+	 if ( E[c][f][i][j]->GetEntries() > MINHISTENTRIES ) {
+           pp_right=GetPhotopeak_v1(E[c][f][i][j],pp_low,pp_up,verbose,12);
 	   if (verbose) cout << " pp_right = " << pp_right << endl; 
            pp_low=0.7*pp_right;
            pp_up=1.3*pp_right;
@@ -200,7 +182,7 @@ Int_t main(int argc, Char_t *argv[])
            cout << ", pp_low = " << pp_low ;
        	   cout << " pp_up = " << pp_up << endl;
 	   cout << " --------- Common ----------- " <<endl;} 
-	 pp_right_com=GetPhotopeak_v1(E_com[kk][i][j],pp_low_com,pp_up_com,verbose,12);
+	 pp_right_com=GetPhotopeak_v1(E_com[c][f][i][j],pp_low_com,pp_up_com,verbose,12);
            pp_low_com=0.7*pp_right_com;
            pp_up_com=1.3*pp_right_com;
          if (verbose) { 
@@ -211,110 +193,91 @@ Int_t main(int argc, Char_t *argv[])
 
          } // > MINHISTENTRIES
          else {
-	   if (verbose ){ cout << " Not enough entries in histogram E["<<kk<<"]["<<i<<"]["<<j<<"]. Skipping."<<endl;}
+	   if (verbose ){ cout << " Not enough entries in histogram E["<<c<<"]["<<f<<"]["<<i<<"]["<<j<<"]. Skipping."<<endl;}
            pp_right=0;
            pp_right_com=0;
 	 }
-           ppeaks[kk][i][j]=pp_right;
-           ppeaks_com[kk][i][j]=pp_right_com;
-	   if ( verbose ) { cout << " ppeaks[" << kk << "][" << i << "][" << j << "] = " << ppeaks[kk][i][j] << endl;}
-	   } //loop over i 
-       } // loop over j
+           ppeaks[c][f][i][j]=pp_right;
+           ppeaks_com[c][f][i][j]=pp_right_com;
+	   if ( verbose ) { cout << " ppeaks[" << c << "][" << f << "][" << i << "][" << j << "] = " << ppeaks[c][f][i][j] << endl;}
 
+	   sprintf(tmpstring,"floods[%d][%d][%d][%d]",c,f,i,j);
+	   sprintf(titlestring,"C%dF%d, Module %d, PSAPD %d",c,f, i,j);
+          floods[c][f][i][j]=new TH2F(tmpstring,titlestring,256,-1,1,256,-1,1);
+	   } //loop over j 
+	   } // loop over i
 
-       for (j=0;j<2;j++){
-         c1->Clear();
-         c1->Divide(2,2);
-	 for (i=0;i<4;i++){
-           c1->cd(i+1);
-	   E[kk][i][j]->Draw(); } //i
-           sprintf(pngstring,"%s.RENA%d.Eapd%d",filebase,kk,j);
-           strcat(pngstring,".png");
- 	   c1->Print(pngstring);
-       } // j
+#define _NRFLOODSTODRAW 4
 
-       for (j=0;j<2;j++){
-         c1->Clear();
-         c1->Divide(2,2);
-	 for (i=0;i<4;i++){
-           c1->cd(i+1);
-	   E_com[kk][i][j]->Draw(); } //i
-           sprintf(pngstring,"%s.RENA%d.Eapd_com%d",filebase,kk,j);
-           strcat(pngstring,".png");
- 	   c1->Print(pngstring);
-       } // j
-
-
-           
-       for (j=0;j<2;j++){
-        for (i=0;i<4;i++){
-	  sprintf(tmpstring,"floods[%d][%d][%d]",kk,i,j);
-	  sprintf(titlestring,"RENA %d, Module %d, PSAPD %d",kk, i,j);
-          floods[kk][i][j]=new TH2F(tmpstring,titlestring,256,-1,1,256,-1,1);
-	    //	    sprintf(tmpstring,"UNIT%d.x:UNIT%d.y>>floods[%d][%d][%d]",i,i,kk,i,j);
-	    //            pp_low=0.7*ppeaks[kk][i][j];
-	    //            pp_up=1.3*ppeaks[kk][i][j];	  
-	  //            if (verbose){
-	  //            cout << "low : " << 0.7*ppeaks[kk][i][j] << endl ;
-	  //            cout << "up  : " << 1.3*ppeaks[kk][i][j] << endl;}
-	    //	     sprintf(cutstring2,"UNIT%d.com%dh<%d&&UNIT%d.E>%.2f&&UNIT%d.E<%.2f",i,j+1,threshold,i,(Float_t) pp_low,i,(Float_t) pp_up);
-	    //sprintf(cutstring2,"UNIT%d.com%dh<%d&&UNIT%d.E>100&&UNIT%d.E<2500",i,j+1,threshold,i,i);
-
-	    //            if (verbose){
-	    //	      cout << "Drawstring = " << tmpstring << endl;
-	    //              cout << "Condition  = " << cutstring2 << endl;}
-	    //	       c1->cd(i+1);
-	    //	       block->Draw(tmpstring,cutstring2,"colz");
-	    //	       cout << "Done ." <<endl;
-	} // i
-       } // j
-       }// kk       
+	   makeplot(E,c,f,_NRFLOODSTODRAW,"E",filebase);
+	   makeplot(E_com,c,f,_NRFLOODSTODRAW,"Ecom",filebase);
+                    
+	 } // f
+       }// c       
 
        if (verbose) cout << " Obtaining Flood histograms " << endl;
         for(l=0;l<block->GetEntries();l++){
          block->GetEntry(l);
-	 if (ppeaks[event->chip][event->module][event->apd] > 0 ){
-           pp_low=.7*ppeaks[event->chip][event->module][event->apd];
-	   pp_up=1.3*ppeaks[event->chip][event->module][event->apd];
+	 if (ppeaks[event->cartridge][event->fin][event->module][event->apd] > 0 ){
+           pp_low=.7*ppeaks[event->cartridge][event->fin][event->module][event->apd];
+	   pp_up=1.3*ppeaks[event->cartridge][event->fin][event->module][event->apd];
            if ((event->E>pp_low)&&(event->E<pp_up)) {
-           floods[event->chip][event->module][event->apd]->Fill(event->x,event->y);
+           floods[event->cartridge][event->fin][event->module][event->apd]->Fill(event->x,event->y);
            }
-         } // ppeaks[][][] > 0
+         } // ppeaks[][][][] > 0
 	} // loop over entries (l) 
+ 
+	if (verbose) cout << " Done Looping. "  << endl;
 
-	for (int kk=0;kk<RENACHIPS;kk++){
-          for (j=0;j<2;j++){
-        	 c1->Clear();
-	         c1->Divide(2,2); 
-             for (i=0;i<4;i++){
-                ppVals(kk*8+j*4+i) = ppeaks[kk][i][j];
-                ppVals_com(kk*8+j*4+i) = ppeaks_com[kk][i][j];
+	//         ps->SaveAs("perfstat.root");
+
+
+	if (verbose) cout << " Setting ppVals " << endl;
+	
+       for (c=0;c<CARTRIDGES_PER_PANEL;c++){
+	 for (f=0;f<FINS_PER_CARTRIDGE;f++){
+           for (i=0;i<MODULES_PER_FIN;i++){
+	     for (j=0;j<APDS_PER_MODULE;j++){
+	       // FIXME 
+
+	       (*ppVals[c][f])[i*APDS_PER_MODULE+j] = ppeaks[c][f][i][j];
+	       (*ppVals_com[c][f])[i*APDS_PER_MODULE+j] = ppeaks_com[c][f][i][j];
+	     } //j 
+	   } //i
                 c1->cd(i+1);
-                floods[kk][i][j]->Draw("colz");
-	     } // loop i
-           sprintf(pngstring,"%s.RENA%d.floodsapd%d",filebase,kk,j);
-           strcat(pngstring,".png");
-           if (verbose) cout << pngstring << endl;
-           c1->Print(pngstring);
-       }
+		makeplot(floods,c,f,_NRFLOODSTODRAW,"floods",filebase);
+	 } //f 
+       } //c
 
-       for (j=0;j<2;j++){
-         for (i=0;i<4;i++){
-           floods[kk][i][j]->Write();
-           E[kk][i][j]->Write();
-	   if ( verbose ) { cout << " ppeaks[" << kk << "][" << i << "][" << j << "] = " << ppeaks[kk][i][j] ;}
-	   ppVals(kk*8+j*4+i) = ppeaks[kk][i][j];
-	   ppVals_com(kk*8+j*4+i) = ppeaks_com[kk][i][j];
-	 } // i
-       } // j
-       if (verbose) cout << endl;
-       	} //loop over kk (chips)
-
-       ppVals.Write("pp_spat");
-       ppVals_com.Write("pp_com");
-       block->Write();
-       rfile->Close();
      
+       
+       for (c=0;c<CARTRIDGES_PER_PANEL;c++){
+	 for (f=0;f<FINS_PER_CARTRIDGE;f++){
+	   	   sprintf(tmpstring,"C%dF%d",c,f);
+	   //   subdir[c][f] = rfile->mkdir(tmpstring);
+	   //subdir[c][f]->cd();
+		   rfile->cd(tmpstring);
+           for (i=0;i<MODULES_PER_FIN;i++){
+	     for (j=0;j<APDS_PER_MODULE;j++){
+           
+	       floods[c][f][i][j]->Write();
+	       //	       E[c][f][i][j]->Write();
+	       if ( verbose ) { cout << " ppeaks[" << c << "][" << f << "][" << i << "][" << j << "] = " << ppeaks[c][f][i][j] ;}
+	     } // j
+	   } // i
+
+	       sprintf(tmpstring,"pp_spat[%d][%d]",c,f);
+	       ppVals[c][f]->Write(tmpstring);
+	       sprintf(tmpstring,"pp_com[%d][%d]",c,f);
+	       ppVals_com[c][f]->Write(tmpstring);
+
+
+       if (verbose) cout << endl;
+       	} //loop over f (fins)
+       } // loop over c
+	       block->Write();
+       rfile->Close();
+    
 
 	return 0;}
 
@@ -416,3 +379,54 @@ Double_t  GetPhotopeak_v2(TH1F *hist,Double_t pp_low,Double_t pp_up,Int_t verbos
 
      return pp_right;
 }
+
+
+Int_t	   makeplot(TH1F *hist[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE],Int_t c, Int_t f, Int_t NRFLOODSTODRAW,Char_t suffix[40],Char_t filebase[FILENAMELENGTH]) {
+
+        TCanvas *c1;
+  Char_t pngstring[FILENAMELENGTH];
+
+        c1 = (TCanvas*)gROOT->GetListOfCanvases()->FindObject("c1");
+        if (!c1) c1 = new TCanvas("c1","c1",10,10,1000,1000);
+        c1->SetCanvasSize(700,700);
+      	 c1->Clear();
+
+	     Int_t kk,i,j;
+	   for (kk=0;kk<TMath::Floor(MODULES_PER_FIN/NRFLOODSTODRAW);kk++){
+         c1->Clear();
+         c1->Divide(NRFLOODSTODRAW,APDS_PER_MODULE);
+	 for (i=kk*NRFLOODSTODRAW;i<NRFLOODSTODRAW*(kk+1);i++){ 
+          for (j=0;j<APDS_PER_MODULE;j++){
+            c1->cd((i%NRFLOODSTODRAW)+1+j*NRFLOODSTODRAW);
+            hist[c][f][i][j]->Draw(); } //j
+	 } //i
+	 sprintf(pngstring,"%s.C%dF%dM%d-%d.%s.",filebase,c,f,kk*NRFLOODSTODRAW,i-1,suffix);
+         strcat(pngstring,"png");
+         c1->Print(pngstring);
+	   } // kk
+	   return 0;}
+
+Int_t	   makeplot(TH2F *hist[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE],Int_t c, Int_t f, Int_t NRFLOODSTODRAW,Char_t suffix[40],Char_t filebase[FILENAMELENGTH]) {
+
+        TCanvas *c1;
+       Char_t pngstring[FILENAMELENGTH];
+
+        c1 = (TCanvas*)gROOT->GetListOfCanvases()->FindObject("c1");
+        if (!c1) c1 = new TCanvas("c1","c1",10,10,1000,1000);
+        c1->SetCanvasSize(1000,500);
+      	 c1->Clear();
+
+	     Int_t kk,i,j;
+	   for (kk=0;kk<TMath::Floor(MODULES_PER_FIN/NRFLOODSTODRAW);kk++){
+         c1->Clear();
+         c1->Divide(NRFLOODSTODRAW,APDS_PER_MODULE);
+	 for (i=kk*NRFLOODSTODRAW;i<NRFLOODSTODRAW*(kk+1);i++){ 
+          for (j=0;j<APDS_PER_MODULE;j++){
+            c1->cd((i%NRFLOODSTODRAW)+1+j*NRFLOODSTODRAW);
+            hist[c][f][i][j]->Draw("colz"); } //j
+	 } //i
+	 sprintf(pngstring,"%s.C%dF%dM%d-%d.%s.",filebase,c,f,kk*NRFLOODSTODRAW,i-1,suffix);
+         strcat(pngstring,"png");
+         c1->Print(pngstring);
+       } // kk
+	   return 0;	   }

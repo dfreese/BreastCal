@@ -54,10 +54,9 @@ int main(int argc, char *argv[]){
   for (i=0;i<argc;i++) {
 
     if (strncmp(argv[i],"-v",2)==0) {
-      verbose=1;
-      i++;
+      verbose=kTRUE;
+      
     }
-
 
     if (strncmp(argv[i],"-f",2)==0) {
       sprintf(filelist,"%s",argv[i+1]);
@@ -71,16 +70,13 @@ int main(int argc, char *argv[]){
 
    }
 
- 
   cout << " Chaining ROOT files; output file generated will be : " << outfilename << endl;
 
-  ifstream f,rootfile;
-  f.open(filelist);
+  ifstream chainfile,rootfile;
+  chainfile.open(filelist);
 
-  //  TChain *b[RENACHIPS];
   TChain *mdata;
   Char_t chainname[40];
-
 
 
   TFile *rfile = new TFile(outfilename,"RECREATE");
@@ -92,20 +88,16 @@ int main(int argc, char *argv[]){
   //}
 
   Int_t  filesread=0;
-  TH1F *E[RENACHIPS][MODULES][2];
-  TH1F *E_com[RENACHIPS][MODULES][2];
   
-  TH1F *ETMP[RENACHIPS][MODULES][2];
-  TH1F *ETMP_com[RENACHIPS][MODULES][2];
+  TH1F *ETMP[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
+  TH1F *ETMP_com[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
+
   TFile *decodedfile;
   Char_t filename[50];
   Char_t tmpstring[50];
 
-  TVector* uu_c=0;
-  TVector* vv_c=0;
 
-
-  while (f >> curfilename) {   // FLAU edited, see note below
+  while (chainfile >> curfilename) {   // FLAU edited, see note below
 
     // -------------------------------------------------------	  
 	// FLAU edited to fix bug, and commented the below out
@@ -137,75 +129,98 @@ int main(int argc, char *argv[]){
          return -11;}
  
 	// FIXME:: Read circle centers from first file - should have a way to check if there are enough entries to have reliable centers. 
-
+	
 	if ( filesread == 1 ) {
-         uu_c = (TVector *) decodedfile->Get("uu_c");
-         vv_c = (TVector *) decodedfile->Get("vv_c");
-	}
-
+	  for (Int_t c=0;c<CARTRIDGES_PER_PANEL;c++){ 
+	    for (Int_t r=0;r<RENAS_PER_CARTRIDGE;r++){
+              sprintf(tmpstring,"timing/uu_c[%d][%d]",c,r);
+	      uu_c[c][r] = (TVector *) decodedfile->Get(tmpstring);
+              sprintf(tmpstring,"timing/vv_c[%d][%d]",c,r);
+	      vv_c[c][r] = (TVector *) decodedfile->Get(tmpstring);
+	    } //r
+	  } //c
+	}// filesread
+	
 	//    decodedfile->ls();        
-        for (int kk=0;kk<RENACHIPS;kk++){
-          for (int j=0;j<2;j++){
-            for (i=0;i<4;i++){
-	      sprintf(tmpstring,"E[%d][%d][%d]",kk,i,j); //  cout <<  tmpstring  ;
-             if (filesread==1) { 
-                E[kk][i][j]= (TH1F *) decodedfile->Get(tmpstring); 
-                E[kk][i][j]->SetDirectory(0);
+	  for (Int_t c=0;c<CARTRIDGES_PER_PANEL;c++){ 
+	    for (Int_t f=0;f<FINS_PER_CARTRIDGE;f++){
+	      for (Int_t m=0;m<MODULES_PER_FIN;m++){
+		for (Int_t j=0;j<APDS_PER_MODULE;j++){
+		  sprintf(tmpstring,"C%dF%d/E[%d][%d][%d][%d]",c,f,c,f,m,j); //  cout <<  tmpstring  ;
+		  if (filesread==1) { 
+		    E[c][f][m][j]= (TH1F *) decodedfile->Get(tmpstring); 
+		    E[c][f][m][j]->SetDirectory(0);
                    }
-             else { 
-	       //   TKey *key2 = (TKey*)gDirectory->GetListOfKeys()->FindObject(E[kk][i][j]->GetName());
-	       //     if (key2) { cout << "key found" << endl;
-		 	       ETMP[kk][i][j]= (TH1F *) decodedfile->Get(tmpstring); 
-	       //	 ETMP[kk][i][j]= (TH1F *) key2->ReadObj();
-			       //		       cout << " " << ETMP[kk][i][j]->GetEntries() << " " << E[kk][i][j]->GetEntries() ;
-			       E[kk][i][j]->Add(ETMP[kk][i][j],1);
-			       //   cout << " " << E[kk][i][j]->GetEntries() <<endl;
-	       delete ETMP[kk][i][j]; //}
-               }
-             sprintf(tmpstring,"E_com[%d][%d][%d]",kk,i,j);
-             if (filesread==1) { 
-                 E_com[kk][i][j]= (TH1F *) decodedfile->Get(tmpstring); 
-                 E_com[kk][i][j]->SetDirectory(0); }
-             else { 
-	       ETMP_com[kk][i][j]= (TH1F *) decodedfile->Get(tmpstring);  
-	       E_com[kk][i][j]->Add(ETMP_com[kk][i][j]);
-	        delete ETMP_com[kk][i][j];
-               }
-     	      }
-            } // j
-	 }//kk
+		  else { 
+		    ETMP[c][f][m][j]= (TH1F *) decodedfile->Get(tmpstring); 
+	            E[c][f][m][j]->Add(ETMP[c][f][m][j],1);
+		    delete ETMP[c][f][m][j]; //}
+		  }
+		  sprintf(tmpstring,"C%dF%d/E_com[%d][%d][%d][%d]",c,f,c,f,m,j);
+		  if (filesread==1) { 
+		    E_com[c][f][m][j]= (TH1F *) decodedfile->Get(tmpstring); 
+		    E_com[c][f][m][j]->SetDirectory(0); }
+		  else { 
+		    ETMP_com[c][f][m][j]= (TH1F *) decodedfile->Get(tmpstring);  
+		    E_com[c][f][m][j]->Add(ETMP_com[c][f][m][j]);
+		    delete ETMP_com[c][f][m][j];
+		  }
+		} //j
+	      } // m
+	    } // f
+	 }//c
+	
+	 decodedfile->Close();
 
-        decodedfile->Close();
+    //	 }
+  } // while .. 
 
-	   //	 }
-	   }
+  chainfile.close();
+ 
+  if (verbose) cout << " Writing to root file " << endl;
 
-  f.close();
- TDirectory *subdir[RENACHIPS];
- rfile->cd();
+  rfile->cd();
 
  //	 for (i=0;i<RENACHIPS;i++){
+
+
 	   mdata->Write();
 	   
-            for (int kk=0;kk<RENACHIPS;kk++){
-             sprintf(tmpstring,"RENA%d",kk);
-             subdir[kk] = rfile->mkdir(tmpstring);
-             subdir[kk]->cd();
-             for (int j=0;j<2;j++){
-               for (int i=0;i<4;i++){
-	         E[kk][i][j]->Write();
-	         E_com[kk][i][j]->Write();
-                 }
-	        } // j
-          }//kk     
-                
-	    subdir[0]->cd("../");
-            
-	    if (uu_c) uu_c->Write("uu_c");
-            if (vv_c) vv_c->Write("vv_c");
-	   //	 }
+	   
 
+	   for (Int_t c=0;c<CARTRIDGES_PER_PANEL;c++){
+	     for (Int_t f=0;f<FINS_PER_CARTRIDGE;f++) {
+	       sprintf(tmpstring,"C%dF%d",c,f);
+	       subdir[c][f] = rfile->mkdir(tmpstring);
+	       subdir[c][f]->cd();
+	       for (Int_t m=0;m<MODULES_PER_FIN;m++){
+		 for (Int_t  j=0;j<APDS_PER_MODULE;j++){
+		   E[c][f][m][j]->Write();
+		   E_com[c][f][m][j]->Write();
+		 } //j
+	       } //m
+	     } //f
+	   } // c
 
+	   
+	   rfile->cd();
+	   TDirectory *timing =  rfile->mkdir("timing");
+
+    
+	   timing->cd();
+	   
+   // need to store uvcenters ::
+	   for (Int_t c=0;c<CARTRIDGES_PER_PANEL;c++){
+	     for (Int_t r=0;r<RENAS_PER_CARTRIDGE;r++){
+	       sprintf(tmpstring,"uu_c[%d][%d]",c,r);
+	       uu_c[c][r]->Write(tmpstring);
+	       sprintf(tmpstring,"vv_c[%d][%d]",c,r);
+	       vv_c[c][r]->Write(tmpstring);
+	     } //r
+	   } //c
+	   
+
+	   
 rfile->Close();
 
 

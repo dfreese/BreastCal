@@ -18,7 +18,7 @@ CFLAGS =  -Wall -Wno-deprecated -W -g -fPIC -I$(ROOTMACRODIR_INC) -I./include -I
 CXXFLAGS = $(CFLAGS) $(shell root-config --cflags) -O3
 MYLIB = -L$(ROOTMACRODIR_LIB) -lmyrootlib -lInit_avdb
 DICTLIB = -L./lib -lModuleDatDict
-LDFLAGS = $(shell root-config --glibs) $(shell root-config --libs) -lMinuit -lSpectrum -lHistPainter $(MYLIB) $(DICTLIB)
+LDFLAGS = $(shell root-config --glibs) $(shell root-config --libs) -lMinuit -lSpectrum -lHistPainter -lTreePlayer $(MYLIB) $(DICTLIB)
 CC =g++
 
 

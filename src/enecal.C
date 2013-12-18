@@ -245,6 +245,8 @@ int main(int argc, Char_t *argv[])
 	  */
 	          calblock->SetName(treename);
 
+		  calblock->SetMaxTreeSize(100e6);
+
           int chip;
           int module;
           int apd;
@@ -256,7 +258,8 @@ int main(int argc, Char_t *argv[])
 
           cout << " Looping over data .. ";
           if (verbose) cout << endl;
-	  for (i=0;i<block->GetEntries();i++){
+	  //	  for (i=0;i<block->GetEntries();i++){
+	  for (i=0;i<1e7;i++){
 	    //	    if ((i%100000)==0) fprintf(stdout,"%d Events Processed\r",i);
 	   //      	  for (i=0;i<1e5;i++){
 	    block->GetEntry(i);
@@ -290,14 +293,25 @@ int main(int argc, Char_t *argv[])
 
 	  cout << " .... Done looping over the events " <<endl;
 
+	  f=calblock->GetCurrentFile();
+        f->Write();     
+      
+
+       TFile *fhi;
+       sprintf(newrootfile,"%s.enecal.hist",filebase);
+       strcat(newrootfile,".root");
+       if (verbose) {
+	 cout << "Creating New Root file : " << newrootfile << endl;}
+       fhi = new TFile(newrootfile,"RECREATE");
+
+	  fhi->cd();
           ppVals->Write("pp_spat");
           ppVals_com->Write("pp_com");
-
-          calblock->AutoSave();
-	  //          f->Write();     
+	  //    calblock->AutoSave();
+	  //  
 	  for (m=0;m<RENACHIPS;m++){
            sprintf(tmpname,"RENA%d",m);
-           subdir[m] = f->mkdir(tmpname);
+           subdir[m] = fhi->mkdir(tmpname);
            subdir[m]->cd();
 	  for (j=0;j<2;j++){
             for (i=0;i<4;i++){
@@ -311,7 +325,7 @@ int main(int argc, Char_t *argv[])
 
 	//	Ehist[1][0][0][34]->Draw(); c1->Print("test.png");
  
-          f->Close();
+          fhi->Close();
          
 	rfile->Close();
 
