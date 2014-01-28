@@ -86,7 +86,7 @@ int main(int argc, Char_t *argv[])
     strncpy(filebase,filenamel,strlen(filenamel)-9);
     filebase[strlen(filenamel)-9]='\0';
 
-    if (verbose){ 
+    if (verbose) { 
         cout << " filename = " << filenamel << endl;
         cout << " filebase = " << filebase << endl;
     }
@@ -116,7 +116,9 @@ int main(int argc, Char_t *argv[])
                 }
                 infile.close();
                 if (lines==65) { 
-                    if (verbose) cout << "Setting Validpeaks " << endl; validpeaks[m][i][j]=1;
+                    if (verbose) {
+                        cout << "Setting Validpeaks " << endl; validpeaks[m][i][j]=1;
+                    }
                 }
             }//j
         } //i 
