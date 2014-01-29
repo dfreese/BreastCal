@@ -117,8 +117,9 @@ int main(int argc, Char_t *argv[])
                 infile.close();
                 if (lines==65) { 
                     if (verbose) {
-                        cout << "Setting Validpeaks " << endl; validpeaks[m][i][j]=1;
+                        cout << "Setting Validpeaks " << endl; 
                     }
+                    validpeaks[m][i][j]=1;
                 }
             }//j
         } //i 
@@ -339,19 +340,28 @@ int main(int argc, Char_t *argv[])
                     }
                     EDGE_FOM_TOP_AV/=2;
 
-                    Char_t pm;
-                    pm=126;
-                    fomout.precision(3);
-                    fomout << fixed;
-                    //    fomout << setw(5);
-                    //    fomout << setfixed(5);
-                    fomout << " U" << i << "M" << j << ": ";
-                    fomout <<  FOM_CTR_AV << " " << pm << " " << FOM_CTR_AV_E << " | " ;
-                    fomout <<  FOM_TOP_AV << " " << pm << " " << FOM_TOP_AV_E << " | " ;
-                    fomout <<  EDGE_FOM_CTR_AV << " " << pm << " " << EDGE_FOM_CTR_AV_E << " | " ;
-                    fomout <<  EDGE_FOM_TOP_AV << " " << pm << " " << EDGE_FOM_TOP_AV_E << " | " ;
-                    fomout << endl;
-                }// validpeaks
+                } else {// validpeaks
+                    FOM_CTR_AV = 0;
+                    FOM_CTR_AV_E = 0;
+                    FOM_TOP_AV = 0;
+                    FOM_TOP_AV_E = 0;
+                    EDGE_FOM_CTR_AV = 0;
+                    EDGE_FOM_CTR_AV_E = 0;
+                    EDGE_FOM_TOP_AV = 0;
+                    EDGE_FOM_TOP_AV_E = 0;
+                }
+                Char_t pm(126);
+                fomout.precision(3);
+                fomout << fixed;
+                //    fomout << setw(5);
+                //    fomout << setfixed(5);
+
+                fomout << " U" << i << "M" << j << ": ";
+                fomout <<  FOM_CTR_AV << " " << pm << " " << FOM_CTR_AV_E << " | " ;
+                fomout <<  FOM_TOP_AV << " " << pm << " " << FOM_TOP_AV_E << " | " ;
+                fomout <<  EDGE_FOM_CTR_AV << " " << pm << " " << EDGE_FOM_CTR_AV_E << " | " ;
+                fomout <<  EDGE_FOM_TOP_AV << " " << pm << " " << EDGE_FOM_TOP_AV_E << " | " ;
+                fomout << endl;
             }
         }
     } // loop m
