@@ -9,3 +9,10 @@
 # Exclude binaries in bin which will not have a file extension
 bin/*
 !bin/*.*
+
+# CMake rules
+*.cmake
+CMakeFiles/*
+*/CMakeFiles
+CMakeCache.txt
+Makefile
