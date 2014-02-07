@@ -9,7 +9,7 @@
 
 # note source files that start with a capital letter are just a bunch of functions and don't have a "main {} "
 
-ROOTMACRODIR=$(HOME)/root/macros
+ROOTMACRODIR=/home/products/RootMacros/macros
 ROOTMACRODIR_LIB=$(ROOTMACRODIR)/lib
 ROOTMACRODIR_INC=$(ROOTMACRODIR)/include
 
@@ -25,6 +25,8 @@ CC =g++
 SOURCE_DIR  := src
 INCLUDE_DIR := include
 LIB_DIR     := lib
+
+HDRONLY := Syspardef.h
 
 CC_EXTENSION := C
 PRG_SUFFIX_FLAG := 0
@@ -52,12 +54,17 @@ all:	default
 .depend: $(SRCS)
 	rm -f ./.depend
 	echo $(SRCS)
-	$(CC) $(CFLAGS) -MM $^  >> ./.depend;
-	sed -i 's/\(^[[:alnum:]_]\+\.o\)/src\/&/g' ./.depend
+	$(CC) $(CFLAGS) -MM $^  >> ./.depend
+
+
+# for some reason I had to put the "sed -i on ./.depend here, because it wasn't executed on the .depend rule
 
 .rules: .depend
-	$(shell cat .depend |  tr ' ' '\n' | grep -v $(ROOTSYS) | sed '/\\/d' | grep -v myrootlib | grep -v libInit_avdb  | grep "[[:alnum:]]" | tr '\n' ' ' | sed  's/src\/[[:alnum:]_]*.o:/\n&/g'  | sed '/^$$/d' > .buildrules; echo "" >> .buildrules)
-	@cat .buildrules | sed 's/^src/bin/g' | sed 's/include/src/g' | sed 's/\.o//' | sed 's/\.[Ch]/\.o/g' | sed 's/\.\///g'  |  awk '{ while(++i<=NF) printf (!a[$$(i)]++) ? $$(i) FS : ""; i=split("",a); print "" }'  |  sed '/^bin\/decoder/!s/[a-zA-Z/]*decoder\.o//'   | awk '{print $$(0)"\n\t $$(CC) $$(CXXFLAGS) $$(LDFLAGS) $$^ -o $$@"}' > .binrules
+	$(shell sed  -i 's/\(^[[:alnum:]_]\+\.o\)/src\/&/g' ./.depend)
+	@echo "Making rules for SW"
+	$(shell cat .depend |  tr ' ' '\n' | grep -v $(ROOTSYS) | sed '/\\/d' | grep -v $(HDRONLY) | grep -v myrootlib | grep -v libInit_avdb  | grep "[[:alnum:]]" | tr '\n' ' '  | sed  's/src\/[[:alnum:]_]*.o:/\n&/g'  | sed '/^$$/d' > .buildrules; echo "" >> .buildrules)
+	@cat .buildrules | sed 's/^src/bin/g' | sed 's/include/src/g' | sed 's/\.o//' | sed 's/\.[Ch]/\.o/g' | sed 's/\.\///g'  |  awk '{ while(++i<=NF) printf (!a[$$(i)]++) ? $$(i) FS : ""; i=split("",a); print "" }'  |  sed '/^bin\/decoder/!s/[a-zA-Z/]*decoder\.o//'   | awk '{print $$(0)"\n\t $$(CC) $$(CXXFLAGS) -o $$@  $$^ $$(LDFLAGS)"}' > .binrules
+
 
 -include .binrules
 -include .depend
