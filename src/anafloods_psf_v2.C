@@ -64,9 +64,10 @@ Int_t main(int argc, Char_t *argv[])
 	Char_t		filename[FILENAMELENGTH] = "";
 	Int_t		verbose = 0;
 	Int_t		ix;
-        Int_t           RENACHIP,MODULE,APD;
-        Int_t           firstchip=0,lastchip=RENACHIPS;
-        Int_t           firstmodule=0,lastmodule=3;
+        Int_t           CARTRIDGE,FIN,MODULE,APD;
+        Int_t           firstcartridge=0,lastcartridge=CARTRIDGES_PER_PANEL;
+        Int_t           firstfin=0,lastfin=FINS_PER_CARTRIDGE;
+        Int_t           firstmodule=0,lastmodule=MODULES_PER_FIN;
         Int_t           firstapd=0,lastapd=1;
 
 
@@ -77,21 +78,30 @@ Int_t main(int argc, Char_t *argv[])
 		/*
 		 * Verbose '-v'
 		 */
-		if(strncmp(argv[ix], "-r", 2) == 0) {
+		if(strncmp(argv[ix], "-c", 2) == 0) {
                   ix++;
-		  RENACHIP = atoi(argv[ix]);
-                  if (RENACHIP < RENACHIPS){
-                     firstchip=RENACHIP;lastchip=firstchip+1;
-		     cout << "Looking at RENA chip " << RENACHIP <<endl;  }
-		  else { cout << " ignoring request for chip " << RENACHIP << endl;}
+		  CARTRIDGE = atoi(argv[ix]);
+                  if (CARTRIDGE < CARTRIDGES_PER_PANEL){
+                     firstcartridge=CARTRIDGE;lastcartridge=firstcartridge+1;
+		     cout << "Looking at Cartridge " << CARTRIDGE <<endl;  }
+		  else { cout << " ignoring request for cartridge " << CARTRIDGE << endl;}
+		}
+
+		if(strncmp(argv[ix], "-l", 2) == 0) {
+                  ix++;
+		  FIN = atoi(argv[ix]);
+                  if (FIN < FINS_PER_CARTRIDGE){
+                     firstfin=FIN;lastfin=firstfin+1;
+		     cout << "Looking at Fin " << FIN <<endl;  }
+		  else { cout << " ignoring request for fin " << FIN << endl;}
 		}
 
 
 		if(strncmp(argv[ix], "-m", 2) == 0) {
                   ix++;
 		  MODULE = atoi(argv[ix]);
-                  if (MODULE <=3 ) { 
-                    firstmodule=MODULE;lastmodule=firstmodule;
+                  if (MODULE <= MODULES_PER_FIN ) { 
+                    firstmodule=MODULE;lastmodule=firstmodule+1;
 		    cout << "Looking at MODULE " << MODULE <<endl;; }
 		  else { cout << " ignoring request for module " << MODULE << endl;}
 		}
@@ -100,14 +110,12 @@ Int_t main(int argc, Char_t *argv[])
                   ix++;
 		  APD = atoi(argv[ix]);
                   if ((APD==0)||(APD==1)){
-                    firstapd=APD;lastapd=firstapd;
+                    firstapd=APD;lastapd=firstapd+1;
 		    cout << "Looking at APD " << APD <<endl;; }
 		  else { cout << " ignoring request for apd " << APD << endl;}
 
 
 		}
-
-
 
 		if(strncmp(argv[ix], "-v", 2) == 0) {
 			cout << "Verbose Mode " << endl;
@@ -150,17 +158,18 @@ Int_t main(int argc, Char_t *argv[])
         cout << " Entries block2 : " << block2->GetEntries() << endl;
 	*/
 
-        TH1F *E[RENACHIPS][4][2];
-        TH2F *floods[RENACHIPS][4][2];
+        TH1F *E[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
+        TH2F *floods[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
+
         Char_t tmpstring[60]; 
         Char_t filebase[FILENAMELENGTH],pngstring[FILENAMELENGTH];
         ofstream peaklocationfile;
         Char_t peaklocationfilename[FILENAMELENGTH];
-        Int_t k,i,j,m;
+        Int_t k,i,j,c,f;
         TCanvas *c1;
 	//        TSpectrum2 *s = new TSpectrum2(); 
-        Int_t chipevents[RENACHIPS];
-        Bool_t modevents[RENACHIPS][MODULES][2];
+	//        Int_t chipevents[RENACHIPS];
+        Bool_t modevents[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
 
         strncpy(filebase,filename,strlen(filename)-5);
         filebase[strlen(filename)-5]='\0';
@@ -172,83 +181,61 @@ Int_t main(int argc, Char_t *argv[])
         c1->SetCanvasSize(700,700);
 
 
-
 	// DON'T CHANGE THESE HERE !!
 
 	/* Read in the flood and energy histograms */
-	for (m=0;m<RENACHIPS;m++){
-	  //        if (verbose)   cout << " Analyzing chip " << m << endl;
-            chipevents[m]=0;
-       for (j=0;j<2;j++){
-	 //         if (verbose)   cout << " Analyzing apd " << j << endl;
-	 //	 c1->Clear();
-	 // c1->Divide(2,2); 
-        for (i=0;i<4;i++){
-	  sprintf(tmpstring,"E[%d][%d][%d]",m,i,j);
-            E[m][i][j]= (TH1F *) rfile->Get(tmpstring);
-            if (!(E[m][i][j])){ 
-	      if(verbose){ cout << " did not find Energy for chip " << m << " apd " << j <<" unit " << i << endl;}
+       for (c=0;c<CARTRIDGES_PER_PANEL;c++){
+	   for (f=0;f<FINS_PER_CARTRIDGE;f++){
+           if (verbose) cout << " Obtaining histograms FIN " << f << endl;
+            for (i=0;i<MODULES_PER_FIN;i++){
+	      for (j=0;j<APDS_PER_MODULE;j++){
+               sprintf(tmpstring,"C%dF%d/E[%d][%d][%d][%d]",c,f,c,f,i,j);
+	       E[c][f][i][j]= (TH1F *) rfile->Get(tmpstring); //new TH1F(tmpstring,titlestring,Ebins,E_low,E_up);
+	       if (!(E[c][f][i][j])){ 
+		 if(verbose){ cout << " did not find Energy for C" << c << "F" << f<< "M" << i << "A" << j  << endl;}
                                 continue; }
-            if ( E[m][i][j]->GetEntries() > MINHISTENTRIES ) modevents[m][i][j]=true;
-            else modevents[m][i][j]=false;
-	    //	    if (verbose) {cout << " E hist read; " ;}
-	    sprintf(tmpstring,"floods[%d][%d][%d]",m,i,j);
+	       if ( E[c][f][i][j]->GetEntries() > MINHISTENTRIES ) modevents[c][f][i][j]=true;
+	       else modevents[c][f][i][j]=false;
+	       sprintf(tmpstring,"C%dF%d/flood_C%dF%dM%dA%d",c,f,c,f,i,j);
+	       floods[c][f][i][j]= (TH2F *) rfile->Get(tmpstring); //new TH1F(tmpstring,titlestring,Ebins,E_low,E_up);
+
 	    //		 if (verbose) { cout << " -- Getting TH2F :: ( i = " << i << ", j = " << j << ") --" ;}
-            floods[m][i][j]= (TH2F *) rfile->Get(tmpstring);
 	    //   if (!(floods[i][j])) floods[i][j] = new TH2F();
 	    //   if (verbose) cout << " flood hist read; " <<endl;
-        }
-       } // j - loop
-	} // m-loop
+	      } // j-loop
+	    } // i - loop
+	   } // f-loop
+       } // c-loop
 
 
-	TVector* ppVals = (TVector *) rfile->Get("pp_spat;1");
-	 //       TVector* ppVals_com = (TVector *) rfile->Get("pp_com;1");
-
-       if (!(ppVals)) cout << "Error :: ppVals not found " <<endl;
-       //       if (!(ppVals_com)) cout << "Error :: ppVals_com not found " <<endl;
-       //Get("ppVals");
-
-       // cout << "ppvals :: " << (*ppVals)(1) << endl; 
 
  Double_t pp_low,pp_up;
  Double_t *xsort,*ysort;
  TGraph *peaks_remapped64;
  peaks_remapped64 = new TGraph(PEAKS);
  Int_t nvalid=0;
- Bool_t  validsegment[RENACHIPS][4][2];
- Float_t costs[RENACHIPS][4][2]={{{0}}};
+ Bool_t  validsegment[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE]={{{{0}}}};
+ Float_t costs[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE]={{{{0}}}};
+ TGraph *peaks[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
  Int_t nfound;
- TGraph *peaks[RENACHIPS][4][2];
  Int_t flag=0;
  #ifdef TIMING
  time_t starttime,startloop,endloop;
  time_t seconds;
 #endif  
 
-      for (m=0;m<RENACHIPS;m++){
-       for (i=0;i<4;i++){ 
-         for (j=0;j<2;j++){
-            validsegment[m][i][j]=0; }}}
 
-      if (verbose)      cout << " firstchip = " << firstchip << " , lastchip = " << lastchip << endl;
-       for (m=firstchip;m<lastchip;m++){
-	 //	               for (m=7;m<8;m++){
-		//         m=4;{
-		 // m=5;{
-	  //         if (!chipevents[m]) continue;
-         if (verbose)  cout << " Analyzing chip .. " << m << endl;   
-
-	 for (i=firstmodule;i<=lastmodule;i++){
-	 //	       i=2; {
-          for (j=firstapd;j<=lastapd;j++){
-	    //	 i=3; j=1; {{
+ for (c=firstcartridge;c<lastcartridge;c++){
+   for (f=firstfin;f<lastfin;f++){ 
+     if (verbose)  cout << " Analyzing fin .. " << f << " in cartridge " << c << endl;   
+     for (i=firstmodule;i<lastmodule;i++){
+       for (j=firstapd;j<lastapd;j++){
 
 #ifdef TIMING
       startloop = time(NULL);    
 #endif
 
-      if (modevents[m][i][j]){
+      if (modevents[c][f][i][j]){
   	 c1->Clear();
 	 c1->Divide(2,2);
 	 if (verbose)        cout << " Crystal segmentation Unit " << i << ",  apd " << j << endl;
@@ -262,15 +249,15 @@ Int_t main(int argc, Char_t *argv[])
   
         if (verbose) { 
             cout << " ********************************************************* "  << endl; 
-            cout << " * Determining Crystal Locations  CHIP " << m << " UNIT " << i << " APD " << j << " *"<<endl;
+            cout << " * Determining Crystal Locations  C" << c << "F" << f << "M" << i << "A" << j << " *"<<endl;
             cout << " ********************************************************* "  << endl;  
-            cout << " Entries Ehist :: " << E[m][i][j]->GetEntries() ;
-            cout << " Entries Floods :: " << floods[m][i][j]->GetEntries() ;
+            cout << " Entries Ehist :: " << E[c][f][i][j]->GetEntries() ;
+            cout << " Entries Floods :: " << floods[c][f][i][j]->GetEntries() ;
  
        } 
          
 
-	if (verbose)	cout << "R"<<m<<"M"<<i<<"A"<<j<< endl;
+	if (verbose)	cout << "C"<<c<<"F"<<f<<"M"<<i<<"A"<<j<< endl;
 
      /* Look for the 64 crystal positions */
      nfound=0;
@@ -278,25 +265,25 @@ Int_t main(int argc, Char_t *argv[])
 
      //  m=0;
 
-     sprintf(peaklocationfilename,"%s.RENA%d.unit%d_apd%d",filebase,m,i,j);
+     sprintf(peaklocationfilename,"%s.C%dF%d.unit%d_apd%d",filebase,c,f,i,j);
 
 #ifdef TIMING
      starttime = time (NULL );
 #endif
      //   cout << " Starttime : " << starttime;
      //     verbose=0;
-     peaks[m][i][j] =   PeakSearch(floods[m][i][j],peaklocationfilename,verbose, flag, costs[m][i][j],j);
+     peaks[c][f][i][j] =   PeakSearch(floods[c][f][i][j],peaklocationfilename,verbose, flag, costs[c][f][i][j],j);
      //     verbose=1;
       }
       else{
 	if (verbose) {
-          cout << " --------- Skipping CHIP " << m << " MODULE " << i << " APD " << j << " ----------- " << endl;
+          cout << " --------- Skipping C" << c << "F" << f<< " MODULE " << i << " APD " << j << " ----------- " << endl;
           cout << " ------------- Not enough events ------------------------- " << endl;
 	} //verbose
-          peaks[m][i][j] = new TGraph(64);
+          peaks[c][f][i][j] = new TGraph(64);
       } // else - modevents[m][i][j]
-     sprintf(tmpstring,"peaks[%d][%d][%d]",m,i,j);
-     peaks[m][i][j]->SetName(tmpstring);
+      sprintf(tmpstring,"peaks[%d][%d][%d][%d]",c,f,i,j);
+     peaks[c][f][i][j]->SetName(tmpstring);
 #ifdef TIMING
      seconds = time (NULL);
      cout << " time to finish PeakSearch : " << seconds-starttime << endl;
@@ -310,38 +297,32 @@ Int_t main(int argc, Char_t *argv[])
   c1->Divide(2,2);
    
    c1->cd(1);
-   floods[m][i][j]->Draw("colz");
-   c1->cd(2);floods[m][i][j]->Draw("histcolz");
-   c1->cd(3);peaks[m][i][j]->Draw("APL");
-    c1->cd(4);floods[m][i][j]->Draw("colz");
-    peaks[m][i][j]->Draw("PL");	
+   floods[c][f][i][j]->Draw("colz");
+   c1->cd(2);floods[c][f][i][j]->Draw("histcolz");
+   c1->cd(3);peaks[c][f][i][j]->Draw("APL");
+    c1->cd(4);floods[c][f][i][j]->Draw("colz");
+    peaks[c][f][i][j]->Draw("PL");	
     
     if (flag==15) { 
-      validsegment[m][i][j]=1;nvalid++;
-      sprintf(peaklocationfilename,"%s.RENA%d.unit%d_apd%d_peaks",filebase,m,i,j);
+      validsegment[c][f][i][j]=1;nvalid++;
+      sprintf(peaklocationfilename,"%s.C%dF%d.unit%d_apd%d_peaks",filebase,c,f,i,j);
       }
     else  {
-      validsegment[m][i][j]=0; 
-      sprintf(peaklocationfilename,"%s.RENA%d.unit%d_apd%d_peaks.failed",filebase,m,i,j);
+      validsegment[c][f][i][j]=0; 
+      sprintf(peaklocationfilename,"%s.C%dF%d.unit%d_apd%d_peaks.failed",filebase,c,f,i,j);
     }
    strcat(peaklocationfilename,".txt");
      peaklocationfile.open(peaklocationfilename);
 
-    xsort = peaks[m][i][j]->GetX();
-    ysort = peaks[m][i][j]->GetY();
+    xsort = peaks[c][f][i][j]->GetX();
+    ysort = peaks[c][f][i][j]->GetY();
    for (k=0;k<PEAKS;k++){ 
      peaklocationfile << k << " " << xsort[k] << " " << ysort[k] <<endl;    }
     
    peaklocationfile.close();
  
-
-   //	 }// i
-	 //  } //j
-       //    c1->Clear();
-       //   floods[i][j]->Draw("colz");
-       // }
    if (verbose) { cout <<" Made it here too! " <<endl;}
-   sprintf(pngstring,"%s.RENA%d.unit%d_apd%d_flood",filebase,m,i,j);
+   sprintf(pngstring,"%s.C%dF%d.unit%d_apd%d_flood",filebase,c,f,i,j);
    strcat(pngstring,".png");
    //   cout << pngstring << endl;
    c1->Update();
@@ -349,16 +330,16 @@ Int_t main(int argc, Char_t *argv[])
 #ifdef PUBPLOT
    set2dcolor(4);
    c1->Clear();
-  sprintf(pngstring,"%s.RENA%d.unit%d_apd%d_flood",filebase,m,i,j);
+   sprintf(pngstring,"%s.C%dF%d.unit%d_apd%d_flood",filebase,c,f,i,j);
    strcat(pngstring,".eps");
 floods[m][i][j]->Draw("colz");
  peaks[m][i][j]->Draw("PL");	
    c1->Print(pngstring);
-   sprintf(pngstring,"%s.RENA%d.unit%d_apd%d_singleflood",filebase,m,i,j);
+   sprintf(pngstring,"%s.C%dF%d.unit%d_apd%d_singleflood",filebase,c,f,i,j);
    strcat(pngstring,".eps");
- TPaletteAxis *palette = (TPaletteAxis*)floods[m][i][j]->GetListOfFunctions()->FindObject("palette");
+ TPaletteAxis *palette = (TPaletteAxis*)floods[c][f][i][j]->GetListOfFunctions()->FindObject("palette");
  palette->SetLabelSize(0.04);
-  floods[m][i][j]->Draw("colz");
+  floods[c][f][i][j]->Draw("colz");
   palette->Draw();
    c1->Print(pngstring);
 #endif
@@ -366,22 +347,26 @@ floods[m][i][j]->Draw("colz");
    endloop = time(NULL);
    cout << " time to finish loop      : " << endloop-startloop << " time to finish all but Peaksearch: " << endloop-startloop-seconds+starttime <<endl;
 #endif
-	    } //loop over j
-       } //loop over i
-      }//look over m
-   
+       } //loop over j
+     } //loop over i
+   }//look over f
+ } // loop over c
 
    sprintf(peaklocationfilename,"%s.segsum.txt",filebase);
    peaklocationfile.open(peaklocationfilename);
 
   peaklocationfile << "\n*****************************************************"  << endl;
   peaklocationfile << "* " <<  nvalid << " Valid segmentations for " << RENACHIPS*8 << " APDs:                *" << endl;
-  for (m=0;m<RENACHIPS;m++){
-   for (i=0;i<4;i++){ 
-    for (j=0;j<2;j++){
-      if (validsegment[m][i][j]==1) { 
-	peaklocationfile << "* RENA " << m << " UNIT " <<  i  << " APD " << j << "  "  << validsegment[m][i][j] << "  (min cost: " << costs[m][i][j] <<" )      *" <<endl;
-      }}}}
+
+ for (c=firstcartridge;c<lastcartridge;c++){
+   for (f=firstfin;f<lastfin;f++){ 
+     if (verbose)  cout << " Analyzing fin .. " << f << " in cartridge " << c << endl;   
+     for (i=firstmodule;i<=lastmodule;i++){
+       for (j=firstapd;j<=lastapd;j++){
+
+      if (validsegment[c][f][i][j]==1) { 
+	peaklocationfile << "* C" << c << "F" << f << "M" <<  i  << "A" << j << "  "  << validsegment[c][f][i][j] << "  (min cost: " << costs[c][f][i][j] <<" )      *" <<endl;
+      }}}}}
   peaklocationfile << "*                                                   *"  << endl;
   peaklocationfile << "*****************************************************"  << endl;
   peaklocationfile.close();

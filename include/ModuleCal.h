@@ -16,6 +16,7 @@ class ModuleCal : public TObject {
   Float_t x;
   Float_t y;
   Short_t chip;
+  Short_t cartridge;
   Short_t fin;
   Short_t m;
   Short_t apd;

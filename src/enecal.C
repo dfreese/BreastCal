@@ -8,6 +8,7 @@ This program fills the energy histograms for every crystal, needed to do energy 
 
 
 #include "enecal.h" 
+#include "time.h"
 //#include "TProof.h"
 //#include "TChain.h"
 //void usage(void);
@@ -28,8 +29,8 @@ int main(int argc, Char_t *argv[])
 	Int_t		ix;
         Bool_t          fileset=0;
         Bool_t          floodlut=kFALSE;
+	Bool_t          fitonly=kFALSE;
         ModuleDat *event = 0;
-        TH2S *floodmap[RENACHIPS][MODULES][APDS_PER_MODULE];
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 	for(ix = 1; ix < argc; ix++) {
@@ -41,6 +42,14 @@ int main(int argc, Char_t *argv[])
 			cout << "Verbose Mode " << endl;
 			verbose = 1;
 		}
+
+
+		if(strncmp(argv[ix], "-fit", 4) == 0) {
+			cout << "Only Perform Fitting " << endl;
+			fitonly = 1;
+			ix++;
+		}
+
 
 		/*
 		 * Verbose '-map'
@@ -65,34 +74,34 @@ int main(int argc, Char_t *argv[])
 	}
 
         rootlogon(verbose);
+        time_t starttime = time(NULL);
 
 
 	if (!fileset) { cout << " Please specify Filename. Exiting. " << endl; return -99;}
 
         cout << " Inputfile :: " << filename << endl;
 
-	TFile *rfile = new TFile(filename,"OPEN");
+	TFile *rfile = new TFile(filename,"UPDATE");
        
-        Char_t filebase[FILENAMELENGTH],peaklocationfilename[FILENAMELENGTH],newrootfile[FILENAMELENGTH]; 
+        Char_t filebase[FILENAMELENGTH],newrootfile[FILENAMELENGTH]; 
         Char_t tmpname[50],tmptitle[50];
         Int_t i,j,k,m,lines;
-        Int_t validpeaks[RENACHIPS][4][2];
-        Double_t U_x[RENACHIPS][4][2][64];
-        Double_t U_y[RENACHIPS][4][2][64];
         Double_t aa, bb;
         ifstream infile;
-        TH1F *Ehist[RENACHIPS][4][2][64];
-        TH1F *Ehist_com[RENACHIPS][4][2][64];
-	//        TF1 *Efits[4][2][64];
+
+
         TVector* ppVals = (TVector *) rfile->Get("pp_spat");
         TVector* ppVals_com = (TVector *) rfile->Get("pp_com");
-        TVector* uu_c = (TVector *) rfile->Get("uu_c");
-        TVector* vv_c = (TVector *) rfile->Get("vv_c");
 
+	//        TVector* uu_c = (TVector *) rfile->Get("uu_c");
+	//        TVector* vv_c = (TVector *) rfile->Get("vv_c");
+
+	/*
         if (!((ppVals) && (ppVals_com) && (uu_c) && (vv_c))){
 	    cout << " Problem reading ppVals and/or uu/cc circle centers.\nExiting. " << endl;
             return -3;
 	  }
+	*/
 
 	//        TCanvas *c1 =new TCanvas();
         Char_t treename[40];
@@ -103,6 +112,7 @@ int main(int argc, Char_t *argv[])
         if (verbose) cout << " filebase = " << filebase << endl;
 
 
+	/*
       if (verbose) { 
         cout << " Circle centers :: " << endl;
      
@@ -118,49 +128,16 @@ int main(int argc, Char_t *argv[])
 	   cout << endl;
        }
       } // verbose
+	*/
 
       //	TChain *block;
       //  TProof::Open("");
-      TTree *block;
+
 	   //          block = new TChain("mdata","Chain of 1");
 	   //          block->Add(filename);
 	   //          block->SetProof();  
 
 
-      TFile *lutfile;
-
-      sprintf(filename,"%s.floodmap.root",filebase);
-
-      if (floodlut){ lutfile =  new TFile(filename,"OPEN");	}
-
-	for (m=0;m<RENACHIPS;m++){
-        for (j=0;j<4;j++){
-	  for (i=0;i<2;i++){
-	     validpeaks[m][j][i]=0;
-             if (floodlut) {
-            sprintf(tmpstring,"floodmap[%d][%d][%d]",m,j,i);
-            floodmap[m][j][i] = (TH2S *)    lutfile->Get(tmpstring);
-	    if ( floodmap[m][j][i]->GetEntries() ) validpeaks[m][j][i]=1;
-             }//floodmap
-             else {
-	     sprintf(peaklocationfilename,"./CHIPDATA/%s.RENA%d.unit%d_apd%d_peaks",filebase,m,j,i);
-             strcat(peaklocationfilename,".txt");
-             infile.open(peaklocationfilename);
-             lines = 0;
-              while (1){ 
-               if (!infile.good()) break;
-               infile >> k >>  aa >> bb;
-               if (k < 64) { U_x[m][j][i][k]=aa; U_y[m][j][i][k]=bb;}
-       //       cout << k << ", " << U_x[i][j][k]<< ", " << U_y[i][j][k] << endl;
-               lines++;      
-                }
-	      if (verbose) cout << "Found " << lines-1 << " peaks in  file " << peaklocationfilename << endl;
-       infile.close();
-       if (lines==65){ if (verbose) cout << "Setting Validpeaks " << endl; validpeaks[m][j][i]=1; }
-	     } // else floodmap
-	}
-	}
-	}
 
 
 	/*
@@ -179,7 +156,7 @@ int main(int argc, Char_t *argv[])
 	//	cout << " U_x[0][0][21] ="<< U_x[0][0][21] << " U_y[0][0][21] = " << U_y[0][0][21]<<endl;
 
 	
-
+      /*
        TFile *f;
        sprintf(newrootfile,"%s.enecal",filebase);
        strcat(newrootfile,".root");
@@ -187,12 +164,16 @@ int main(int argc, Char_t *argv[])
 	 cout << "Creating New Root file : " << newrootfile << endl;}
        f = new TFile(newrootfile,"RECREATE");
 
-
+*/
 	/* loop over the chips !! */
 
-	for (m=0;m<RENACHIPS;m++){
+	//	for (m=0;m<RENACHIPS;m++){
 
        /* Creating histograms */
+
+
+	  /*
+
 	  for (j=0;j<4;j++){
             for (i=0;i<2;i++){
 	      for (k=0;k<64;k++){
@@ -210,14 +191,15 @@ int main(int argc, Char_t *argv[])
           }
 	} // m
 
-
+	  */
 	  /*
 	  if (m==0)  block = (TTree *) rfile->Get("block1");
           else  block = (TTree *) rfile->Get("block2");
 	  */
 
 	  sprintf(treename,"mdata");
-          block = (TTree *) rfile->Get(treename);
+           TChain *block;
+         block = (TChain *) rfile->Get(treename);
 
          if (!block) {
 	   cout << " Problem reading Tree " << treename  << " from file " << filename << endl;
@@ -225,78 +207,98 @@ int main(int argc, Char_t *argv[])
            return -10;}
 	 //	 entries=block->GetEntries();
 
-	 if (verbose)	 cout << " Looping over " << block->GetEntries() << " entries." ;
- 	block->SetBranchAddress("eventdata",&event);
-         strncpy(filebase,filename,strlen(filename)-5);
-         filebase[strlen(filename)-5]='\0';
-  
-	 if (verbose) cout << "\n. Cloning Tree " << endl;
-	 //	 TTree *calblock = (TTree *)block->GetTree()->CloneTree(0);
-	 TTree *calblock = block->CloneTree(0);
 
-        sprintf(treename,"calblock");// Energy calibrated event data ");
-	//        TTree *calblock =  new TTree(treename,"PET Data, crystal id determined");
-	// calblock->Branch("eventdata",&event);
+         cout << " Read block from file :: " << time(NULL)-starttime << endl;
 
+         PixelCal *CrysCal = new PixelCal("CrysCalPar");
+         CrysCal->SetVerbose(verbose);
 
-	  /*
-         if (m==0) calblock->SetName("calblock1");
-         else calblock->SetName("calblock2");
-	  */
-	          calblock->SetName(treename);
+         CrysCal->ReadCal(filebase);
+         cout << " CrysCal->X[0][0][2][1][0] = " << CrysCal->X[0][0][2][1][0] << endl;
 
-		  calblock->SetMaxTreeSize(100e6);
+       Sel_GetEhis *m_getEhis = new Sel_GetEhis();
 
-          int chip;
-          int module;
-          int apd;
+       cout << "FYI:: Size of Sel_GetEhis :: " << sizeof(Sel_GetEhis) << endl;
 
 
+       m_getEhis->SetFileBase(filebase);
 
 
+       TFile *rfi;
+
+       if (!fitonly){
+
+#define USEPROOF
+
+#ifdef USEPROOF      
+       //  TProof *proof = new TProof("proof");
+       //   proof->Open("");
+      	 TProof *p = TProof::Open("workers=1");
+	 //	 TProof *p = TProof::Open("");
+       //       gProof->UploadPackage("/home/miil/MODULE_ANA/ANA_V5/SpeedUp/PAR/ModuleDatDict.par");
+       //       gProof->EnablePackage("ModuleDatDict");
+
+         cout << " Proof open :: " << time(NULL)-starttime << endl;
+
+#define USEPAR
+     
+#ifdef USEPAR
+       /* This is an example of the method to use PAR files  -- will need to use an environment var here to make it location independent */
+             p->UploadPackage("/home/miil/MODULE_ANA/ANA_V5/SpeedUp/PAR/Sel_GetEhis.par");
+             p->EnablePackage("Sel_GetEhis");
+
+#else
+       /* Loading the shared library */
+	     p->Exec("gSystem->Load(\"/home/miil/MODULE_ANA/ANA_V5/SpeedUp/lib/libModuleAna.so\")");
+#endif
+
+        p->AddInput(CrysCal);
+
+       block->SetProof();
+         cout << " Proof ready to process :: " << time(NULL)-starttime << endl;
+       block->Process(m_getEhis);
+        cout << " Proof processed :: " << time(NULL)-starttime << endl;
+       m_getEhis->SetPixelCal(CrysCal);
+
+#else
+       //      block->Process("Sel_GetFloods.cc+");
+       m_getEhis->SetPixelCal(CrysCal);
+      block->Process(m_getEhis);
+#endif
+
+         PPeaks *thesePPeaks = (PPeaks *) rfile->Get("PhotoPeaks");
+	 if (!(thesePPeaks)) {
+	   cout << " Warning :: Couldn't read object PhotoPeaks from file " << rfile->GetName() << endl;
+	   cout << " rfile->ls() :: "<< endl;
+	   rfile->ls();
+           exit(-1);
+	 }
+
+	 m_getEhis->SetPPeaks(thesePPeaks);
+
+        cout << " Before WriteHist :: " << time(NULL)-starttime << endl;
+	rfi = new TFile("CrysPixs.root","RECREATE");
+       m_getEhis->WriteHists(rfi);
+        cout << " After WriteHist :: " << time(NULL)-starttime << endl;
 
 
-          cout << " Looping over data .. ";
-          if (verbose) cout << endl;
-	  //	  for (i=0;i<block->GetEntries();i++){
-	  for (i=0;i<1e7;i++){
-	    //	    if ((i%100000)==0) fprintf(stdout,"%d Events Processed\r",i);
-	   //      	  for (i=0;i<1e5;i++){
-	    block->GetEntry(i);
-	    chip=event->chip;
-            module=event->module;
-            apd=event->apd; 
-
-	   // perform time calibration
-            if ((event->apd==0) || (event->apd==1) ) event->ft=finecalc(event->ft,(*uu_c)(event->chip+RENACHIPS*event->module+event->apd*MODULES*RENACHIPS),(*vv_c)(event->chip+RENACHIPS*event->module+event->apd*MODULES*RENACHIPS) );
+	 }
 
 
-	    if (validpeaks[chip][module][apd]){
-               
-	      // if (validpeaks[m][0][0]&&UNIT0.com1h<threshold)
-	      if (floodlut)
-                { event->id=floodmap[chip][module][apd]->GetBinContent(floodmap[chip][module][apd]->FindBin(event->x,event->y));}
-              else 
-		{   event->id=getcrystal(event->x,event->y,U_x[chip][module][apd],U_y[chip][module][apd],verbose);}
-	      if ((event->id>=0)&&(event->id< 64)){  
-                    Ehist[chip][module][apd][event->id]->Fill(event->E); 
-                    Ehist_com[chip][module][apd][event->id]->Fill(-event->Ec); 
-		} // if valid crystalid 
-            } // if validpeaks
+       else { m_getEhis->LoadEHis(rfile); m_getEhis->SetPixelCal(CrysCal);}
 
-             calblock->Fill();
-             
-	     //	     cout << validpeaks[0][0] << " "<<UNIT0.E << " " << UNIT0.id<< endl;
+    
+       // m_getEhis->FitApdEhis(0,0,0,0);
 
-	  }
+       cout << " writing CrysCal :: " << time(NULL)-starttime << endl;
+     CrysCal->Write(); 
 
-
-	  cout << " .... Done looping over the events " <<endl;
-
+      /*
 	  f=calblock->GetCurrentFile();
         f->Write();     
-      
+      */
 
+      /*
        TFile *fhi;
        sprintf(newrootfile,"%s.enecal.hist",filebase);
        strcat(newrootfile,".root");
@@ -326,62 +328,13 @@ int main(int argc, Char_t *argv[])
 	//	Ehist[1][0][0][34]->Draw(); c1->Print("test.png");
  
           fhi->Close();
-         
+        
+      */ 
+       cout << " closing file  rfi :: " << time(NULL)-starttime << endl;
+       rfi->Close();
+       cout << " closing file  rfile :: " << time(NULL)-starttime << endl;
 	rfile->Close();
-
-
+       cout << " done :: " << time(NULL)-starttime << endl;
+	
 	return 0;}
-
-
-Int_t getcrystal(Double_t x, Double_t y, Double_t xpos[64], Double_t ypos[64], Int_t verbose){
-  //  cout << " Getcrystal :: " << " xpos[21] = " << xpos[21] << " ypos[21] = " << ypos[21] << endl;
-  //  cout << " x = " << x << " y = " << y << endl;
-  
-  Double_t dist,min;
-  Int_t histnr;
-
-  histnr=9999;
-  min=100000;
-  if ((TMath::Abs(x)>1)||(TMath::Abs(y)>1)) return -3;
-   for (Int_t k=0;k<PEAKS;k++){
-      //      dist=(*(*xpeaks+k)-xdata)*(*(*xpeaks+k)-xdata)+(*(*ypeaks+k)-ydata)*(*(*ypeaks+k)-ydata);
-
-      dist=TMath::Power((Float_t) ypos[k]-y,2)+TMath::Power((Float_t) xpos[k]-x,2);
-
-     //if (debvar) cout << "k = " << k << "dist = " << dist << endl;
-
-     if (dist<min) {histnr=k;min=dist;
-
-       //   if (debvar) cout << "--------> k = " << k <<" min = " << min <<endl;
-       }
-     } //for loop 
-   //      if (verbose) cout << "FINAL :: histnr = " << histnr <<" min = " << min << endl;
-     if (histnr!=9999) { 
-       return histnr;
-	}
-     
-  
-     else { if (verbose) 
-	 {cout << "No associated histogram found !" << endl;
-	   cout << " Entry :  x = " << x << " y = " << y <<endl;}
-     }
-    min=10000;
-    histnr=9999;
-    
-  return -2;}
-
-
-
-
-Double_t finecalc(Double_t uv, Float_t u_cent, Float_t v_cent){
-  Double_t tmp;
-  Int_t UV = (Int_t) uv;
-  Int_t u = (( UV & 0xFFFF0000 ) >> 16 );
-  Int_t v = ( UV & 0xFFFF );
-  // cout << " finecalc : u = " << u << " v = " << v  << " ( center :: " << u_cent << ","<< v_cent << ")";
-  tmp=TMath::ATan2(u-u_cent,v-v_cent);
-  //  cout << " tmp = " << tmp << endl;
-  if (tmp < 0. ) { tmp+=2*3.141592;}
-  return tmp;///(2*3.141592*CIRCLEFREQUENCY);
-}
 

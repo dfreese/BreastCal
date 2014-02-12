@@ -1,7 +1,9 @@
 #include <stdlib.h>
 #include "getfloods.h"
+#include "Sel_GetFloods.h"
 #include "TTreePerfStats.h"
 #include "TChain.h"
+#include "TProof.h"
 
 Int_t main(int argc, Char_t *argv[])
 {
@@ -79,7 +81,7 @@ Int_t main(int argc, Char_t *argv[])
         if (!rfile || rfile->IsZombie()) {  
          cout << "problems opening file " << filename << "\n.Exiting" << endl; 
          return -11;}
-        TTree *block;
+
 
         Char_t tmpstring[60],titlestring[60];
 	//,cutstring[120],cutstring2[120];
@@ -92,17 +94,20 @@ Int_t main(int argc, Char_t *argv[])
 	//        for (Int_t kk=0;kk<RENACHIPS;kk++){
 
 	  //         cout << " Analyzing chip " << kk << endl;
+
+	//         TTree *block;
 	 sprintf(treename,"mdata");         
-         block = (TTree *)  rfile->Get(treename);
-	 /* Perf ana code
-         TChain *blockchain;
-         blockchain = (TChain *) rfile->Get(treename);
-         blockchain->Merge("mergedchain.root");
-         TFile *mc = new TFile("mergedchain.root");
-         block = (TTree *)  mc->Get("mdata");
-*/
-         block->SetCacheSize(300000000);
-         block->AddBranchToCache("*");
+	 //         block = (TTree *)  rfile->Get(treename);
+	 //	 Perf ana code
+         TChain *block;
+         block = (TChain *) rfile->Get(treename);
+	 //         blockchain->Merge("mergedchain.root");
+	 //         TFile *mc = new TFile("mergedchain.root");
+	 //       block = (TTree *)  mc->Get("mdata");
+
+	 //         block->SetCacheSize(300000000);
+	 //         block->AddBranchToCache("*");
+
          TTreePerfStats *ps = new TTreePerfStats("ioperf",block);
          if (!block) {
 	   cout << " Problem reading Tree " << treename  << " from file " << filename << endl;
@@ -118,7 +123,7 @@ Int_t main(int argc, Char_t *argv[])
 	 */
          if (verbose)  cout << " Ok, we got " << entries << " entries. " << endl;
 
-	 block->SetBranchAddress("eventdata",&event);
+	 //	 block->SetBranchAddress("eventdata",&event);
 
 
         strncpy(filebase,filename,strlen(filename)-5);
@@ -152,14 +157,16 @@ Int_t main(int argc, Char_t *argv[])
        Double_t pp_right,pp_low,pp_up;
        Double_t ppeaks[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
        Double_t ppeaks_com[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
+
+       PPeaks *ph = new PPeaks("PhotoPeaks");
+
        Double_t pp_right_com,pp_low_com,pp_up_com;
 
-
-
+      
        if (verbose) cout << " Determining photopeak position " << endl;
 
        for (c=0;c<CARTRIDGES_PER_PANEL;c++){
-	 for (f=0;f<FINS_PER_CARTRIDGE;f++){
+      	 for (f=0;f<FINS_PER_CARTRIDGE;f++){
            for (i=0;i<MODULES_PER_FIN;i++){
 	     for (j=0;j<APDS_PER_MODULE;j++){
 	       pp_low= PP_LOW_EDGE;
@@ -197,13 +204,15 @@ Int_t main(int argc, Char_t *argv[])
            pp_right=0;
            pp_right_com=0;
 	 }
+	   ph->spat[c][f][i][j]=pp_right;
            ppeaks[c][f][i][j]=pp_right;
            ppeaks_com[c][f][i][j]=pp_right_com;
+           ph->com[c][f][i][j]=pp_right_com;
 	   if ( verbose ) { cout << " ppeaks[" << c << "][" << f << "][" << i << "][" << j << "] = " << ppeaks[c][f][i][j] << endl;}
 
 	   sprintf(tmpstring,"floods[%d][%d][%d][%d]",c,f,i,j);
 	   sprintf(titlestring,"C%dF%d, Module %d, PSAPD %d",c,f, i,j);
-          floods[c][f][i][j]=new TH2F(tmpstring,titlestring,256,-1,1,256,-1,1);
+           floods[c][f][i][j]=new TH2F(tmpstring,titlestring,256,-1,1,256,-1,1);
 	   } //loop over j 
 	   } // loop over i
 
@@ -215,6 +224,56 @@ Int_t main(int argc, Char_t *argv[])
 	 } // f
        }// c       
 
+       Sel_GetFloods *m_getfloods = new Sel_GetFloods();
+       //   TSelector *m_getfloods = new TSelector();
+
+
+
+       //         PPeaks *thesepeaks = new PPeaks("thesepeaks");
+	 //    thesepeaks->SetName("Photopeaks");
+
+
+       //       m_getfloods->SetOutputFileName(filename);
+       m_getfloods->SetOutputFileName("Testing.root");
+       m_getfloods->SetFileBase(filebase);
+       m_getfloods->SetPhotoPeaks(ppeaks);
+
+        #define USEPROOF
+
+#ifdef USEPROOF      
+       //  TProof *proof = new TProof("proof");
+       //   proof->Open("");
+       TProof *p = TProof::Open("");
+
+     
+#ifdef USEPAR
+       /* This is an example of the method to use PAR files  --  need to use an environment var here to make it location independent */
+       p->UploadPackage("/home/miil/MODULE_ANA/ANA_V5/SpeedUp/PAR/Sel_GetFloods.par");
+       p->EnablePackage("Sel_GetFloods");
+#else
+       /* Loading the shared library */
+	     p->Exec("gSystem->Load(\"/home/miil/MODULE_ANA/ANA_V5/SpeedUp/lib/libModuleAna.so\")");
+#endif
+
+        p->AddInput(ph);
+	// This didn't work ::            gProof->Load("m_getfloods");
+           
+       block->SetProof();
+       block->Process(m_getfloods);
+#else
+       //      block->Process("Sel_GetFloods.cc+");
+      block->Process(m_getfloods);
+#endif
+ 
+	      //              block->Process("Sel_GetFloods.cc");
+
+	      // 
+
+
+       cout << " Proof output " << endl;
+       //     gProof->GetOutputList()->Print();
+
+       /*
        if (verbose) cout << " Obtaining Flood histograms " << endl;
         for(l=0;l<block->GetEntries();l++){
          block->GetEntry(l);
@@ -226,14 +285,17 @@ Int_t main(int argc, Char_t *argv[])
            }
          } // ppeaks[][][][] > 0
 	} // loop over entries (l) 
- 
+       */
 	if (verbose) cout << " Done Looping. "  << endl;
 
 	//         ps->SaveAs("perfstat.root");
 
 
 	if (verbose) cout << " Setting ppVals " << endl;
-	
+
+
+
+	/*	
        for (c=0;c<CARTRIDGES_PER_PANEL;c++){
 	 for (f=0;f<FINS_PER_CARTRIDGE;f++){
            for (i=0;i<MODULES_PER_FIN;i++){
@@ -245,11 +307,13 @@ Int_t main(int argc, Char_t *argv[])
 	     } //j 
 	   } //i
                 c1->cd(i+1);
-		makeplot(floods,c,f,_NRFLOODSTODRAW,"floods",filebase);
+       		makeplot(floods,c,f,_NRFLOODSTODRAW,"floods",filebase);
 	 } //f 
        } //c
-
+	*/
      
+
+	/*
        
        for (c=0;c<CARTRIDGES_PER_PANEL;c++){
 	 for (f=0;f<FINS_PER_CARTRIDGE;f++){
@@ -260,7 +324,7 @@ Int_t main(int argc, Char_t *argv[])
            for (i=0;i<MODULES_PER_FIN;i++){
 	     for (j=0;j<APDS_PER_MODULE;j++){
            
-	       floods[c][f][i][j]->Write();
+	       //    floods[c][f][i][j]->Write();
 	       //	       E[c][f][i][j]->Write();
 	       if ( verbose ) { cout << " ppeaks[" << c << "][" << f << "][" << i << "][" << j << "] = " << ppeaks[c][f][i][j] ;}
 	     } // j
@@ -275,8 +339,15 @@ Int_t main(int argc, Char_t *argv[])
        if (verbose) cout << endl;
        	} //loop over f (fins)
        } // loop over c
-	       block->Write();
-       rfile->Close();
+*/
+
+        rfile->cd(); 
+        m_getfloods->WriteFloods(rfile,verbose);
+        rfile->cd();
+	ph->Write();
+
+        block->Write();
+        rfile->Close();
     
 
 	return 0;}
@@ -381,7 +452,7 @@ Double_t  GetPhotopeak_v2(TH1F *hist,Double_t pp_low,Double_t pp_up,Int_t verbos
 }
 
 
-Int_t	   makeplot(TH1F *hist[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE],Int_t c, Int_t f, Int_t NRFLOODSTODRAW,Char_t suffix[40],Char_t filebase[FILENAMELENGTH]) {
+Int_t	   makeplot(TH1F *hist[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE],Int_t c, Int_t f, Int_t NRFLOODSTODRAW,const Char_t suffix[40],Char_t filebase[FILENAMELENGTH]) {
 
         TCanvas *c1;
   Char_t pngstring[FILENAMELENGTH];
@@ -406,27 +477,3 @@ Int_t	   makeplot(TH1F *hist[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_P
 	   } // kk
 	   return 0;}
 
-Int_t	   makeplot(TH2F *hist[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE],Int_t c, Int_t f, Int_t NRFLOODSTODRAW,Char_t suffix[40],Char_t filebase[FILENAMELENGTH]) {
-
-        TCanvas *c1;
-       Char_t pngstring[FILENAMELENGTH];
-
-        c1 = (TCanvas*)gROOT->GetListOfCanvases()->FindObject("c1");
-        if (!c1) c1 = new TCanvas("c1","c1",10,10,1000,1000);
-        c1->SetCanvasSize(1000,500);
-      	 c1->Clear();
-
-	     Int_t kk,i,j;
-	   for (kk=0;kk<TMath::Floor(MODULES_PER_FIN/NRFLOODSTODRAW);kk++){
-         c1->Clear();
-         c1->Divide(NRFLOODSTODRAW,APDS_PER_MODULE);
-	 for (i=kk*NRFLOODSTODRAW;i<NRFLOODSTODRAW*(kk+1);i++){ 
-          for (j=0;j<APDS_PER_MODULE;j++){
-            c1->cd((i%NRFLOODSTODRAW)+1+j*NRFLOODSTODRAW);
-            hist[c][f][i][j]->Draw("colz"); } //j
-	 } //i
-	 sprintf(pngstring,"%s.C%dF%dM%d-%d.%s.",filebase,c,f,kk*NRFLOODSTODRAW,i-1,suffix);
-         strcat(pngstring,"png");
-         c1->Print(pngstring);
-       } // kk
-	   return 0;	   }

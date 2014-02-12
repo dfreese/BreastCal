@@ -12,12 +12,16 @@
 #include "TVector.h"
 #include "TMath.h"
 #include "TF1.h"
-#include "./decoder.h"
+#include "TChain.h"
 #include "./ModuleDat.h"
-Int_t getcrystal(Double_t x, Double_t y, Double_t xpos[64], Double_t ypos[64], Int_t verbose );
+#include "Syspardef.h"
+#include "libInit_avdb.h"
+#include "myrootlib.h"
+#include "TProof.h"
+#include "Sel_GetEhis.h"
 
-
-Double_t finecalc(Double_t uv, Float_t u_cent, Float_t v_cent);
+//Int_t getcrystal(Double_t x, Double_t y, Double_t xpos[64], Double_t ypos[64], Int_t verbose );
+//Double_t finecalc(Double_t uv, Float_t u_cent, Float_t v_cent);
 
 
 #endif

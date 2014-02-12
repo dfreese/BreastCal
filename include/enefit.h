@@ -10,7 +10,6 @@
 #include "Apd_Fit.h"
 #include "TMath.h"
 #include "TSpectrum.h"
-#include "./decoder.h"
 #include "ModuleDat.h"
 #include "ModuleCal.h"
 #include "TError.h"

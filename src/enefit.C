@@ -1,5 +1,5 @@
 #include "enefit.h"
-
+#include "decoder.h"
 
 #define FIRSTCHIP 0
 #define LASTCHIP RENACHIPS
@@ -104,36 +104,6 @@ int main(int argc, Char_t *argv[])
         filebase[strlen(filename)-12]='\0';
 
 	//        for (m=0;m<RENACHIPS;m++){
-        for (m=FIRSTCHIP;m<LASTCHIP;m++){
-        for (i=0;i<4;i++)
-        for (j=0;j<2;j++){
-	  { validpeaks[m][i][j]=0;
-	    sprintf(peaklocationfilename,"./CHIPDATA/%s.RENA%d.unit%d_apd%d_peaks",filebase,m,i,j);
-       strcat(peaklocationfilename,".txt");
-       infile.open(peaklocationfilename);
-       lines = 0;
-       while (1){
-       if (!infile.good()) break;
-       infile >> k >>  aa >> bb;
-       if (k < 64) { U_x[m][i][j][k]=aa; U_y[m][i][j][k]=bb;}
-       //       cout << k << ", " << U_x[i][j][k]<< ", " << U_y[i][j][k] << endl;
-       lines++;      
-       }
-       if (verbose) cout << "Found " << lines-1 << " peaks in  file " << peaklocationfilename << endl;
-       infile.close();
-       if ((lines==65)){ if (verbose) cout << "Setting Validpeaks " << endl; validpeaks[m][i][j]=1; }
-	  }//j
-	} //i 
-	} //m
-
-	if (verbose){
-	  for (m=FIRSTCHIP;m<LASTCHIP;m++){
-      	  for (i=0;i<4;i++){
-        for (j=0;j<2;j++){      
-	  cout << " m = " << m << " i = " << i << " j = " << j << " : " <<validpeaks[m][i][j] <<endl;
-	} //j 
-	  }//i
-	  }//m
  
 	  cout <<  " File content :: " << endl;
           enefile->ls();
@@ -142,120 +112,7 @@ int main(int argc, Char_t *argv[])
 
  
 
-	/* Getting E hists */
-      Char_t tmpstring[30];
-      for (m=FIRSTCHIP;m<LASTCHIP;m++){
-	//        sprintf(tmpstring,"RENA%d",m);
-	//      	enefile->cd(tmpstring);
-	//        subdir[m]->cd();
-           for (i=0;i<4;i++){
-           for (j=0;j<2;j++){ 
-	   for (k=0;k<64;k++){              
-	     sprintf(tmpstring,"RENA%d/Ehist[%d][%d][%d][%d];1",m,m,i,j,k);
-              Ehist[m][i][j][k]=(TH1F *) enefile->Get(tmpstring); 
-              sprintf(tmpstring,"Efits[%d][%d][%d][%d];1",m,i,j,k);
-              Efits[m][i][j][k]= new TF1(tmpstring,"gaus",EFITMIN,EFITMAX);
-              sprintf(tmpstring,"Efits_com[%d][%d][%d][%d];1",m,i,j,k);
-              Efits_com[m][i][j][k]= new TF1(tmpstring,"gaus",EFITMIN_COM,EFITMAX_COM);
-    	     sprintf(tmpstring,"RENA%d/Ehist_com[%d][%d][%d][%d];1",m,m,i,j,k);
-              Ehist_com[m][i][j][k]=(TH1F *) enefile->Get(tmpstring); 
 
-	   }//k
-	   }//j 
-	   } //i  
-      }  // m
-
-
-	
-      //	  TF1 *ftmp[64];
-          Float_t CRYSTALPP[RENACHIPS][4][2][64];
-          Float_t CRYSTALPP_COM[RENACHIPS][4][2][64];
-	/* Fitting E spectra */
-	  Float_t Emean,Emean_com,peak,Emeans[8*RENACHIPS],Emeans_com[8*RENACHIPS];
-	     /* fitting energy spectra */
-
-
-
-	  for (m=FIRSTCHIP;m<LASTCHIP;m++){
-           for (i=0;i<4;i++){
-          for (j=0;j<2;j++){ 
-	    if (verbose) { cout << endl; cout << " --------------- CHIP " << m << " MODULE " << i << " PSAPD " << j;
-	      cout << " ---------------- " << endl;}
-	     if (validpeaks[m][i][j]==1) {
-	       if (verbose) cout << " Getting mean energy :: " << endl;
-	       Emean = (Float_t )  (*ppVals)(m*8+j*4+i);
-	       Emeans[m*8+j*4+i] = (Float_t )  (*ppVals)(m*8+j*4+i);
-	       Emean_com = (Float_t )  (*ppVals_com)(m*8+j*4+i);
-	       Emeans_com[m*8+j*4+i] = (Float_t )  (*ppVals_com)(m*8+j*4+i);
-	       if (verbose)  { cout  << " S :: ppVals : " << Emean   << " Entries :" << Ehist[m][i][j][0]->GetEntries()   << endl;}
-	       if (verbose)  { cout  << " C :: ppVals : " << Emean_com   << " Entries :" << Ehist_com[m][i][j][0]->GetEntries()   << endl;}
-               for (k=0;k<64;k++){
-	      //	      fitall(Ehist[i][j], ftmp, &vals[0], pixvals, E_low, E_up, c1, verbose);
-		 sprintf(tmpstring,"Efits[%d][%d][%d][%d]",m,i,j,k);
-                 if ( Ehist[m][i][j][k]->GetEntries() < MINPIXENTRIES ) Ehist[m][i][j][k]->Rebin(2); 
-		 //     if ( Ehist[m][i][j][k]->GetEntries() < MINPIXENTRIES/2 ) Ehist[m][i][j][k]->Rebin(2); 
-              if (verbose) {
-                cout << "===================================================================" << endl;
-                cout << "= Histogram["<<m<<"]["<<i<<"]["<<j<<"]["<<k<<"]"                             << endl;
-                cout << "===================================================================" << endl;
-                cout << " ----------- Spatials ---------------- " <<endl;
-                cout << " Hist entries : " << Ehist[m][i][j][k]->GetEntries() << " Efits mean :" ;
-		cout << Efits[m][i][j][k]->GetParameter(1) << " nrbins :: " << Ehist[m][i][j][k]->GetNbinsX() << endl;}
-	      // edge has lower gain
-              if ((k==0)||(k==7)||(k==54)||(k==63)){ peak=getpeak( Ehist[m][i][j][k], Emean*0.7,Emean*1.15,0,verbose);
-                if (peak==NOVALIDPEAKFOUND) { 
-		  if (verbose) cout << " That didn't go well. Retry to get peak with larger margins " << endl;
-		  peak=getpeak( Ehist[m][i][j][k], Emean*0.6,Emean*1.5,1,verbose);
-		}}
-	      else { peak=getpeak( Ehist[m][i][j][k], Emean*0.85,Emean*1.15,0,verbose);
-                if (peak==NOVALIDPEAKFOUND) { 
-		  if (verbose) cout << " That didn't go well. Retry to get peak with larger margins " << endl;
-		  peak=getpeak( Ehist[m][i][j][k], Emean*0.7,Emean*1.5,1,verbose);}
-		}
-		if (peak==NOVALIDPEAKFOUND) peak=Emean;
-              Efits[m][i][j][k]->SetParameter(1,peak);
-              Efits[m][i][j][k]->SetParameter(2,0.04*peak);
-              if (verbose) {
-		cout << " Peak @ " << peak <<", fitting between : " << peak*0.85 << " and " << peak*1.15 << endl;}
-              if ( (Ehist[m][i][j][k]->GetEntries()) >  MINEHISTENTRIES ){
-		Ehist[m][i][j][k]->Fit(Efits[m][i][j][k],"Q","",peak*0.85,peak*1.15);}
-              Efits[m][i][j][k]->SetLineColor(kRed);
-	      CRYSTALPP[m][i][j][k]=Efits[m][i][j][k]->GetParameter(1);
-              if (TMath::Abs(CRYSTALPP[m][i][j][k]/Emean -1 ) > 0.3 )          {
-		if (verbose) { cout << " BAD FIT to histogram ["<<m<<"]["<<i<<"]["<<j<<"]["<<k<<"]" << endl; 
-		  cout << " taking PP @ " << Emean << " ( peak = " << peak << " ) " << endl;}
-                CRYSTALPP[m][i][j][k]=Emean;}
-	      if (verbose) {
-                cout << " ------------ Common ----------------- " <<endl;
-                cout << " Hist entries : " << Ehist_com[m][i][j][k]->GetEntries() << " Efits mean :" ;
-		cout << Efits_com[m][i][j][k]->GetParameter(1) << endl;}
-	      Ehist_com[m][i][j][k]->SetAxisRange(E_low_com,SATURATIONPEAK,"X");
-              peak=getpeak( Ehist_com[m][i][j][k], Emean_com*0.85,Emean_com*1.25,0,verbose);
-                if (peak==NOVALIDPEAKFOUND) { 
-		  if (verbose) cout << " That didn't go well. Retry to get peak with larger margins " << endl;
-                  if ((k==0)||(k==7)||(k==54)||(k==63)){ peak=getpeak( Ehist_com[m][i][j][k], Emean_com*0.6,Emean_com*1.25,1,verbose);}
-		  else {peak=getpeak( Ehist_com[m][i][j][k], Emean_com*0.7,Emean_com*1.5,1,verbose);}
-		}
-              if (peak==NOVALIDPEAKFOUND) peak=Emean_com;
-              Efits_com[m][i][j][k]->SetParameter(1,peak);
-              Efits_com[m][i][j][k]->SetParameter(2,0.04*peak);
-              if (verbose) {
-		cout << " Peak @ " << peak <<", fitting between : " << peak*0.85 << " and " << peak*1.15 << endl;}
-              if ( (Ehist_com[m][i][j][k]->GetEntries()) >  MINEHISTENTRIES ){
-		Ehist_com[m][i][j][k]->Fit(Efits_com[m][i][j][k],"Q","",peak*0.85,peak*1.15);}
-              Efits_com[m][i][j][k]->SetLineColor(kBlue);
-	      CRYSTALPP_COM[m][i][j][k]=Efits_com[m][i][j][k]->GetParameter(1);
-              if (TMath::Abs(CRYSTALPP_COM[m][i][j][k]/Emean_com -1 ) > 0.35 )          {
-		if (verbose) {cout << " BAD FIT to histogram ["<<m<<"]["<<i<<"]["<<j<<"]["<<k<<"]" << endl;
-                     cout << " taking PP @ " << Emean_com << " ( peak = " << peak << " ) " << endl;}
-                CRYSTALPP_COM[m][i][j][k]=Emean_com;}
-
-	       } // loop over k
-	     } // validpeaks
-	   } // i 
-	  } //j
-	  } // m
-	
 
    TCanvas *c1;
    c1 = (TCanvas*)gROOT->GetListOfCanvases()->FindObject("c1");
@@ -264,76 +121,7 @@ int main(int argc, Char_t *argv[])
   c1->SetCanvasSize(1754,1240);
 	  // plot histograms
  
-  if (genplots){
-
-  Bool_t firstloop=1;
-           m=0;i=0;j=0;
-	   //         for (m=0;m<RENACHIPS;m++){
-         for (m=FIRSTCHIP;m<LASTCHIP;m++){
-	  for (i=0;i<4;i++){
-	   for (j=0;j<2;j++){
-            for (Int_t kk=0;kk<2;kk++){
-             c1->Clear();
-             c1->Divide(8,4);
-             for (k=0;k<32;k++){
-	       c1->cd(k+1);
-                Ehist_com[m][i][j][k+kk*32]->Draw();
-                Efits_com[m][i][j][k+kk*32]->Draw("same");
-	      }
-             if (firstloop) { c1->Print("crystalpeakfits_com.ps("); firstloop=0;}
-             else { c1->Print("crystalpeakfits_com.ps");
-	  }
-
-	    }  // loop kk
-           } // loop j
-	  } // loop over i
-
-          } // loop over m
-
-   c1->Print("crystalpeakfits_com.ps)");
-
-   firstloop=1;
-           m=0;i=0;j=0;
-	   //         for (m=0;m<RENACHIPS;m++){
-         for (m=FIRSTCHIP;m<LASTCHIP;m++){
-	  for (i=0;i<4;i++){
-	   for (j=0;j<2;j++){
-            for (Int_t kk=0;kk<2;kk++){
-             c1->Clear();
-             c1->Divide(8,4);
-             for (k=0;k<32;k++){
-	       c1->cd(k+1);
-                Ehist[m][i][j][k+kk*32]->Draw();
-                Efits[m][i][j][k+kk*32]->Draw("same");
-	      }
-             if (firstloop) { c1->Print("crystalpeakfits_spat.ps("); firstloop=0;}
-             else { c1->Print("crystalpeakfits_spat.ps");
-	  }
-
-	    }  // loop kk
-           } // loop j
-	  } // loop over i
-
-          } // loop over m
-
-   c1->Print("crystalpeakfits_spat.ps)");
-
-  }
-
-	  if (verbose) {
-	    cout << "Energy Calibration parameters :: " << endl;
-	    for (m=FIRSTCHIP;m<LASTCHIP;m++){
-	      cout << "Chip " << m << endl;
-	      for (k=0;k<64;k++){
-              for ( i=0;i<4;i++){
-                for (j=0;j<2;j++){
-                  cout << CRYSTALPP[m][i][j][k]<<" " << CRYSTALPP_COM[m][i][j][k]; }}
-              cout << endl;}
-	      cout <<endl; }
-	  }
-
-
-
+  
 
 	  // Open Calfile //
         strncpy(filebase,filename,strlen(filename)-12);
@@ -350,41 +138,6 @@ int main(int argc, Char_t *argv[])
 
         TTree *cal;
 
-        Char_t treename[40];
-        Char_t treetitle[50];
-	//   for (m=0;m<RENACHIPS;m++){
-            sprintf(treename,"cal");
-            sprintf(treetitle,"Energy calibrated LYSO-PSAPD module data ");
-	    cal = new TTree(treename,treetitle);
-            cal->Branch("Calibrated Event Data",&calevent);
-
-	    //	    for (m=0; m<RENACHIPS;m++){
-	    for (m=FIRSTCHIP; m<LASTCHIP;m++){
-             for (i=0;i<4;i++){ 
-              for (j=0;j<2;j++){
-               sprintf(tmpstring,"globhist[%d][%d][%d]",m,i,j);
-    	       sprintf(tmptitle,"Global Espec RENA %d Module %d PSAPD %d",m,i,j);
-               globhist[m][i][j] = new TH1F(tmpstring,tmptitle,Ebins,E_low,E_up);
-               sprintf(tmpstring,"globhist_com[%d][%d][%d]",m,i,j);
-	       sprintf(tmptitle,"Global Common Espec RENA %d Module %d PSAPD %d",m,i,j);
-               globhist_com[m][i][j] = new TH1F(tmpstring,tmptitle,Ebins_com,E_low_com,E_up_com);
-	      }//j
-	     }//i
-	    }//m
-
-
-
-
-
-	//	enefile->ls();
-
-
-	    //    for (m=0;m<RENACHIPS;m++){
-      /*	  if (m==0)  {
-            block = (TTree *) enefile->Get("calblock1");
-	  }
-          else  block = (TTree *) enefile->Get("calblock2");
-      */
         sprintf(treename,"calblock");
         calblock = (TTree *) enefile->Get(treename);
         if (!calblock) {

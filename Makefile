@@ -17,8 +17,8 @@ ROOTMACRODIR_INC=$(ROOTMACRODIR)/include
 CFLAGS =  -Wall -Wno-deprecated -W -g -fPIC -I$(ROOTMACRODIR_INC) -I./include -I$(ROOTSYS)/include
 CXXFLAGS = $(CFLAGS) $(shell root-config --cflags) -O3
 MYLIB = -L$(ROOTMACRODIR_LIB) -lmyrootlib -lInit_avdb
-DICTLIB = -L./lib -lModuleDatDict
-LDFLAGS = $(shell root-config --glibs) $(shell root-config --libs) -lMinuit -lSpectrum -lHistPainter -lTreePlayer $(MYLIB) $(DICTLIB)
+DICTLIB = -L./lib -lModuleAna
+LDFLAGS = $(shell root-config --glibs) $(shell root-config --libs) -lMinuit -lSpectrum -lHistPainter -lTreePlayer -lProof $(MYLIB) $(DICTLIB)
 CC =g++
 
 
@@ -26,66 +26,95 @@ SOURCE_DIR  := src
 INCLUDE_DIR := include
 LIB_DIR     := lib
 
+# note: the make implicit rule to compile C++ programs uses .C or .cc extension only.
 CC_EXTENSION := C
+CLASS_EXTENSION := cc
+
 PRG_SUFFIX_FLAG := 0
 SRCS := $(wildcard $(SOURCE_DIR)/*.$(CC_EXTENSION))
-OBJS := $(SRCS:%.C=%.o)
+OBJS := $(SRCS:%.C=%.o) $(CLASSES_C:%.cc=%.o)
 HDRS  = $(wildcard  $(INCLUDE_DIR)/*.h)
 PRGS := $(patsubst $(SOURCE_DIR)/%.C,%,$(SRCS))
 PRG_SUFFIX=
 BINNS := $(patsubst %,./bin/%$(PRG_SUFFIX),$(PRGS))
 BINS := $(shell  echo $(BINNS) |  sed  's/\(\.\/bin\/[A-Z]\+[A-Za-z_0-9]\+\)\b//g') #| grep -v "[A-Z]*" )
+HDRONLY := Syspardef.h
 
-SOLIBS := ./lib/libModuleDatDict.so
+CLASSES_C := $(wildcard $(SOURCE_DIR)/*.$(CLASS_EXTENSION))
+CLASSES_H := $(patsubst $(SOURCE_DIR)/%.cc,$(INCLUDE_DIR)/%.h,$(CLASSES_C))
+CLASSES_H := $(CLASSES_H) $(INCLUDE_DIR)/LinkDef.h 
 
+SOLIBS := ./lib/libModuleDat.so 
+#./lib/Sel_GetFloods.so
+#SOLIBS_DICT := $(patsubst ./lib/lib%.so,%Dict.C,$(SOLIBS))
 
 #depend: .depend .rules
 #	@echo "Done with dependencies"
 
-default: ./setana_env.sh ./ModuleDatDict.C ./lib/libModuleDatDict.so  $(BINS)
+#default: ./setana_env.sh $(SOLIBS_DICT) $(SOLIBS)  $(BINS)
+default: ./setana_env.sh ./ModuleAnaDict.C ./lib/libModuleAna.so .rules $(BINS) 
+	./PAR/MakePAR.sh
 	@echo "Done making ANA CODE"
 
-all:	default
+all:	 default 
+
+check:
+	@echo $(CLASSES_H)
+	@echo $(CLASSES_C)
+	@echo $(OBJS)
 
 .PHONY:	clean print 
 
-.depend: $(SRCS)
+.depend: $(SRCS) $(CLASSES_C)
 	rm -f ./.depend
-	echo $(SRCS)
+	@echo $(SRCS)
 	$(CC) $(CFLAGS) -MM $^  >> ./.depend;
 	sed -i 's/\(^[[:alnum:]_]\+\.o\)/src\/&/g' ./.depend
 
 .rules: .depend
-	$(shell cat .depend |  tr ' ' '\n' | grep -v $(ROOTSYS) | sed '/\\/d' | grep -v myrootlib | grep -v libInit_avdb  | grep "[[:alnum:]]" | tr '\n' ' ' | sed  's/src\/[[:alnum:]_]*.o:/\n&/g'  | sed '/^$$/d' > .buildrules; echo "" >> .buildrules)
+	@echo "Making rules for SW"
+	$(shell cat .depend |  tr ' ' '\n' | grep -v $(ROOTSYS) | sed '/\\/d' | grep -v $(HDRONLY) | grep -v myrootlib | grep -v libInit_avdb  | grep "[[:alnum:]]" | tr '\n' ' '  | sed  's/src\/[[:alnum:]_]*.o:/\n&/g'  | sed '/^$$/d' > .buildrules; echo "" >> .buildrules)
 	@cat .buildrules | sed 's/^src/bin/g' | sed 's/include/src/g' | sed 's/\.o//' | sed 's/\.[Ch]/\.o/g' | sed 's/\.\///g'  |  awk '{ while(++i<=NF) printf (!a[$$(i)]++) ? $$(i) FS : ""; i=split("",a); print "" }'  |  sed '/^bin\/decoder/!s/[a-zA-Z/]*decoder\.o//'   | awk '{print $$(0)"\n\t $$(CC) $$(CXXFLAGS) $$(LDFLAGS) $$^ -o $$@"}' > .binrules
 
 -include .binrules
 -include .depend
 
-#.C.o:
+#.cxx.o:
 #	$(CC) -c $(CXXFLAGS) $< -o $@
 
-#%.o: .c
+#%.o: .cxx
 #	$(CC) -c $(CXXFLAGS) $< -o $@
 
 print: 
 	 @echo $(SRCS)
 	 @echo $(OBJS)
-	@echo $(BINS)
 	@echo $(HDRS)
+	@echo -n "BINNS:  "
+	@echo $(BINNS)
+	@echo -n "BINS:  "
+	@echo $(BINS)
 
-
-./ModuleDatDict.C: ./include/ModuleDat.h ./include/ModuleCal.h ./include/CoincEvent.h ./include/LinkDef.h
+./ModuleAnaDict.C: $(CLASSES_H) 
 	rootcint -f $@ -c $(CXXFLAGS) -p $^
+
+#./Sel_GetFloodsDict.C: $(CLASSES_H) 
+#	rootcint -f $@ -c $(CXXFLAGS) -p $^
+
+#./PPeaks.C: $(CLASSES_H)
+#	rootcint -f $@ -c $(CXXFLAGS) -p $^
 
 #shared library .. can be static I think.
 
-./lib/libModuleDatDict.so: ./ModuleDatDict.C ./src/ModuleDat.C ./src/ModuleCal.C ./src/CoincEvent.C
-	g++ -shared -o $@ `root-config --ldflags` $(CXXFLAGS) -I$(ROOTSYS)/include $^
+./lib/libModuleAna.so: ./ModuleAnaDict.C $(CLASSES_C)
+	g++ -shared -o $@ `root-config --ldflags --glibs` $(CXXFLAGS) -I$(ROOTSYS)/include $^
 
-./setana_env.sh:
-	echo "CURDIR=`pwd`" > ./setana_env.sh
-	echo "source `pwd`/src/addtopath.sh `pwd`" > ./setana_env.sh
+#./lib/Sel_GetFloods.so: ./Sel_GetFloodsDict.C $(CLASSES_C)
+#	g++ -shared -o $@ `root-config --ldflags` $(CXXFLAGS) -I$(ROOTSYS)/include $^
+
+
+#./setana_env.sh:
+#	echo "CURDIR=`pwd`" > ./setana_env.sh
+#	echo "source `pwd`/src/addtopath.sh `pwd`" > ./setana_env.sh
 
 # GENERATED WITH ::
 # 1. change whitespace to endline
