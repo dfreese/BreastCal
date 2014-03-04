@@ -1,5 +1,9 @@
-#include "enefit.h"
+#include "calibrate.h"
 #include "decoder.h"
+#include "TCanvas.h"
+#include "time.h"
+#include "Sel_Calibrator.h"
+#include "TProof.h"
 
 #define FIRSTCHIP 0
 #define LASTCHIP RENACHIPS
@@ -60,7 +64,7 @@ int main(int argc, Char_t *argv[])
         cout <<  " Input file :: " << filename << "." << endl ;
 
         rootlogon(verbose);
-
+        time_t starttime = time(NULL);
 
 
         Char_t filebase[FILENAMELENGTH],peaklocationfilename[FILENAMELENGTH],rootfile[FILENAMELENGTH]; 
@@ -88,56 +92,52 @@ int main(int argc, Char_t *argv[])
               
 	if (verbose)	cout << "Rootfile to open :: " << rootfile << endl;
 
-	TFile *enefile = new TFile(rootfile,"OPEN");       
-         if (!enefile || enefile->IsZombie()) {  
+       	TFile *rfile = new TFile(rootfile,"OPEN");       
+        if (!rfile || rfile->IsZombie()) {  
          cout << "problems opening file " << rootfile << "\n.Exiting" << endl; 
          return -11;}
 
 
-
+	/*
         TVector* ppVals = (TVector *) enefile->Get("pp_spat");
         TVector* ppVals_com = (TVector *) enefile->Get("pp_com");
+	*/
+
 
 	//	enefile->ls() ;
 
-        strncpy(filebase,filename,strlen(filename)-12);
-        filebase[strlen(filename)-12]='\0';
 
 	//        for (m=0;m<RENACHIPS;m++){
  
+	if (verbose) {
 	  cout <<  " File content :: " << endl;
-          enefile->ls();
-	} //verbose
+	  //          enefile->ls();
+} //verbose
 	
 
  
 
 
 
-   TCanvas *c1;
-   c1 = (TCanvas*)gROOT->GetListOfCanvases()->FindObject("c1");
-  if (!c1) c1 = new TCanvas("c1","c1",10,10,1000,1000);
   
-  c1->SetCanvasSize(1754,1240);
+	TCanvas *c1;
+     c1  = (TCanvas*)gROOT->GetListOfCanvases()->FindObject("c1");
+    if (!c1) c1 = new TCanvas("c1","c1",10,10,1000,1000);
+  
+    c1->SetCanvasSize(1754,1240);
 	  // plot histograms
  
-  
 
-	  // Open Calfile //
-        strncpy(filebase,filename,strlen(filename)-12);
-        filebase[strlen(filename)-12]='\0';
-        sprintf(rootfile,"%s",filebase);
-        strcat(rootfile,".cal.root");
-
-        TTree *calblock;
-
-        TFile *calfile = new TFile(rootfile,"RECREATE");
-	if (verbose) cout << " Creating file " << rootfile << endl;
+	//        TFile *calfile = new TFile(rootfile,"RECREATE");
+	//	if (verbose) cout << " Creating file " << rootfile << endl;
              
           // Create Tree //
 
-        TTree *cal;
+	//        TTree *cal;
 
+	Char_t treename[20];
+
+	/*
         sprintf(treename,"calblock");
         calblock = (TTree *) enefile->Get(treename);
         if (!calblock) {
@@ -147,6 +147,117 @@ int main(int argc, Char_t *argv[])
          calblock->SetBranchAddress("eventdata",&event);
 
 
+	*/
+   strncpy(filebase,filename,strlen(filename)-5);
+        filebase[strlen(filename)-5]='\0';
+        if (verbose) cout << " filebase = " << filebase << endl;
+
+	  sprintf(treename,"mdata");
+           TChain *block;
+         block = (TChain *) rfile->Get(treename);
+
+         if (!block) {
+	   cout << " Problem reading Tree " << treename  << " from file " << filename << endl;
+           cout << " Exiting " << endl;
+           return -10;}
+	 //	 entries=block->GetEntries();
+
+
+         cout << " Read block from file :: " << time(NULL)-starttime << endl;
+         cout << " Read block from file :: " << time(NULL)-starttime << endl;
+
+         PixelCal *CrysCal = new PixelCal("CrysCalPar");
+         CrysCal->SetVerbose(verbose);
+
+         CrysCal->ReadCal(filebase);
+
+         Sel_Calibrator *m_cal = new Sel_Calibrator();
+
+       cout << "FYI:: Size of Sel_Calibrator :: " << sizeof(Sel_Calibrator) << endl;
+
+
+       //       m_getEhis->SetFileBase(filebase);
+
+
+       TFile *rfi;
+
+       //  if (!fitonly){
+
+       //#define USEPROOF
+
+#ifdef USEPROOF      
+       //  TProof *proof = new TProof("proof");
+       //   proof->Open("");
+      	 TProof *p = TProof::Open("workers=1");
+	 //	 TProof *p = TProof::Open("");
+       //       gProof->UploadPackage("/home/miil/MODULE_ANA/ANA_V5/SpeedUp/PAR/ModuleDatDict.par");
+       //       gProof->EnablePackage("ModuleDatDict");
+
+         cout << " Proof open :: " << time(NULL)-starttime << endl;
+
+	 #define USEPAR
+     
+#ifdef USEPAR
+       /* This is an example of the method to use PAR files  -- will need to use an environment var here to make it location independent */
+
+             p->UploadPackage("/home/miil/MODULE_ANA/ANA_V5/SpeedUp/PAR/Sel_Calibrator.par");
+             p->EnablePackage("Sel_Calibrate");
+
+#else
+       /* Loading the shared library */
+	     p->Exec("gSystem->Load(\"/home/miil/MODULE_ANA/ANA_V5/SpeedUp/lib/libModuleAna.so\")");
+#endif
+
+        p->AddInput(CrysCal);
+
+       block->SetProof();
+
+       m_cal->SetPixelCal(CrysCal);
+         cout << " Proof ready to process :: " << time(NULL)-starttime << endl;
+       block->Process(m_cal);
+        cout << " Proof processed :: " << time(NULL)-starttime << endl;
+
+#else
+       //      block->Process("Sel_GetFloods.cc+");
+       m_cal->SetPixelCal(CrysCal);
+       cout << " Ready to process :: " << endl;
+      block->Process(m_cal);
+#endif
+
+      /*
+         PPeaks *thesePPeaks = (PPeaks *) rfile->Get("PhotoPeaks");
+	 if (!(thesePPeaks)) {
+	   cout << " Warning :: Couldn't read object PhotoPeaks from file " << rfile->GetName() << endl;
+	   cout << " rfile->ls() :: "<< endl;
+	   rfile->ls();
+           exit(-1);
+	 }
+
+	 m_getEhis->SetPPeaks(thesePPeaks);
+      */
+
+      /*
+        cout << " Before WriteHist :: " << time(NULL)-starttime << endl;
+	rfi = new TFile("CrysPixs.root","RECREATE");
+       m_getEhis->WriteHists(rfi);
+        cout << " After WriteHist :: " << time(NULL)-starttime << endl;
+      */
+
+	//  }
+
+
+	//       else { m_getEhis->LoadEHis(rfile); m_getEhis->SetPixelCal(CrysCal);}
+
+    
+       // m_getEhis->FitApdEhis(0,0,0,0);
+
+      /*
+       cout << " writing CrysCal :: " << time(NULL)-starttime << endl;
+     CrysCal->Write(); 
+      */
+
+
+	 /*
 
 	  if (verbose) cout << " Looping over entries: " <<endl;
        for (k=0;k<calblock->GetEntries();k++){
@@ -186,8 +297,10 @@ int main(int argc, Char_t *argv[])
        } // loop over entries 
 
 
- 
+	 */
 	
+
+	 // here's fitting the global E_spec
 
  Int_t hibin=0;
  Int_t max=0;
@@ -199,153 +312,10 @@ int main(int argc, Char_t *argv[])
 
  c1->SetCanvasSize(700,700);
 
-   calfile->cd();
-   cal->Write(); 
-   ppVals->Write();
-   if (verbose)   cout << "Fitting global histogram: " <<endl;
+ //   calfile->cd();
+ //   cal->Write(); 
+ //   ppVals->Write();
 
-   ofstream globpeaks;
-   Float_t mean;
-   sprintf(peaklocationfilename,"%s_globfits_spat.txt",filebase);
-   globpeaks.open(peaklocationfilename);
-
-   for (m=FIRSTCHIP;m<LASTCHIP;m++){
-     calfile->cd();
-     sprintf(tmpstring,"RENA%d",m);
-     subdir[m] = calfile->mkdir(tmpstring);
-               subdir[m]->cd();
-    for (Int_t i=0;i<4;i++){
-     for ( j=0;j<2;j++){
-	    hibin=0;
-            max=0;
-	    xlow = Emeans[m*8+j*4+i]*0.85;
-	    xhigh = Emeans[m*8+j*4+i]*1.15;
-            c1->Clear();
-            if (globhist[m][i][j]->GetEntries() > MINHISTENTRIES){
-	    if (verbose){
-	      cout << "Fitting global energy histogram RENA " << m << " UNIT " << i << " APD " << j << endl;}
-      	       globfits[m][i][j]=fitapdspec(globhist[m][i][j],xlow,xhigh,1,verbose);
-	       sprintf(tmpname,"globfits[%d][%d][%d]",m,i,j);
-               globfits[m][i][j]->SetName(tmpname);
-               globhist[m][i][j]->Draw();
-               eres=2.35*globfits[m][i][j]->GetParameter(5)/globfits[m][i][j]->GetParameter(4);
-               d_eres=2.35*errorprop_divide(globfits[m][i][j]->GetParameter(5),globfits[m][i][j]->GetParError(5),
-                                       globfits[m][i][j]->GetParameter(4),globfits[m][i][j]->GetParError(4));
-                       mean = getmean(CRYSTALPP[m][i][j]);
-	    }
-	    else{
-	      // in case not enough entries we still want to store the globhist and draw it,
-               globhist[m][i][j]->Draw();
-	       eres=0.99;d_eres=0.99; mean=5000;
-	    }  // else
-
- 	    globpeaks << " R" << m << "M" << i << "A" << j << " " << eres << " " << d_eres << " " << mean << endl;
- 
-               sprintf(tmpstring,"Eres = %.2f #pm %.2f FWHM",100*eres,100*d_eres);
-               labeltxt->Clear();
-               labeltxt->AddText(tmpstring);
-               sprintf(peaklocationfilename,"%s.RENA%d.unit%d_apd%d_glob",filebase,m,i,j);
-               strcat(peaklocationfilename,".png");
-               labeltxt->Draw();
-	       c1->Print(peaklocationfilename);
-	      //            peak=getpeak
-              
-     	    globhist[m][i][j]->Write();
-		    // FIXME should create a directory on this file
-	    for(k=0;k<64;k++){ Ehist[m][i][j][k]->Write();Efits[m][i][j][k]->Write();}
-	  }//i
-	}//j
-    }//m
-
-   globpeaks.close();
-
-   if (verbose)   cout << "Fitting Common global histogram common: " <<endl;
-
-   sprintf(peaklocationfilename,"%s_globfits_com.txt",filebase);
-   globpeaks.open(peaklocationfilename);
-
-
-   for (m=FIRSTCHIP;m<LASTCHIP;m++){
-     calfile->cd();
-     //     sprintf(tmpstring,"RENA%d",m);
-     //     subdir[m] = calfile->mkdir(tmpstring);
-     subdir[m]->cd();
-    for (Int_t i=0;i<4;i++){
-     for (Int_t j=0;j<2;j++){
-	    hibin=0;
-            max=0;
-	    /*
-	    xlow = Emeans_com[m*8+j*4+i]*0.85;
-	    xhigh = Emeans_com[m*8+j*4+i]*1.15;
-	    */
-            xlow=400;xhigh=600;
-            c1->Clear();
-            if (globhist_com[m][i][j]->GetEntries() > MINHISTENTRIES){
-	    if (verbose){
-	      cout << "Fitting common global energy histogram RENA " << m << " UNIT " << i << " APD " << j << endl;
-              cout << " Emeans_com = " << Emeans_com[m*8+j*4+i] << endl;}
-      	       globfits_com[m][i][j]=fitapdspec(globhist_com[m][i][j],xlow,xhigh,1,verbose);
-	       sprintf(tmpname,"globfits_com[%d][%d][%d]",m,i,j);
-               globfits_com[m][i][j]->SetName(tmpname);
-               globhist_com[m][i][j]->Draw();
-               eres=2.35*globfits_com[m][i][j]->GetParameter(5)/globfits_com[m][i][j]->GetParameter(4);
-               d_eres=2.35*errorprop_divide(globfits_com[m][i][j]->GetParameter(5),globfits_com[m][i][j]->GetParError(5),
-                                       globfits_com[m][i][j]->GetParameter(4),globfits_com[m][i][j]->GetParError(4));
-                       mean = getmean(CRYSTALPP_COM[m][i][j]);
-	    }
-	    else{
-	      // in case not enough entries we still want to store the globhist and draw it,
-               globhist_com[m][i][j]->Draw();
-	       eres=0.99;d_eres=0.99; mean=5000;
-	    }  // else
-	    globpeaks << " R" << m << "M" << i << "A" << j << " " << eres << " " << d_eres << " " << mean << endl;
-               sprintf(tmpstring,"Eres = %.2f #pm %.2f FWHM",100*eres,100*d_eres);
-               labeltxt->Clear();
-               labeltxt->AddText(tmpstring);
-               sprintf(peaklocationfilename,"%s.RENA%d.unit%d_apd%d_glob_com",filebase,m,i,j);
-               strcat(peaklocationfilename,".png");
-               labeltxt->Draw();
-	       c1->Print(peaklocationfilename);
-	      //            peak=getpeak
-              
-              globhist_com[m][i][j]->Write();
-		    // FIXME should create a directory on this file
-	    for(k=0;k<64;k++){ Ehist_com[m][i][j][k]->Write();Efits_com[m][i][j][k]->Write();}
-	  }//i
-	}//j
-   }//m
-
-
-   globpeaks.close();
-          calfile->Close();
-         
-      
-	  ofstream ofile;
-
-   for (m=FIRSTCHIP;m<LASTCHIP;m++){
-     for (i=0;i<4;i++){
-     for (j=0;j<2;j++){
-       sprintf(peaklocationfilename,"%s.RENA%d.unit%d_apd%d_cal",filebase,m,i,j);
-       strcat(peaklocationfilename,".txt");
-       if (validpeaks[m][i][j]){
-       ofile.open(peaklocationfilename);
-       for (k=0;k<64;k++){
-	 ofile << U_x[m][i][j][k] << " " << U_y[m][i][j][k] << " " << CRYSTALPP[m][i][j][k];
-         if (Efits[m][i][j][k]->GetParameter(1)){
-	   ofile << "  " << 235*Efits[m][i][j][k]->GetParameter(2)/Efits[m][i][j][k]->GetParameter(1) ;}
-         else { ofile << "  0    " ; } 
-         ofile << " " << CRYSTALPP_COM[m][i][j][k];
-          if (Efits_com[m][i][j][k]->GetParameter(1)){
-	   ofile << "  " << 235*Efits_com[m][i][j][k]->GetParameter(2)/Efits_com[m][i][j][k]->GetParameter(1) ;}
-         else { ofile << "  0    " ; } 
-
-
-         ofile << endl;}
-        ofile.close();
-       }
-     } // j
-     } //i 
-   } //m
 
    return 0;}
 

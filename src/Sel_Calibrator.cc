@@ -43,6 +43,9 @@ void Sel_Calibrator::SlaveBegin(TTree * /*tree*/)
    // The SlaveBegin() function is called after the Begin() function.
    // When running with PROOF SlaveBegin() is called on each slave server.
    // The tree argument is deprecated (on PROOF 0 is passed).
+
+  cout << " Welcome to SlaveBegin Sel_Calibrator " << endl;
+ 
   TString hn;
   TString ht;
    TString option = GetOption();
@@ -70,6 +73,8 @@ void Sel_Calibrator::SlaveBegin(TTree * /*tree*/)
      } 
    }
 
+
+  cout << " ... SlaveBegin Done " << endl;
 
 }
 
@@ -99,6 +104,10 @@ Bool_t Sel_Calibrator::Process(Long64_t entry)
 
   // need to calc average gain for each PSAPD -- note :: perhaps should do a weighting or so, also probably better to do it in Sel_GetEhis.cc 
   //   calevent->E=event->E* Emeans[event->chip*8+event->apd*4+event->module]/CRYSTALPP[event->chip][event->module][event->apd][event->id];
+
+   
+   fChain->GetTree()->GetEntry(entry);
+
     fCalEvent->ct=ct;
     fCalEvent->cartridge=cartridge;
     fCalEvent->fin=fin;
@@ -164,3 +173,171 @@ Double_t Sel_Calibrator::FineCalc(Double_t uv, Float_t u_cent, Float_t v_cent){
   return tmp;///(2*3.141592*CIRCLEFREQUENCY);
 }
 
+#ifdef GOTOWORK
+
+Int_t Sel_Calibrator::ReadUVCenters(TFile *rfile){
+  Char_t tmpstring[40];  
+  for (Int_t c=0;c<CARTRIDGES_PER_PANEL;c++){
+    for (Int_t r=0;r<RENAS_PER_CARTRIDGE;r++){
+      sprintf(tmpstring,"timing/uu_c[%d][%d]",c,r);
+      uu_c[c][rena]= (TVector *) rfile->Get(tmpstring); //new TH1F(tmpstring,titlestring,Ebins,E_low,E_up);
+      sprintf(tmpstring,"timing/vv_c[%d][%d]",c,r);
+      vv_c[c][rena]= (TVector *) rfile->Get(tmpstring); //new TH1F(tmpstring,titlestring,Ebins,E_low,E_up);
+    }
+  }
+
+  return 0;}
+
+
+Int_t Sel_Calibrator::FitAllGlobal(){
+
+   ofstream globpeaks;
+   Float_t mean;
+   sprintf(peaklocationfilename,"%s_globfits_spat.txt",filebase);
+   globpeaks.open(peaklocationfilename);
+    for (Int_t cc=0;cc<CARTRIDGES_PER_PANEL;cc++){
+     for (Int_t f=0;f<FINS_PER_CARTRIDGE;f++){
+       for (Int_t m=0;m<MODULES_PER_FIN;m++){
+         for (Int_t j=0;j<APDS_PER_MODULE;j++){
+	    if (verbose){
+	      cout << "Fitting global energy histogram cartridge " << cc << " Fin " << f << " Module " << m << " APD " << j << endl;}
+        	   FitGlobal(fGlobHist[cc][f][m][j]);
+
+}
+
+
+Int_t Sel_Calibrator::FitGlobal(TH1F *globhist){
+
+   if (verbose)   cout << "Fitting global histogram: " <<endl;
+
+	    hibin=0;
+            max=0;
+	    xlow = Emeans[m*8+j*4+i]*0.85;
+	    xhigh = Emeans[m*8+j*4+i]*1.15;
+            c1->Clear();
+            if (globhist->GetEntries() > MINHISTENTRIES){
+      	       globfits[m][i][j]=fitapdspec(globhist[m][i][j],xlow,xhigh,1,verbose);
+	       sprintf(tmpname,"globfits[%d][%d][%d]",m,i,j);
+               globfits[m][i][j]->SetName(tmpname);
+               globhist[m][i][j]->Draw();
+               eres=2.35*globfits[m][i][j]->GetParameter(5)/globfits[m][i][j]->GetParameter(4);
+               d_eres=2.35*errorprop_divide(globfits[m][i][j]->GetParameter(5),globfits[m][i][j]->GetParError(5),
+                                       globfits[m][i][j]->GetParameter(4),globfits[m][i][j]->GetParError(4));
+                       mean = getmean(CRYSTALPP[m][i][j]);
+	    }
+	    else{
+	      // in case not enough entries we still want to store the globhist and draw it,
+               globhist[m][i][j]->Draw();
+	       eres=0.99;d_eres=0.99; mean=5000;
+	    }  // else
+
+ 	    globpeaks << " R" << m << "M" << i << "A" << j << " " << eres << " " << d_eres << " " << mean << endl;
+ 
+               sprintf(tmpstring,"Eres = %.2f #pm %.2f FWHM",100*eres,100*d_eres);
+               labeltxt->Clear();
+               labeltxt->AddText(tmpstring);
+               sprintf(peaklocationfilename,"%s.RENA%d.unit%d_apd%d_glob",filebase,m,i,j);
+               strcat(peaklocationfilename,".png");
+               labeltxt->Draw();
+	       c1->Print(peaklocationfilename);
+	      //            peak=getpeak
+              
+     	    globhist[m][i][j]->Write();
+		    // FIXME should create a directory on this file
+	    for(k=0;k<64;k++){ Ehist[m][i][j][k]->Write();Efits[m][i][j][k]->Write();}
+	  }//i
+	}//j
+    }//m
+
+   globpeaks.close();
+
+
+   if (verbose)   cout << "Fitting Common global histogram common: " <<endl;
+
+   //   sprintf(peaklocationfilename,"%s_globfits_com.txt",filebase);
+   //   globpeaks.open(peaklocationfilename);
+
+
+   //   for (m=FIRSTCHIP;m<LASTCHIP;m++){
+   //     calfile->cd();
+         //     sprintf(tmpstring,"RENA%d",m);
+        //     subdir[m] = calfile->mkdir(tmpstring);
+   //     subdir[m]->cd();
+   //    for (Int_t i=0;i<4;i++){
+   //     for (Int_t j=0;j<2;j++){
+	    hibin=0;
+            max=0;
+	    /*
+	    xlow = Emeans_com[m*8+j*4+i]*0.85;
+	    xhigh = Emeans_com[m*8+j*4+i]*1.15;
+	    */
+            xlow=400;xhigh=600;
+            c1->Clear();
+            if (globhist_com[m][i][j]->GetEntries() > MINHISTENTRIES){
+	    if (verbose){
+	      cout << "Fitting common global energy histogram RENA " << m << " UNIT " << i << " APD " << j << endl;
+              cout << " Emeans_com = " << Emeans_com[m*8+j*4+i] << endl;}
+      	       globfits_com[m][i][j]=fitapdspec(globhist_com[m][i][j],xlow,xhigh,1,verbose);
+	       sprintf(tmpname,"globfits_com[%d][%d][%d]",m,i,j);
+               globfits_com[m][i][j]->SetName(tmpname);
+               globhist_com[m][i][j]->Draw();
+               eres=2.35*globfits_com[m][i][j]->GetParameter(5)/globfits_com[m][i][j]->GetParameter(4);
+               d_eres=2.35*errorprop_divide(globfits_com[m][i][j]->GetParameter(5),globfits_com[m][i][j]->GetParError(5),
+                                       globfits_com[m][i][j]->GetParameter(4),globfits_com[m][i][j]->GetParError(4));
+                       mean = getmean(CRYSTALPP_COM[m][i][j]);
+	    }
+	    else{
+	      // in case not enough entries we still want to store the globhist and draw it,
+               globhist_com[m][i][j]->Draw();
+	       eres=0.99;d_eres=0.99; mean=5000;
+	    }  // else
+	    globpeaks << " R" << m << "M" << i << "A" << j << " " << eres << " " << d_eres << " " << mean << endl;
+               sprintf(tmpstring,"Eres = %.2f #pm %.2f FWHM",100*eres,100*d_eres);
+               labeltxt->Clear();
+               labeltxt->AddText(tmpstring);
+               sprintf(peaklocationfilename,"%s.RENA%d.unit%d_apd%d_glob_com",filebase,m,i,j);
+               strcat(peaklocationfilename,".png");
+               labeltxt->Draw();
+	       c1->Print(peaklocationfilename);
+	      //            peak=getpeak
+              
+              globhist_com[m][i][j]->Write();
+		    // FIXME should create a directory on this file
+	    for(k=0;k<64;k++){ Ehist_com[m][i][j][k]->Write();Efits_com[m][i][j][k]->Write();}
+	  }//i
+	}//j
+   }//m
+
+
+   globpeaks.close();
+          calfile->Close();
+         
+      
+	  ofstream ofile;
+
+   for (m=FIRSTCHIP;m<LASTCHIP;m++){
+     for (i=0;i<4;i++){
+     for (j=0;j<2;j++){
+       sprintf(peaklocationfilename,"%s.RENA%d.unit%d_apd%d_cal",filebase,m,i,j);
+       strcat(peaklocationfilename,".txt");
+       if (validpeaks[m][i][j]){
+       ofile.open(peaklocationfilename);
+       for (k=0;k<64;k++){
+	 ofile << U_x[m][i][j][k] << " " << U_y[m][i][j][k] << " " << CRYSTALPP[m][i][j][k];
+         if (Efits[m][i][j][k]->GetParameter(1)){
+	   ofile << "  " << 235*Efits[m][i][j][k]->GetParameter(2)/Efits[m][i][j][k]->GetParameter(1) ;}
+         else { ofile << "  0    " ; } 
+         ofile << " " << CRYSTALPP_COM[m][i][j][k];
+          if (Efits_com[m][i][j][k]->GetParameter(1)){
+	   ofile << "  " << 235*Efits_com[m][i][j][k]->GetParameter(2)/Efits_com[m][i][j][k]->GetParameter(1) ;}
+         else { ofile << "  0    " ; } 
+
+
+         ofile << endl;}
+        ofile.close();
+       }
+     } // j
+     } //i 
+   } //m
+}
+#endif

@@ -13,6 +13,7 @@
 #include "ModuleDat.h"
 #include "ModuleCal.h"
 #include "TError.h"
+#include "TChain.h"
 
 #define MINPIXENTRIES 1000
 #define NOVALIDPEAKFOUND -8989898

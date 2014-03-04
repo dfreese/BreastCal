@@ -286,9 +286,9 @@ for (i = 0; i < 36; i++) {
 
 
     for (int c=0;c<CARTRIDGES_PER_PANEL;c++){
-      for (int r=0;r<RENAS_PER_CARTRIDGE;r++){
-	uu_c[c][r] = new TVector(APDS_PER_MODULE*MODULES_PER_RENA);
-	vv_c[c][r] = new TVector(APDS_PER_MODULE*MODULES_PER_RENA);
+      for (int f=0;f<FINS_PER_CARTRIDGE;f++){
+	uu_c[c][f] = new TVector(APDS_PER_MODULE*MODULES_PER_FIN);
+	vv_c[c][f] = new TVector(APDS_PER_MODULE*MODULES_PER_FIN);
       }
     }
 
@@ -774,14 +774,14 @@ if (pedfilenamespec) {
  if (( event->apd == 1 )||(event->apd ==0 )){ 
    if (  ( rawevent.com1h - pedestals[cartridgeId][chipId][module][5] ) < uvthreshold ) {
      //  cout <<   " entries:: " <<     uventries[cartridgeId][chipId][module][0] << " uu_c = " << (*uu_c[cartridgeId][chipId])[module*2] << endl ;
-      uventries[cartridgeId][chipId][module][0]++;
-      (*uu_c[cartridgeId][chipId])[module*2+0]+= (Float_t)( rawevent.u1h - (*uu_c[cartridgeId][chipId])[module*2+0])/uventries[cartridgeId][chipId][module][0]; 
-      (*vv_c[cartridgeId][chipId])[module*2+0]+= (Float_t)( rawevent.v1h - (*vv_c[cartridgeId][chipId])[module*2+0])/uventries[cartridgeId][chipId][module][0]; 
+      uventries[cartridgeId][event->fin][event->module][0]++;
+      (*uu_c[cartridgeId][event->fin])[event->module*2+0]+=(Float_t)(rawevent.u1h- (*uu_c[cartridgeId][event->fin])[event->module*2+0])/uventries[cartridgeId][event->fin][event->module][0]; 
+      (*vv_c[cartridgeId][event->fin])[event->module*2+0]+=(Float_t)(rawevent.v1h- (*vv_c[cartridgeId][event->fin])[event->module*2+0])/uventries[cartridgeId][event->fin][event->module][0]; 
     }
    if (( rawevent.com2h - pedestals[cartridgeId][chipId][module][7] ) < uvthreshold ) {
-      uventries[cartridgeId][chipId][module][1]++;
-      (*uu_c[cartridgeId][chipId])[module*2+1]+=(Float_t)(rawevent.u2h- (*uu_c[cartridgeId][chipId])[module*2+1])/uventries[cartridgeId][chipId][module][1]; 
-      (*vv_c[cartridgeId][chipId])[module*2+1]+=(Float_t)(rawevent.v2h- (*vv_c[cartridgeId][chipId])[module*2+1])/uventries[cartridgeId][chipId][module][1]; 
+      uventries[cartridgeId][event->module][module][1]++;
+      (*uu_c[cartridgeId][event->fin])[event->module*2+1]+=(Float_t)(rawevent.u2h- (*uu_c[cartridgeId][event->fin])[event->module*2+1])/uventries[cartridgeId][event->fin][event->module][1]; 
+      (*vv_c[cartridgeId][event->fin])[event->module*2+1]+=(Float_t)(rawevent.v2h- (*vv_c[cartridgeId][event->fin])[event->module*2+1])/uventries[cartridgeId][event->fin][event->module][1]; 
    }
  } // apd =0 || apd =1 
   } // if uvcalc

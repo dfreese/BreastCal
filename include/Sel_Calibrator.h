@@ -14,6 +14,7 @@
 #include <TH1F.h>
 #include <PixelCal.h>
 #include <ModuleCal.h>
+#include <TVector.h>
 
 // Header file for the classes stored in the TTree if any.
 #include <TObject.h>
@@ -76,7 +77,23 @@ public :
    ModuleCal   *fCalEvent;
    TH1F *fGlobHist[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
    TH1F *fGlobHist_com[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
-   Sel_Calibrator(TTree * /*tree*/ =0) : fChain(0) { }
+   TVector *uu_c[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE];
+   TVector *vv_c[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE];
+
+
+
+  Sel_Calibrator(TTree * /*tree*/ =0) : fChain(0) {
+ 
+   for (int c=0;c<CARTRIDGES_PER_PANEL;c++){
+      for (int r=0;r<RENAS_PER_CARTRIDGE;r++){
+        uu_c[c][r] = new TVector(APDS_PER_MODULE*MODULES_PER_RENA);
+        vv_c[c][r] = new TVector(APDS_PER_MODULE*MODULES_PER_RENA);
+      }
+    }
+
+
+    
+    }
 
    Int_t ReadCal(TFile *r) ;
    void SetCal(PixelCal *pixcal){ fCrysCal = pixcal; }
@@ -84,6 +101,7 @@ public :
  
    virtual ~Sel_Calibrator() { }
    virtual Int_t   Version() const { return 2; }
+   void SetPixelCal(PixelCal *pixcal ){ cout << " Setting fCrysCal ... " ;  fCrysCal = pixcal; cout << " Done. " << endl; } 
    virtual void    Begin(TTree *tree);
    virtual void    SlaveBegin(TTree *tree);
    virtual void    Init(TTree *tree);

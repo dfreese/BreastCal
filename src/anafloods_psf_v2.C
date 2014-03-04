@@ -31,7 +31,7 @@
 //#define PUBPLOT
 
 // comment this if you don't want the additional Pictorial Structure based search.
-#define sortps
+//#define sortps
 
 
 
@@ -42,7 +42,7 @@
 #define SRT16
 
 // comment this if you don't want timing
-//#define TIMING
+#define TIMING
 #ifdef TIMING
 #include "time.h"
 #endif
