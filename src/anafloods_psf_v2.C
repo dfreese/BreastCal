@@ -42,7 +42,7 @@
 #define SRT16
 
 // comment this if you don't want timing
-#define TIMING
+//#define TIMING
 #ifdef TIMING
 #include "time.h"
 #endif

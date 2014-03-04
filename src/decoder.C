@@ -779,7 +779,7 @@ if (pedfilenamespec) {
       (*vv_c[cartridgeId][event->fin])[event->module*2+0]+=(Float_t)(rawevent.v1h- (*vv_c[cartridgeId][event->fin])[event->module*2+0])/uventries[cartridgeId][event->fin][event->module][0]; 
     }
    if (( rawevent.com2h - pedestals[cartridgeId][chipId][module][7] ) < uvthreshold ) {
-      uventries[cartridgeId][event->module][module][1]++;
+      uventries[cartridgeId][event->fin][event->module][1]++;
       (*uu_c[cartridgeId][event->fin])[event->module*2+1]+=(Float_t)(rawevent.u2h- (*uu_c[cartridgeId][event->fin])[event->module*2+1])/uventries[cartridgeId][event->fin][event->module][1]; 
       (*vv_c[cartridgeId][event->fin])[event->module*2+1]+=(Float_t)(rawevent.v2h- (*vv_c[cartridgeId][event->fin])[event->module*2+1])/uventries[cartridgeId][event->fin][event->module][1]; 
    }
@@ -805,14 +805,14 @@ if (pedfilenamespec) {
 
 if (verbose){
   for (c=0;c<CARTRIDGES_PER_PANEL;c++){
-   for (r=0;r<RENAS_PER_CARTRIDGE;r++){
-     for ( i=0;i<MODULES_PER_RENA;i++) {
+   for (f=0;f<FINS_PER_CARTRIDGE;f++){
+     for ( i=0;i<MODULES_PER_FIN;i++) {
        for ( j=0;j<APDS_PER_MODULE;j++) {
-	 cout << " Circle Center Cartridge " << c << " Chip " << r << " Module " << i << " APD " << j << ": "  ;
-	 cout << "uu_c = " << (*uu_c[c][r])[i*2+j] << " vv_c = " << (*vv_c[c][r])[i*2+j] << " nn_entries = " << uventries[c][r][i][j] << endl;   
+	 cout << " Circle Center Cartridge " << c << " Fin " << f << " Module " << i << " APD " << j << ": "  ;
+	 cout << "uu_c = " << (*uu_c[c][f])[i*2+j] << " vv_c = " << (*vv_c[c][f])[i*2+j] << " nn_entries = " << uventries[c][f][i][j] << endl;   
        } // j
      } //i
-   }//r
+   }//f
   }//c
      
  } // verbose
@@ -955,14 +955,14 @@ if (verbose){
 
     
     timing->cd();
-
+    
    // need to store uvcenters ::
  for (c=0;c<CARTRIDGES_PER_PANEL;c++){
-   for (r=0;r<RENAS_PER_CARTRIDGE;r++){
-       sprintf(tmpstring,"uu_c[%d][%d]",c,r);
-       uu_c[c][r]->Write(tmpstring);
-       sprintf(tmpstring,"vv_c[%d][%d]",c,r);
-       vv_c[c][r]->Write(tmpstring);
+   for (f=0;f<FINS_PER_CARTRIDGE;f++){
+       sprintf(tmpstring,"uu_c[%d][%d]",c,f);
+       uu_c[c][f]->Write(tmpstring);
+       sprintf(tmpstring,"vv_c[%d][%d]",c,f);
+       vv_c[c][f]->Write(tmpstring);
    } //r
  } //c
 

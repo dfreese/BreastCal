@@ -132,7 +132,7 @@ int main(int argc, char *argv[]){
 	
 	if ( filesread == 1 ) {
 	  for (Int_t c=0;c<CARTRIDGES_PER_PANEL;c++){ 
-	    for (Int_t r=0;r<RENAS_PER_CARTRIDGE;r++){
+	    for (Int_t r=0;r<FINS_PER_CARTRIDGE;r++){
               sprintf(tmpstring,"timing/uu_c[%d][%d]",c,r);
 	      uu_c[c][r] = (TVector *) decodedfile->Get(tmpstring);
               sprintf(tmpstring,"timing/vv_c[%d][%d]",c,r);
@@ -204,6 +204,8 @@ int main(int argc, char *argv[]){
 
 	   
 	   rfile->cd();
+
+	   if (verbose) cout << " Writing U,V centers to roofile " << endl;
 	   TDirectory *timing =  rfile->mkdir("timing");
 
     
@@ -211,7 +213,7 @@ int main(int argc, char *argv[]){
 	   
    // need to store uvcenters ::
 	   for (Int_t c=0;c<CARTRIDGES_PER_PANEL;c++){
-	     for (Int_t r=0;r<RENAS_PER_CARTRIDGE;r++){
+	     for (Int_t r=0;r<FINS_PER_CARTRIDGE;r++){
 	       sprintf(tmpstring,"uu_c[%d][%d]",c,r);
 	       uu_c[c][r]->Write(tmpstring);
 	       sprintf(tmpstring,"vv_c[%d][%d]",c,r);
