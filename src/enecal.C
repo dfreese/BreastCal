@@ -297,7 +297,7 @@ int main(int argc, Char_t *argv[])
 
        cout << "  CrysCal->GainSpat[0][0][2][1][0] = " <<   CrysCal->GainSpat[0][0][2][1][0] <<endl;
 
- 
+       CrysCal->WriteCalTxt(filebase);
        CrysCal->Write(); 
 
       /*

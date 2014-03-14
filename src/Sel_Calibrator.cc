@@ -509,36 +509,3 @@ Int_t Sel_Calibrator::FitGlobal(TH1F *globhist, Double_t xlow, Double_t xhigh, D
 } //Fitglobal
 
 
-
-/*         
-Should go in CrysPix.h  
-    
-	  ofstream ofile;
-
-   for (m=FIRSTCHIP;m<LASTCHIP;m++){
-     for (i=0;i<4;i++){
-     for (j=0;j<2;j++){
-       sprintf(peaklocationfilename,"%s.RENA%d.unit%d_apd%d_cal",fFilebase,m,i,j);
-       strcat(peaklocationfilename,".txt");
-       if (validpeaks[m][i][j]){
-       ofile.open(peaklocationfilename);
-       for (k=0;k<64;k++){
-	 ofile << U_x[m][i][j][k] << " " << U_y[m][i][j][k] << " " << CRYSTALPP[m][i][j][k];
-         if (Efits[m][i][j][k]->GetParameter(1)){
-	   ofile << "  " << 235*Efits[m][i][j][k]->GetParameter(2)/Efits[m][i][j][k]->GetParameter(1) ;}
-         else { ofile << "  0    " ; } 
-         ofile << " " << CRYSTALPP_COM[m][i][j][k];
-          if (Efits_com[m][i][j][k]->GetParameter(1)){
-	   ofile << "  " << 235*Efits_com[m][i][j][k]->GetParameter(2)/Efits_com[m][i][j][k]->GetParameter(1) ;}
-         else { ofile << "  0    " ; } 
-
-
-         ofile << endl;}
-        ofile.close();
-       }
-     } // j
-     } //i 
-   } //m
-}
-
-*/

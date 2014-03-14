@@ -20,6 +20,8 @@ class PixelCal : public TNamed {
   Float_t Y[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][XTALS_PER_APD];
   Float_t GainSpat[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][XTALS_PER_APD];
   Float_t GainCom[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][XTALS_PER_APD];
+  Float_t EresSpat[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][XTALS_PER_APD];
+  Float_t EresCom[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][XTALS_PER_APD];
   Bool_t validpeaks[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
   TH2S *floodmap[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
   Bool_t floodlut;
@@ -30,7 +32,7 @@ class PixelCal : public TNamed {
   Int_t GetCrystalId(Float_t x, Float_t y, Int_t c, Int_t f, Int_t i, Int_t j);
   virtual ~PixelCal();
   void SetVerbose(Bool_t val){ verbose=val;}
-
+  Int_t WriteCalTxt(const char *filebase);
  private:
   Bool_t verbose;
 

@@ -102,3 +102,34 @@ Int_t PixelCal::GetCrystalId(Float_t x, Float_t y, Int_t c, Int_t f, Int_t i, In
 
 
 
+Int_t PixelCal::WriteCalTxt(const char *filebase){
+/*         
+	   Should go in CrysPix.h  */
+    
+ 
+  ofstream ofile;
+  Char_t calfilename[120];
+
+      for (Int_t c=0;c<CARTRIDGES_PER_PANEL;c++){
+	for (Int_t f=0;f<FINS_PER_CARTRIDGE;f++){
+	  for (Int_t i=0;i<MODULES_PER_FIN;i++){
+	    for (Int_t j=0;j<APDS_PER_MODULE;j++){
+	      sprintf(calfilename,"%s.C%dR%dM%dA%d_cal",filebase,c,f,i,j);
+	      strcat(calfilename,".txt");
+	      if (validpeaks[c][f][i][j]){
+		ofile.open(calfilename);
+		for (Int_t k=0;k<64;k++){
+		  ofile << X[c][f][i][j][k] << " " << Y[c][f][i][j][k] ;
+                  ofile <<  " " << GainSpat[c][f][i][j][k] << " " << EresSpat[c][f][i][j][k];
+		  ofile << " " << GainCom[c][f][i][j][k]   << " " << EresCom[c][f][i][j][k];
+		  ofile << endl;}
+		ofile.close();
+	      }
+	    } // j
+	  } //i 
+	} //f
+      }//c
+
+      return 0;}
+
+

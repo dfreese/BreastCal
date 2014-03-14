@@ -352,6 +352,10 @@ Int_t Sel_GetEhis::FitApdEhis(Int_t cc, Int_t f, Int_t i, Int_t j){
 		   if (verbose) { cout << " BAD FIT to histogram ["<<c<<"]["<<f<<"]["<<i<<"]["<<j<<"]["<<k<<"]" << endl; 
 		     cout << " taking PP @ " << Emean << " ( peak = " << peak << " ) " << endl;}
 		   fCrysCal->GainSpat[cc][f][i][j][k]=Emean;}
+		 if (spatfit->GetParameter(1)){
+		   fCrysCal->EresSpat[cc][f][i][j][k]=235*spatfit->GetParameter(2)/spatfit->GetParameter(1) ;}
+                 else fCrysCal->EresSpat[cc][f][i][j][k]=.99;
+
 		 if (verbose) {
 		   cout << " ------------ Common ----------------- " <<endl;
 		   cout << " Hist entries : " << fEhist_com[cc][f][i][j][k]->GetEntries() << " Efits mean :" ;
@@ -378,6 +382,11 @@ Int_t Sel_GetEhis::FitApdEhis(Int_t cc, Int_t f, Int_t i, Int_t j){
 		   if (verbose) {cout << " BAD FIT to histogram ["<<cc<<"]["<<f<<"]["<<i<<"]["<<j<<"]["<<k<<"]" << endl;
                      cout << " taking PP @ " << Emean_com << " ( peak = " << peak << " ) " << endl;}
 		   fCrysCal->GainCom[cc][f][i][j][k]=Emean_com;}
+
+		 if (comfit->GetParameter(1)){
+		   fCrysCal->EresCom[cc][f][i][j][k]=235*comfit->GetParameter(2)/comfit->GetParameter(1) ;}
+                 else fCrysCal->EresCom[cc][f][i][j][k]=.99;
+
 	       }  // loop over k
 	  } // validpeaks
 
