@@ -22,8 +22,8 @@ int main(int argc, Char_t *argv[])
 	Char_t		filename[FILENAMELENGTH] = "";
 	Int_t		verbose = 0;//, threshold=-800;
 	Int_t		ix;
-        ModuleDat *event = 0;
-        ModuleCal   *calevent =  new ModuleCal();
+	//       ModuleDat *event = 0;
+	//        ModuleCal   *calevent =  new ModuleCal();
         Bool_t genplots=0;
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -67,23 +67,10 @@ int main(int argc, Char_t *argv[])
         time_t starttime = time(NULL);
 
 
-        Char_t filebase[FILENAMELENGTH],peaklocationfilename[FILENAMELENGTH],rootfile[FILENAMELENGTH]; 
-        Char_t tmpname[20],tmptitle[50];
-        Int_t i,j,k,m,lines;
-        Int_t validpeaks[RENACHIPS][4][2]={{{0}}};
-        Double_t U_x[RENACHIPS][4][2][64];
-        Double_t U_y[RENACHIPS][4][2][64];
-        Double_t aa, bb;
+        Char_t filebase[FILENAMELENGTH],rootfile[FILENAMELENGTH]; 
+	//        Char_t tmpname[20],tmptitle[50];
+	//        Int_t i,j,k,m,lines;
         ifstream infile;
-        TH1F *Ehist[RENACHIPS][4][2][64];
-        TH1F *Ehist_com[RENACHIPS][4][2][64];
-        TH1F *globhist[RENACHIPS][4][2];
-        TF1 *globfits[RENACHIPS][4][2];
-        TH1F *globhist_com[RENACHIPS][4][2];
-        TF1 *globfits_com[RENACHIPS][4][2];
-        TF1 *Efits[RENACHIPS][4][2][64];
-        TF1 *Efits_com[RENACHIPS][4][2][64];
-        TDirectory *subdir[RENACHIPS];
 
 	//        strncpy(filebase,filename,strlen(filename)-17);
 	//        filebase[strlen(filename)-17]='\0';
@@ -321,7 +308,7 @@ int main(int argc, Char_t *argv[])
 
   
 
-
+      /*
  Int_t hibin=0;
  Int_t max=0;
  Float_t xlow,xhigh;
@@ -331,7 +318,7 @@ int main(int argc, Char_t *argv[])
  labeltxt->SetFillColor(kWhite);
 
  c1->SetCanvasSize(700,700);
-
+      */
  //   calfile->cd();
  //   cal->Write(); 
  //   ppVals->Write();

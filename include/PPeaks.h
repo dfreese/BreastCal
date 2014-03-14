@@ -7,8 +7,8 @@
 #include "TObject.h"
 #endif
 
-//#include "syspardef.h" 
-#include "/home/miil/MODULE_ANA/ANA_V5/SpeedUp/include/Syspardef.h"
+#include "Syspardef.h" 
+//#include "/home/miil/MODULE_ANA/ANA_V5/SpeedUp/include/Syspardef.h"
 
 class PPeaks : public TNamed {
  

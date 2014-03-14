@@ -211,7 +211,7 @@ Bool_t Sel_Calibrator::Process(Long64_t entry)
       fGlobHist_com[cartridge][fin][module][apd]->Fill(fCalEvent->Ec); 
       fCalEvent->id=_id;
       
-      //   fCalEvent->ft = FineCalc(ft,  (*uu_c[cartridge][fin])[module*2+apd], (*vv_c[cartridge][fin])[module*2+apd]);
+       fCalEvent->ft = FineCalc(ft,  (*uu_c[cartridge][fin])[module*2+apd], (*vv_c[cartridge][fin])[module*2+apd]);
     }
 
         fCalTree->Fill();

@@ -9,7 +9,8 @@
 #include "Riostream.h"
 #include "TH2S.h"
 #include "TMath.h"
-#include "/home/miil/MODULE_ANA/ANA_V5/SpeedUp/include/Syspardef.h"
+//#include "/home/miil/MODULE_ANA/ANA_V5/SpeedUp/include/Syspardef.h"
+#include "Syspardef.h"
 
 class PixelCal : public TNamed {
  

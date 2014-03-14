@@ -13,12 +13,14 @@
 #include <TSelector.h>
 #include <TF1.h>
 #include <TSpectrum.h>
-//#include "Syspardef.h"
-//#include "PixelCal.h"
+#include "Syspardef.h"
+#include "PixelCal.h"
+#include "PPeaks.h"
+/*
 #include "/home/miil/MODULE_ANA/ANA_V5/SpeedUp/include/Syspardef.h"
 #include "/home/miil/MODULE_ANA/ANA_V5/SpeedUp/include/PixelCal.h"
 #include "/home/miil/MODULE_ANA/ANA_V5/SpeedUp/include/PPeaks.h"
-
+*/
 
 // Header file for the classes stored in the TTree if any.
 #include <TObject.h>

@@ -13,9 +13,10 @@
 #include <TH2F.h>
 // Header file for the classes stored in the TTree if any.
 #include <TObject.h>
-//#include "Syspardef.h"
-#include "/home/miil/MODULE_ANA/ANA_V5/SpeedUp/include/Syspardef.h"
-#include "/home/miil/MODULE_ANA/ANA_V5/SpeedUp/include/PPeaks.h"
+#include "Syspardef.h"
+#include "PPeaks.h"
+//#include "/home/miil/MODULE_ANA/ANA_V5/SpeedUp/include/Syspardef.h"
+//#include "/home/miil/MODULE_ANA/ANA_V5/SpeedUp/include/PPeaks.h"
 #include <Riostream.h>
 
 // Fixed size dimensions of array or collections stored in the TTree if any.
