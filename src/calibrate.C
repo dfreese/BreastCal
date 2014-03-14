@@ -162,16 +162,25 @@ int main(int argc, Char_t *argv[])
            return -10;}
 	 //	 entries=block->GetEntries();
 
+         if (verbose) cout << " Number of entries to process :: " << block->GetEntries() << endl;
 
          cout << " Read block from file :: " << time(NULL)-starttime << endl;
          cout << " Read block from file :: " << time(NULL)-starttime << endl;
+         TString calparfile;
+        calparfile.Form("%s.par.root",filebase);
+ 
+         TFile *calfile = new TFile(calparfile);
 
          PixelCal *CrysCal = new PixelCal("CrysCalPar");
-         CrysCal->SetVerbose(verbose);
+         CrysCal = (PixelCal *) calfile->Get("CrysCalPar");
+	   
 
-         CrysCal->ReadCal(filebase);
+
+         cout << " CrysCal->X[0][0][2][1][0] = " << CrysCal->X[0][0][2][1][0] << endl;
+         cout << " CrysCal->GainSpat[0][0][2][1][0] = " << CrysCal->GainSpat[0][0][2][1][0] << endl;
 
          Sel_Calibrator *m_cal = new Sel_Calibrator();
+         m_cal->SetFileBase(filebase);
 
        cout << "FYI:: Size of Sel_Calibrator :: " << sizeof(Sel_Calibrator) << endl;
 
@@ -179,17 +188,17 @@ int main(int argc, Char_t *argv[])
        //       m_getEhis->SetFileBase(filebase);
 
 
-       TFile *rfi;
+       //    TFile *rfi;
 
        //  if (!fitonly){
 
-       //#define USEPROOF
+#define USEPROOF
 
 #ifdef USEPROOF      
        //  TProof *proof = new TProof("proof");
        //   proof->Open("");
-      	 TProof *p = TProof::Open("workers=1");
-	 //	 TProof *p = TProof::Open("");
+             	 TProof *p = TProof::Open("workers=2");
+       //	 	 TProof *p = TProof::Open("");
        //       gProof->UploadPackage("/home/miil/MODULE_ANA/ANA_V5/SpeedUp/PAR/ModuleDatDict.par");
        //       gProof->EnablePackage("ModuleDatDict");
 
@@ -201,30 +210,38 @@ int main(int argc, Char_t *argv[])
        /* This is an example of the method to use PAR files  -- will need to use an environment var here to make it location independent */
 
              p->UploadPackage("/home/miil/MODULE_ANA/ANA_V5/SpeedUp/PAR/Sel_Calibrator.par");
-             p->EnablePackage("Sel_Calibrate");
+             p->EnablePackage("Sel_Calibrator");
 
 #else
        /* Loading the shared library */
 	     p->Exec("gSystem->Load(\"/home/miil/MODULE_ANA/ANA_V5/SpeedUp/lib/libModuleAna.so\")");
 #endif
-
-        p->AddInput(CrysCal);
+       m_cal->ReadUVCenters(rfile);
+       p->AddInput(CrysCal);
 
        block->SetProof();
+       /*
+       TProofOutputFile outf = TProofOutputFile("mycalout.root");
+       p->GetOutputList()->Add(outf);
+       */
+        cout << " Proof ready to process :: " << time(NULL)-starttime << endl;
+        block->Process(m_cal);
+        cout << " Proof processed :: " << time(NULL)-starttime << endl;
 
        m_cal->SetPixelCal(CrysCal);
-         cout << " Proof ready to process :: " << time(NULL)-starttime << endl;
-       block->Process(m_cal);
-        cout << " Proof processed :: " << time(NULL)-starttime << endl;
 
 #else
        //      block->Process("Sel_GetFloods.cc+");
+       m_cal->ReadUVCenters(rfile);
        m_cal->SetPixelCal(CrysCal);
        cout << " Ready to process :: " << endl;
       block->Process(m_cal);
 #endif
 
-      /*
+  
+
+      m_cal->FitAllGlobal();
+    /*
          PPeaks *thesePPeaks = (PPeaks *) rfile->Get("PhotoPeaks");
 	 if (!(thesePPeaks)) {
 	   cout << " Warning :: Couldn't read object PhotoPeaks from file " << rfile->GetName() << endl;
@@ -302,6 +319,9 @@ int main(int argc, Char_t *argv[])
 
 	 // here's fitting the global E_spec
 
+  
+
+
  Int_t hibin=0;
  Int_t max=0;
  Float_t xlow,xhigh;
@@ -315,6 +335,8 @@ int main(int argc, Char_t *argv[])
  //   calfile->cd();
  //   cal->Write(); 
  //   ppVals->Write();
+
+
 
 
    return 0;}

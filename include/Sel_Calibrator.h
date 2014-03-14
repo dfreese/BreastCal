@@ -12,9 +12,12 @@
 #include <TFile.h>
 #include <TSelector.h>
 #include <TH1F.h>
-#include <PixelCal.h>
-#include <ModuleCal.h>
+//#include <PixelCal.h>
+//#include <ModuleCal.h>
+#include "/home/miil/MODULE_ANA/ANA_V5/SpeedUp/include/PixelCal.h"
+#include "/home/miil/MODULE_ANA/ANA_V5/SpeedUp/include/ModuleCal.h"
 #include <TVector.h>
+#include <TProofOutputFile.h>
 
 // Header file for the classes stored in the TTree if any.
 #include <TObject.h>
@@ -71,37 +74,76 @@ public :
    TBranch        *b_eventdata_id;   //!
 
 
+   Bool_t verbose;
+
+   time_t starttime,startloop,endloop;
+   time_t seconds;
+
    // will hold calibration data
    PixelCal *fCrysCal ;
+
+   // will hold calibrated data
    TTree *fCalTree;
+
+   // Calibrated Event Class
    ModuleCal   *fCalEvent;
+
+   // Global E hisotgrams
    TH1F *fGlobHist[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
    TH1F *fGlobHist_com[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
-   TVector *uu_c[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE];
-   TVector *vv_c[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE];
 
+   // outputfile
+   TProofOutputFile *fProofFile;
+   TFile *fFile;
 
+   // Vectors holding u,v centers
+      TVector *uu_c[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE];
+      TVector *vv_c[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE];
+
+      TString fFileBase;
+
+      // ########### NOTE :: CRUCIALLY IMPORTANT !! INITIALIZE ALL POINTERS TO 0 IN CONSTRUCTOR !! //
 
   Sel_Calibrator(TTree * /*tree*/ =0) : fChain(0) {
- 
-   for (int c=0;c<CARTRIDGES_PER_PANEL;c++){
+   fCrysCal = 0 ;
+   fCalEvent = 0;
+   fCalTree = 0;
+   verbose = kFALSE;
+   fGlobHist = {{{{0}}}}  ; 
+   fGlobHist_com = {{{{0}}}}  ;
+   fFileBase= "CalTree";
+   fProofFile = 0;
+   fFile = 0;
+
+   //#ifdef UVR
+   for (int cc=0;cc<CARTRIDGES_PER_PANEL;cc++){
       for (int r=0;r<RENAS_PER_CARTRIDGE;r++){
-        uu_c[c][r] = new TVector(APDS_PER_MODULE*MODULES_PER_RENA);
-        vv_c[c][r] = new TVector(APDS_PER_MODULE*MODULES_PER_RENA);
+        uu_c[cc][r] = new TVector(APDS_PER_MODULE*MODULES_PER_RENA);
+        vv_c[cc][r] = new TVector(APDS_PER_MODULE*MODULES_PER_RENA);
       }
     }
-
+   //#endif
 
     
     }
 
+   //  virtual void   SetFileBase( const Char_t* name ) { fFileBase = name ;}
+   void SetPixelCal(PixelCal *pixcal ){ cout << " Setting fCrysCal ... " ;  fCrysCal = pixcal; cout << " Done. " << endl; } 
+   //   void SetPPeaks(PPeaks *ppeak ){ cout << " Setting fPPeaks ... " ;  fPPeaks = ppeak; cout << " Done. " << endl; } 
+   void SetVerbose(Bool_t v) { verbose=v;}
+   void SetFileBase(TString f) { fFileBase = f; return;}
+
+   Int_t WriteTree(TFile *rfile);
    Int_t ReadCal(TFile *r) ;
+
+   Int_t ReadUVCenters(TFile *rfile);
+
    void SetCal(PixelCal *pixcal){ fCrysCal = pixcal; }
    Double_t FineCalc(Double_t uv, Float_t u_cent, Float_t v_cent);
  
    virtual ~Sel_Calibrator() { }
    virtual Int_t   Version() const { return 2; }
-   void SetPixelCal(PixelCal *pixcal ){ cout << " Setting fCrysCal ... " ;  fCrysCal = pixcal; cout << " Done. " << endl; } 
+   //   void SetPixelCal(PixelCal *pixcal ){ cout << " Setting fCrysCal ... " ;  fCrysCal = pixcal; cout << " Done. " << endl; } 
    virtual void    Begin(TTree *tree);
    virtual void    SlaveBegin(TTree *tree);
    virtual void    Init(TTree *tree);
@@ -114,7 +156,11 @@ public :
    virtual TList  *GetOutputList() const { return fOutput; }
    virtual void    SlaveTerminate();
    virtual void    Terminate();
-
+   Int_t FitAllGlobal();
+   Float_t Getmean(Float_t *array);
+   Int_t FitGlobal(TH1F *globhist, Double_t xlow, Double_t xhigh, Double_t &eres, Double_t &d_eres);
+     Int_t WriteGlobPeaks(ofstream &globpeaks, Int_t cc, Int_t f, Int_t i, Int_t j, Double_t eres, Double_t d_eres, Float_t mean);
+     Int_t WriteGlobHist(TString fileappendix=".glob.root");
 
    ClassDef(Sel_Calibrator,1)
 

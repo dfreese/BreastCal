@@ -381,6 +381,9 @@ Int_t Sel_GetEhis::FitApdEhis(Int_t cc, Int_t f, Int_t i, Int_t j){
 	       }  // loop over k
 	  } // validpeaks
 
+
+	  //   cout << " CrysCal->GainSpat[0][0][2][1][0] = "<<  fCrysCal->GainSpat[0][0][2][1][0] << endl;
+
 	  delete spatfit;
 	  delete comfit;
 

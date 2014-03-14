@@ -240,7 +240,6 @@ int main(int argc, Char_t *argv[])
        //       gProof->EnablePackage("ModuleDatDict");
 
          cout << " Proof open :: " << time(NULL)-starttime << endl;
-
 #define USEPAR
      
 #ifdef USEPAR
@@ -278,7 +277,9 @@ int main(int argc, Char_t *argv[])
 	 m_getEhis->SetPPeaks(thesePPeaks);
 
         cout << " Before WriteHist :: " << time(NULL)-starttime << endl;
-	rfi = new TFile("CrysPixs.root","RECREATE");
+        TString calparfile;
+        calparfile.Form("%s.par.root",filebase);
+ 	rfi = new TFile(calparfile,"RECREATE");
        m_getEhis->WriteHists(rfi);
         cout << " After WriteHist :: " << time(NULL)-starttime << endl;
 
@@ -292,7 +293,12 @@ int main(int argc, Char_t *argv[])
        // m_getEhis->FitApdEhis(0,0,0,0);
 
        cout << " writing CrysCal :: " << time(NULL)-starttime << endl;
-     CrysCal->Write(); 
+       CrysCal = m_getEhis->GetPixelCal();
+
+       cout << "  CrysCal->GainSpat[0][0][2][1][0] = " <<   CrysCal->GainSpat[0][0][2][1][0] <<endl;
+
+ 
+       CrysCal->Write(); 
 
       /*
 	  f=calblock->GetCurrentFile();

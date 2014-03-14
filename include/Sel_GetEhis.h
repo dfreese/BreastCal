@@ -104,6 +104,7 @@ public :
           }
    virtual void   SetFileBase( const Char_t* name ) { fFileBase = name ;}
    void SetPixelCal(PixelCal *pixcal ){ cout << " Setting fCrysCal ... " ;  fCrysCal = pixcal; cout << " Done. " << endl; } 
+   PixelCal *GetPixelCal(void) { return fCrysCal; }
    void SetPPeaks(PPeaks *ppeak ){ cout << " Setting fPPeaks ... " ;  fPPeaks = ppeak; cout << " Done. " << endl; } 
    void SetVerbose(Bool_t v) { verbose=v;}
    Int_t WriteHists(TFile *rfile);

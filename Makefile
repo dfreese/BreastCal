@@ -18,7 +18,7 @@ CFLAGS =  -Wall -Wno-deprecated -W -g -fPIC -I$(ROOTMACRODIR_INC) -I./include -I
 CXXFLAGS = $(CFLAGS) $(shell root-config --cflags) -O3
 MYLIB = -L$(ROOTMACRODIR_LIB) -lmyrootlib -lInit_avdb
 DICTLIB = -L./lib -lModuleAna
-LDFLAGS = $(shell root-config --glibs) $(shell root-config --libs) -lMinuit -lSpectrum -lHistPainter -lTreePlayer -lProof $(MYLIB) $(DICTLIB)
+LDFLAGS = $(shell root-config --glibs) $(shell root-config --libs) -lMinuit -lSpectrum -lHistPainter -lTreePlayer -lProof -lProofPlayer $(MYLIB) $(DICTLIB)
 CC =g++
 
 
@@ -106,7 +106,7 @@ print:
 #shared library .. can be static I think.
 
 ./lib/libModuleAna.so: ./ModuleAnaDict.C $(CLASSES_C)
-	g++ -shared -o $@ `root-config --ldflags --glibs` $(CXXFLAGS) -I$(ROOTSYS)/include $^
+	g++ -shared -o $@ `root-config --ldflags --glibs`  -lProof -lProofPlayer  $(CXXFLAGS) -I$(ROOTSYS)/include $^
 
 #./lib/Sel_GetFloods.so: ./Sel_GetFloodsDict.C $(CLASSES_C)
 #	g++ -shared -o $@ `root-config --ldflags` $(CXXFLAGS) -I$(ROOTSYS)/include $^
