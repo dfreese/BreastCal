@@ -27,9 +27,11 @@
 #include <TH2.h>
 #include <TStyle.h>
 #include <TSystem.h>
-#include "/home/miil/MODULE_ANA/ANA_V5/SpeedUp/include/Apd_Fit.h"
+//#include "/home/miil/MODULE_ANA/ANA_V5/SpeedUp/include/Apd_Fit.h"
+#include "Apd_Fit.h"
 #include <TPaveText.h>
-#include "/home/miil/root/macros/include/myrootlib.h"
+//#include "/home/miil/root/macros/include/myrootlib.h"
+#include "myrootlib.h"
 
 ClassImp(Sel_Calibrator)
 
