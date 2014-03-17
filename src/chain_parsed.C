@@ -214,6 +214,7 @@ int main(int argc, char *argv[]){
    // need to store uvcenters ::
 	   for (Int_t c=0;c<CARTRIDGES_PER_PANEL;c++){
 	     for (Int_t r=0;r<FINS_PER_CARTRIDGE;r++){
+		 if(verbose)	 cout << " C" << c<< " F" <<r << endl;
 	       sprintf(tmpstring,"uu_c[%d][%d]",c,r);
 	       uu_c[c][r]->Write(tmpstring);
 	       sprintf(tmpstring,"vv_c[%d][%d]",c,r);

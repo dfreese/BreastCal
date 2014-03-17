@@ -444,8 +444,10 @@ if (pedfilenamespec) {
         int four_up_board_num = local_four_up_board;
 	//        cout << " 4up:: " << four_up_board_num << endl;
 	// MAPPING ISSUE !! -- 12/12/2013
-        four_up_board_num = 3 - four_up_board_num;  // FIXME 
-        cartridgeId-- ; // FIXME
+
+//        four_up_board_num = 3 - four_up_board_num;  // FIXME 
+//        cartridgeId-- ; // FIXME
+
         vector<bool> fpgaIdVec;
         fpgaIdVec.push_back((packBuffer[2] & 0x20) != 0);
         fpgaIdVec.push_back((packBuffer[2] & 0x10) != 0);

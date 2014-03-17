@@ -241,16 +241,19 @@ int main(int argc, Char_t *argv[])
 
          cout << " Proof open :: " << time(NULL)-starttime << endl;
 
-#define USEPAR
-     
-#ifdef USEPAR
+//#define USEPAR
 
-       /* This is an example of the method to use PAR files  -- will need to use an environment var here to make it location independent */
 
              char *libpath = getenv("CURDIR");
 	     cout << " Loading Shared Library from " << libpath << endl;
 	       cout << " (note CURDIR = " << getenv("CURDIR") << " )" << endl;
 	     TString exestring;
+
+     
+#ifdef USEPAR
+
+       /* This is an example of the method to use PAR files  -- will need to use an environment var here to make it location independent */
+
 	     //	     exestring.Form("gSystem->Load(\"%slibModuleAna.so\")","/home/miil/MODULE_ANA/ANA_V5/SpeedUp/lib/");
 	     exestring.Form("%s/PAR/Sel_GetEhis.par",libpath);
              
