@@ -4,6 +4,7 @@
 #include "time.h"
 #include "Sel_Calibrator.h"
 #include "TProof.h"
+#include <stdlib.h>
 
 #define FIRSTCHIP 0
 #define LASTCHIP RENACHIPS
@@ -62,6 +63,7 @@ int main(int argc, Char_t *argv[])
 	}
 
         cout <<  " Input file :: " << filename << "." << endl ;
+
 
         rootlogon(verbose);
         time_t starttime = time(NULL);
@@ -191,17 +193,31 @@ int main(int argc, Char_t *argv[])
 
          cout << " Proof open :: " << time(NULL)-starttime << endl;
 
-	 #define USEPAR
+	 //#define USEPAR
+
+             char *libpath = getenv("CURDIR");
+	     cout << " Loading Shared Library from " << libpath << endl;
+	     cout << " (note CURDIR = " << getenv("CURDIR") << " )" << endl;
+	     TString exestring;
      
 #ifdef USEPAR
+
        /* This is an example of the method to use PAR files  -- will need to use an environment var here to make it location independent */
 
-             p->UploadPackage("/home/miil/MODULE_ANA/ANA_V5/SpeedUp/PAR/Sel_Calibrator.par");
+
+	     //	     exestring.Form("gSystem->Load(\"%slibModuleAna.so\")","/home/miil/MODULE_ANA/ANA_V5/SpeedUp/lib/");
+	     exestring.Form("%s/PAR/Sel_Calibrator.par",libpath);
+             
+             p->UploadPackage(exestring.Data());
              p->EnablePackage("Sel_Calibrator");
 
 #else
        /* Loading the shared library */
-	     p->Exec("gSystem->Load(\"/home/miil/MODULE_ANA/ANA_V5/SpeedUp/lib/libModuleAna.so\")");
+             exestring.Form("gSystem->Load(\"%s/lib/libModuleAna.so\")",libpath);
+	     p->Exec(exestring.Data());
+
+	     //   return -1;
+
 #endif
        m_cal->ReadUVCenters(rfile);
        p->AddInput(CrysCal);
@@ -212,7 +228,10 @@ int main(int argc, Char_t *argv[])
        p->GetOutputList()->Add(outf);
        */
         cout << " Proof ready to process :: " << time(NULL)-starttime << endl;
+
+
         block->Process(m_cal);
+
         cout << " Proof processed :: " << time(NULL)-starttime << endl;
 
        m_cal->SetPixelCal(CrysCal);

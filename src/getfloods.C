@@ -245,15 +245,42 @@ Int_t main(int argc, Char_t *argv[])
        //   proof->Open("");
        TProof *p = TProof::Open("");
 
+
+             char *libpath = getenv("CURDIR");
+	     cout << " Loading Shared Library from " << libpath << endl;
+	     cout << " (note CURDIR = " << getenv("CURDIR") << " )" << endl;
+	     TString exestring;
+
      
 #ifdef USEPAR
-       /* This is an example of the method to use PAR files  --  need to use an environment var here to make it location independent */
+
+       // This is an example of the method to use PAR files  -- will need to use an environment var here to make it location independent */
+
+	     //	     exestring.Form("gSystem->Load(\"%slibModuleAna.so\")","/home/miil/MODULE_ANA/ANA_V5/SpeedUp/lib/");
+	     exestring.Form("%s/PAR/Sel_GetFloods.par",libpath);
+             
+             p->UploadPackage(exestring.Data());
+             p->EnablePackage("Sel_GetFloods");
+
+#else
+       /* Loading the shared library */
+             exestring.Form("gSystem->Load(\"%s/lib/libModuleAna.so\")",libpath);
+	     p->Exec(exestring.Data());
+
+	     //   return -1;
+
+#endif
+
+       /*     
+#ifdef USEPAR
+       // This is an example of the method to use PAR files  --  need to use an environment var here to make it location independent 
        p->UploadPackage("/home/miil/MODULE_ANA/ANA_V5/SpeedUp/PAR/Sel_GetFloods.par");
        p->EnablePackage("Sel_GetFloods");
 #else
-       /* Loading the shared library */
-	     p->Exec("gSystem->Load(\"/home/miil/MODULE_ANA/ANA_V5/SpeedUp/lib/libModuleAna.so\")");
+       // Loading the shared library 
+	     p->Exec("gSystem->Load(\"/home/miil/MODULE_ANA/ANA_V5/SpeedUp/lib/libModuleAna.so\")")
 #endif
+       */
 
         p->AddInput(ph);
 	// This didn't work ::            gProof->Load("m_getfloods");
