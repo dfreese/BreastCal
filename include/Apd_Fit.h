@@ -4,6 +4,9 @@
 #define PEAKS 64
 #define SATURATION 2500
 
+#define PSFILE 1
+#define PNGFILE 0
+
 #include "TROOT.h"
 #include "TMath.h"
 #include "TF1.h"
@@ -43,5 +46,5 @@ TF1* fitapdspec(TH1F *hist, Float_t xlow=0,Float_t xhigh=25,Int_t com=0,Int_t ve
 //Int_t fitall(TH1F**,Double_t*,Double_t[64][9] ,Float_t , Float_t , TCanvas*,Int_t);
 Int_t fitall(TH1F *hi[PEAKS],TF1 *ffunc[PEAKS],Double_t *values,Double_t pixvals[PEAKS][9],Float_t lowfit, Float_t hifit, TCanvas *c1,Int_t verbose=0);
 //Int_t writ(TH1F**, TCanvas*, Char_t[40]  );
-Int_t writ(TH1F *hi[PEAKS] , TF1 *ff[PEAKS],TCanvas *ccc, Char_t filename[40] = "outputfile.ps" ,Int_t drawfunc=0);
-
+//Int_t writ(TH1F *hi[PEAKS] , TF1 *ff[PEAKS],TCanvas *ccc, Char_t filename[40] = "outputfile.ps" ,int drawfunc=0);
+Int_t writ(TH1F *hi[PEAKS] , TF1 *ff[PEAKS], TCanvas *ccc, Char_t filename[40] = "outputfile.ps",Int_t drawfunc=0,Int_t type=PSFILE  );

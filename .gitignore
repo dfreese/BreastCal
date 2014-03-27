@@ -1,0 +1,13 @@
+# ignore objects and archives, anywhere in the tree.
+*.[oa]
+# ignore emacs backup files
+*~
+# ignore hidden files
+.*
+# ignore ROOT dictionary
+ModuleAnaDict.*
+# ignore lib
+lib/*
+# ignore binaries
+/bin/*
+!/bin/*sh

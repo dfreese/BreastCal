@@ -88,7 +88,8 @@ vector<unsigned int> chipRate;
 int main(int argc, char *argv[]){
   float pedestals[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][CHANNELS_PER_MODULE]={{{{0}}}};
   Int_t calcpedestal=0;
-  int uvcalc=0;
+// changed this to be always one, because ana code expects the vectors containing u,v centers to be in the root file.
+  int uvcalc=1;
  int chip;
  int module;
  int cartridge;

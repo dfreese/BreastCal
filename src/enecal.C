@@ -210,18 +210,19 @@ int main(int argc, Char_t *argv[])
 
 
          cout << " Read block from file :: " << time(NULL)-starttime << endl;
-
+         cout << " Entries in block :: " << block->GetEntries() << endl;
          PixelCal *CrysCal = new PixelCal("CrysCalPar");
          CrysCal->SetVerbose(verbose);
 
          CrysCal->ReadCal(filebase);
          cout << " CrysCal->X[0][0][2][1][0] = " << CrysCal->X[0][0][2][1][0] << endl;
-
+  cout << " fCrysCal->X[0][6][8][0][0] = " << CrysCal->X[0][6][8][0][0] << endl;
        Sel_GetEhis *m_getEhis = new Sel_GetEhis();
 
        cout << "FYI:: Size of Sel_GetEhis :: " << sizeof(Sel_GetEhis) << endl;
 
-
+       CrysCal->Print();
+ 
        m_getEhis->SetFileBase(filebase);
 
 
@@ -249,6 +250,8 @@ int main(int argc, Char_t *argv[])
 	       cout << " (note CURDIR = " << getenv("CURDIR") << " )" << endl;
 	     TString exestring;
 
+//FIXME NOT SURE WHY IT DOESN'T WORK WHEN USEPAR IS NOT DEFINED ... 
+#define USEPAR
      
 #ifdef USEPAR
 
@@ -270,17 +273,18 @@ int main(int argc, Char_t *argv[])
 #endif
 
 
-        p->AddInput(CrysCal);
+	           p->AddInput(CrysCal);
 
        block->SetProof();
+//       m_getEhis->LS();
          cout << " Proof ready to process :: " << time(NULL)-starttime << endl;
-       block->Process(m_getEhis);
+        block->Process(m_getEhis);
         cout << " Proof processed :: " << time(NULL)-starttime << endl;
        m_getEhis->SetPixelCal(CrysCal);
 
 #else
        //      block->Process("Sel_GetFloods.cc+");
-       m_getEhis->SetPixelCal(CrysCal);
+	//     m_getEhis->SetPixelCal(CrysCal);
       block->Process(m_getEhis);
 #endif
 
@@ -298,14 +302,14 @@ int main(int argc, Char_t *argv[])
         TString calparfile;
         calparfile.Form("%s.par.root",filebase);
  	rfi = new TFile(calparfile,"RECREATE");
-       m_getEhis->WriteHists(rfi);
+        m_getEhis->WriteHists(rfi);
         cout << " After WriteHist :: " << time(NULL)-starttime << endl;
 
 
 	 }
 
 
-       else { m_getEhis->LoadEHis(rfile); m_getEhis->SetPixelCal(CrysCal);}
+          else { m_getEhis->LoadEHis(rfile); m_getEhis->SetPixelCal(CrysCal);}
 
     
        // m_getEhis->FitApdEhis(0,0,0,0);

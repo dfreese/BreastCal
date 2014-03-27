@@ -143,10 +143,12 @@ int main(int argc, Char_t *argv[])
 
         if (verbose) cout << " Opening file " << rootfile << " for writing " << endl;
         TFile *fomfile = new TFile(rootfile,"UPDATE");
-        sprintf(tmpstring,"C%d",cc);
+/*        sprintf(tmpstring,"C%d",cc);
 	TDirectory *c_subdir = (TDirectory *) fomfile->Get(tmpstring);
         if (c_subdir) c_subdir->rmdir(tmpstring);
         if (!(c_subdir)) fomfile->mkdir(tmpstring);
+        c_subdir->cd();
+*/
         TTree *block;
         Char_t treename[40];
 
@@ -214,9 +216,23 @@ int main(int argc, Char_t *argv[])
         TH1F *xsums[FINS_PER_CARTRIDGE][MODULES_PER_FIN][2][8];
 
 	for (Short_t ff=0;ff<FINS_PER_CARTRIDGE;ff++){
+	sprintf(tmpstring,"C%dF%d",cc,ff);
+	TDirectory *f_subdir = (TDirectory *) fomfile->Get(tmpstring);
+        if (f_subdir) { f_subdir->rmdir(tmpstring); }
+        if (!(f_subdir)) f_subdir = fomfile->mkdir(tmpstring);
+        f_subdir->cd();
+	if( verbose){ gDirectory->pwd();}
+//        fomfile->ls();
 	 for (m=0;m<MODULES_PER_FIN;m++){
            for (j=0;j<2;j++){
-	     if (CrysCal->validpeaks[cc][ff][m][j]){
+   	       if (CrysCal->validpeaks[cc][ff][m][j]){
+	       sprintf(tmpstring,"M%dA%d",m,j);
+	       TDirectory *m_subdir = (TDirectory *) f_subdir->Get(tmpstring);
+	       if (m_subdir) {  m_subdir->rmdir(tmpstring); }
+	       if (!(m_subdir)) m_subdir = f_subdir->mkdir(tmpstring);
+	       if( verbose){ gDirectory->pwd();}
+	       m_subdir->cd();
+
                if (verbose) {cout << " ========  F"<<ff<<"M"<<m<<"A"<<j<<" ========= " << endl;}
                fitpos(xhist[ff][m][j],xfits[ff][m][j],0);
                for (k=0;k<64;k++){
@@ -262,9 +278,12 @@ int main(int argc, Char_t *argv[])
 	//        xsums[m][i][j][7]->Draw();
 	       c1->Print(curoutfile);
 
+
+	       f_subdir->cd();
 	     } // validpeaks
 	   } //j 
 	 } //m 
+	 fomfile->cd();
 	} //ff
 
 	 ofstream fomout;

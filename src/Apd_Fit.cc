@@ -1053,68 +1053,81 @@ Int_t fitall
  =======================================================================================================================
  =======================================================================================================================
  */
-Int_t writ(TH1F *hi[PEAKS], TF1 *ff[PEAKS], TCanvas *ccc, Char_t filename[MAXFILELENGTH], Int_t drawfunc)
+
+
+Int_t writ(TH1F *hi[PEAKS], TF1 *ff[PEAKS], TCanvas *ccc, Char_t filename[MAXFILELENGTH], Int_t drawfunc, Int_t type)
 {
-	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-	Int_t	k;
-	Char_t	filenameo[MAXFILELENGTH+1], filenamec[MAXFILELENGTH+1];
-	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+        Int_t   k;
+        Char_t  filenamedef[MAXFILELENGTH+3],filenameo[MAXFILELENGTH+4], filenamec[MAXFILELENGTH+4];
+        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
          // cout << "filename = " << filename << endl;
 
-	strcpy(filenameo, filename);
-	strcpy(filenamec, filename);
-	strcat(filenameo, "(");
-	strcat(filenamec, ")");
+        if (type==PSFILE){
 
-	/*
-	  cout << "in : " << filenameo<<endl;
-	  * TCanvas *ccc = new TCanvas("ccc","Energy Spectra",10,10,1000,900);
-	 */
-	ccc->Clear();
-	ccc->Divide(2, 4);
+        strcpy(filenameo, filename);
+        strcpy(filenamec, filename);
+        strcpy(filenamedef, filename);
+        strcat(filenameo, ".ps(");
+        strcat(filenamec, ".ps)");
+        strcat(filenamedef, ".ps");
+        }
+        /*
+          cout << "in : " << filenameo<<endl;
+          * TCanvas *ccc = new TCanvas("ccc","Energy Spectra",10,10,1000,900);
+         */
+        ccc->Clear();
+        ccc->Divide(2, 4);
 
-	for(k = 1; k < PEAKS + 1; k++) {
-		if(k % 8)
-			ccc->cd(k % 8);
-		else
-			ccc->cd(8);
+        for(k = 1; k < PEAKS + 1; k++) {
+                if(k % 8)
+                        ccc->cd(k % 8);
+                else
+                        ccc->cd(8);
 
-		/*
-		 * cout << k << " " << k%8 <<endl;
-		 */
-		hi[k - 1]->Draw("E");
+                /*
+                 * cout << k << " " << k%8 <<endl;
+                 */
+                hi[k - 1]->Draw("E");
 
-		/*
-		 * cout << ff[k-1]->GetName() <<endl;
-		 */
-		if(drawfunc) ff[k - 1]->Draw("same");
-		if(!(k % 8)) {
+                /*
+                 * cout << ff[k-1]->GetName() <<endl;
+                 */
+                if(drawfunc) { if (ff[k-1]) ff[k - 1]->Draw("same"); }
+ if(!(k % 8)) {
 
-			/*
-			 * cout << k << endl;
-			 */
-			if(k == 8) {
-				ccc->Print(filenameo);
-			}
-			else {
-				if(k == PEAKS)
-					ccc->Print(filenamec);
-				else {
-					ccc->Print(filename);
-				}
-			}
+                        /*
+                         * cout << k << endl;
+                                         */
 
-			/*
-			 * if (k!=PEAKS){ ;
-			 * cout << "Clearing and Dividing " <<endl;
-			 */
-			ccc->Clear();
-			ccc->Divide(2, 4);
+                    if (type==PSFILE){
 
-			/* } */
-		}
-	}
+                        if(k == 8) {
+                                ccc->Print(filenameo);
+                        }
+                        else {
+                                if(k == PEAKS)
+                                        ccc->Print(filenamec);
+                                else {
+                                        ccc->Print(filename);
+                                }
+                        }
 
-	return 0;
+                    }
+                    else  sprintf(filenameo,"%s_%d.png",filename,(Int_t) (k-1)/8);
+                    ccc->Print(filenameo);
+                        /*
+                         * if (k!=PEAKS){ ;
+                         * cout << "Clearing and Dividing " <<endl;
+                         */
+                        ccc->Clear();
+                        ccc->Divide(2, 4);
+
+                        /* } */
+                }
+        }
+
+        return 0;
 }
+

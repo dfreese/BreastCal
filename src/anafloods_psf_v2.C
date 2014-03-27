@@ -31,7 +31,7 @@
 //#define PUBPLOT
 
 // comment this if you don't want the additional Pictorial Structure based search.
-//#define sortps
+#define sortps
 
 
 
@@ -54,6 +54,10 @@ Int_t updatesegmentation(TH2F *hist, Double_t x[16], Double_t y[16], TGraph *upd
 Int_t updatesegpoint(TH2F *hist, Double_t x, Double_t y, Double_t &xxx, Double_t &yyy, Int_t verbose) ;
 Int_t validate_sort(TGraph *gr, Int_t verbose);
 
+void usage(void){
+    cout << "   anafloods -f [filename] [ -v -c [cartridgeId] -l [finId] -m [moduleId] -a [apdId] ] " << endl;
+}
+
 Int_t main(int argc, Char_t *argv[])
 {
 
@@ -68,18 +72,19 @@ Int_t main(int argc, Char_t *argv[])
         Int_t           firstcartridge=0,lastcartridge=CARTRIDGES_PER_PANEL;
         Int_t           firstfin=0,lastfin=FINS_PER_CARTRIDGE;
         Int_t           firstmodule=0,lastmodule=MODULES_PER_FIN;
-        Int_t           firstapd=0,lastapd=1;
-
+        Int_t           firstapd=0,lastapd=APDS_PER_MODULE;
+        Bool_t          used;
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 	for(ix = 1; ix < argc; ix++) {
-
+	    used=kFALSE;
 		/*
 		 * Verbose '-v'
 		 */
 		if(strncmp(argv[ix], "-c", 2) == 0) {
-                  ix++;
+		    used=kTRUE;
+		  ix++;
 		  CARTRIDGE = atoi(argv[ix]);
                   if (CARTRIDGE < CARTRIDGES_PER_PANEL){
                      firstcartridge=CARTRIDGE;lastcartridge=firstcartridge+1;
@@ -88,6 +93,7 @@ Int_t main(int argc, Char_t *argv[])
 		}
 
 		if(strncmp(argv[ix], "-l", 2) == 0) {
+		    used=kTRUE;
                   ix++;
 		  FIN = atoi(argv[ix]);
                   if (FIN < FINS_PER_CARTRIDGE){
@@ -98,6 +104,7 @@ Int_t main(int argc, Char_t *argv[])
 
 
 		if(strncmp(argv[ix], "-m", 2) == 0) {
+		    used=kTRUE;
                   ix++;
 		  MODULE = atoi(argv[ix]);
                   if (MODULE <= MODULES_PER_FIN ) { 
@@ -107,6 +114,7 @@ Int_t main(int argc, Char_t *argv[])
 		}
 
 		if(strncmp(argv[ix], "-a", 2) == 0) {
+		    used=kTRUE;
                   ix++;
 		  APD = atoi(argv[ix]);
                   if ((APD==0)||(APD==1)){
@@ -118,11 +126,13 @@ Int_t main(int argc, Char_t *argv[])
 		}
 
 		if(strncmp(argv[ix], "-v", 2) == 0) {
+		    used=kTRUE;
 			cout << "Verbose Mode " << endl;
 			verbose = 1;
 		}
 		/* filename '-f' */
 		if(strncmp(argv[ix], "-f", 2) == 0) {
+		    used=kTRUE;
 			if(strlen(argv[ix + 1]) < FILENAMELENGTH) {
 				sprintf(filename, "%s", argv[ix + 1]);
 			}
@@ -132,12 +142,21 @@ Int_t main(int argc, Char_t *argv[])
 				return -99;
 			}
 			ix++;}
+
+                
+		if (!used){
+		    cout << " Unknown argument " << argv[ix] << endl;
+		    cout << " Usage: " ; 
+                    usage() ;
+		    cout << " Exiting" << endl;
+			return -3;
+		}
 	}
 
 	cout << " Inputfile : " << filename << "." << endl; 
 
         rootlogon(verbose);
-        set2dcolor(2);
+        set2dcolor(4);
 
 
 
@@ -361,8 +380,8 @@ floods[m][i][j]->Draw("colz");
  for (c=firstcartridge;c<lastcartridge;c++){
    for (f=firstfin;f<lastfin;f++){ 
      if (verbose)  cout << " Analyzing fin .. " << f << " in cartridge " << c << endl;   
-     for (i=firstmodule;i<=lastmodule;i++){
-       for (j=firstapd;j<=lastapd;j++){
+     for (i=firstmodule;i<lastmodule;i++){
+       for (j=firstapd;j<lastapd;j++){
 
       if (validsegment[c][f][i][j]==1) { 
 	peaklocationfile << "* C" << c << "F" << f << "M" <<  i  << "A" << j << "  "  << validsegment[c][f][i][j] << "  (min cost: " << costs[c][f][i][j] <<" )      *" <<endl;
@@ -539,8 +558,8 @@ case 2:
 
  for (k=0;k<(flood->GetNbinsX());k++){
      for (l=0;l< (flood->GetNbinsY());l++){
-           xval = flood->GetBinCenter(k); 
-           yval = flood->GetBinCenter(l); 
+	 xval = flood->GetXaxis()->GetBinCenter(k); 
+	 yval = flood->GetYaxis()->GetBinCenter(l); 
            curbin = flood->FindBin(xval,yval);
            value =  flood->GetBinContent(k,l);
 

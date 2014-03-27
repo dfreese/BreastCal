@@ -24,7 +24,6 @@
 //
 
 #include "Sel_GetEhis.h"
-#include <TH2.h>
 #include <TStyle.h>
 #include <TDirectory.h>
 #include <TCanvas.h>
@@ -66,7 +65,12 @@ void Sel_GetEhis::SlaveBegin(TTree * /*tree*/)
 #endif
     */
 
+
+  fInput->ls();
+
+
    TString option = GetOption();
+
   startloop = time (NULL);
    fCrysCal = dynamic_cast<PixelCal *>(fInput->FindObject("CrysCalPar"));
   endloop = time (NULL);
@@ -74,7 +78,7 @@ void Sel_GetEhis::SlaveBegin(TTree * /*tree*/)
 
 
 
-   cout << " fCrysCal->X[0][0][2][1][0] = " << fCrysCal->X[0][0][2][1][0] << endl;
+   cout << " fCrysCal->X[0][6][8][1][0] = " << fCrysCal->X[0][6][8][1][0] << endl;
 
    startloop = time (NULL);
 
@@ -124,8 +128,11 @@ Bool_t Sel_GetEhis::Process(Long64_t entry)
  
 
   Int_t _id;
+
+
+
    fChain->GetTree()->GetEntry(entry);
-   // perform time calibration
+     // perform time calibration
    if ((apd==0) || (apd==1) ) 
      //  event->ft=finecalc(event->ft,(*uu_c)(event->chip+RENACHIPS*event->module+event->apd*MODULES*RENACHIPS),(*vv_c)(event->chip+RENACHIPS*event->module+event->apd*MODULES*RENACHIPS) );
 
@@ -145,6 +152,7 @@ Bool_t Sel_GetEhis::Process(Long64_t entry)
 
    //             calblock->Fill();
 
+   
    return kTRUE;
 }
 
@@ -170,6 +178,7 @@ void Sel_GetEhis::Terminate()
    TString hn;
    //   fOutput->ls();
 
+
     for (Int_t cc=0;cc<CARTRIDGES_PER_PANEL;cc++){
 	 for (Int_t f=0;f<FINS_PER_CARTRIDGE;f++){
            for (Int_t i=0;i<MODULES_PER_FIN;i++){
@@ -190,6 +199,7 @@ void Sel_GetEhis::Terminate()
 
 }
 
+//#ifdef IFOUNDIT
 
 Int_t Sel_GetEhis::WriteHists(TFile *rfile){
   Char_t tmpstring[40];     
@@ -802,3 +812,4 @@ void Sel_GetEhis::ReadEHistos(TFile *rfile)
 */
 
 
+ //#endif

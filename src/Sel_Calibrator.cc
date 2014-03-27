@@ -464,9 +464,9 @@ Int_t Sel_Calibrator::WriteGlobHist(TString fileappendix){
   TFile *rfile = new TFile(hfilename.Data(),"RECREATE");
   for (Int_t cc=0;cc<CARTRIDGES_PER_PANEL;cc++){
      for (Int_t f=0;f<FINS_PER_CARTRIDGE;f++){
-       sprintf(tmpstring,"C%dF%d",c,f);
-        subdir[c][f] = rfile->mkdir(tmpstring);
-        subdir[c][f]->cd();
+       sprintf(tmpstring,"C%dF%d",cc,f);
+        subdir[cc][f] = rfile->mkdir(tmpstring);
+        subdir[cc][f]->cd();
        for (Int_t m=0;m<MODULES_PER_FIN;m++){
          for (Int_t j=0;j<APDS_PER_MODULE;j++){
 	   fGlobHist[cc][f][m][j]->Write();

@@ -114,7 +114,7 @@ Int_t PixelCal::WriteCalTxt(const char *filebase){
 	for (Int_t f=0;f<FINS_PER_CARTRIDGE;f++){
 	  for (Int_t i=0;i<MODULES_PER_FIN;i++){
 	    for (Int_t j=0;j<APDS_PER_MODULE;j++){
-	      sprintf(calfilename,"%s.C%dR%dM%dA%d_cal",filebase,c,f,i,j);
+	      sprintf(calfilename,"%s.C%dF%dM%dA%d_cal",filebase,c,f,i,j);
 	      strcat(calfilename,".txt");
 	      if (validpeaks[c][f][i][j]){
 		ofile.open(calfilename);

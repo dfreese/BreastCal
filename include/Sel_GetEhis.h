@@ -36,7 +36,7 @@ public :
    TTree          *fChain;   //!pointer to the analyzed TTree or TChain
 
    // Declaration of leaf types
- //ModuleDat       *eventdata;
+//ModuleDat       *eventdata;
    UInt_t          fUniqueID;
    UInt_t          fBits;
    Long64_t        ct;
@@ -59,19 +59,20 @@ public :
    Short_t         id;
 
    //histograms
-  TH1F *fEhist[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][XTALS_PER_APD];
-  TH1F *fEhist_com[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][XTALS_PER_APD];
-  //  TF1 *fEfit[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][XTALS_PER_APD];
-  //  TF1 *fEfit_com[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][XTALS_PER_APD];
+   TH1F *fEhist[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][XTALS_PER_APD];
+   TH1F *fEhist_com[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][XTALS_PER_APD];
 
-  Bool_t verbose;
+   //  TF1 *fEfit[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][XTALS_PER_APD];
+   //  TF1 *fEfit_com[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][XTALS_PER_APD];
 
-  //IO stuff
-  string fFileBase;
+   Bool_t verbose;
 
-  //Classes
-  PixelCal *fCrysCal;
-  PPeaks *fPPeaks;  
+   //IO stuff
+   TString fFileBase;
+
+   //Classes
+   PixelCal *fCrysCal;
+   PPeaks *fPPeaks;  
 
    // List of branches
    TBranch        *b_eventdata_fUniqueID;   //!
@@ -100,15 +101,21 @@ public :
 
 
    Sel_GetEhis(TTree * /*tree*/ =0) : fChain(0) { 
-     fCrysCal = 0 ;
-     fPPeaks = 0;
-     verbose = kFALSE;
+      fCrysCal = 0 ;
+       fPPeaks = 0;
+       verbose = kFALSE;
+      fFileBase = "dummy";
+      fEhist = {{{{{0}}}}};
+      fEhist_com = {{{{{0}}}}};
           }
+   
+
    virtual void   SetFileBase( const Char_t* name ) { fFileBase = name ;}
    void SetPixelCal(PixelCal *pixcal ){ cout << " Setting fCrysCal ... " ;  fCrysCal = pixcal; cout << " Done. " << endl; } 
    PixelCal *GetPixelCal(void) { return fCrysCal; }
    void SetPPeaks(PPeaks *ppeak ){ cout << " Setting fPPeaks ... " ;  fPPeaks = ppeak; cout << " Done. " << endl; } 
    void SetVerbose(Bool_t v) { verbose=v;}
+//#ifdef IFOUNDIT 
    Int_t WriteHists(TFile *rfile);
    Int_t FitApdEhis(Int_t c, Int_t f, Int_t i, Int_t j);
    Int_t FitAll(void) ;
@@ -116,6 +123,7 @@ public :
    void LoadEHis(TFile *rfile);
    void DefFFuncs(void);
    Int_t GenPlots(Int_t cc, Int_t firstfin, Int_t lastfin);
+//#endif
 
   virtual ~Sel_GetEhis() { }
    virtual Int_t   Version() const { return 2; }
@@ -133,7 +141,7 @@ public :
    virtual void    Terminate();
 
 
-   ClassDef(Sel_GetEhis,1);
+   ClassDef(Sel_GetEhis,2);
 };
 
 #endif

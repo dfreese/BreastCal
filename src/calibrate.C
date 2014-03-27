@@ -245,8 +245,12 @@ int main(int argc, Char_t *argv[])
 #endif
 
   
-
+      cout << " Fitting Global spectra :: " <<time(NULL)-starttime << endl;
       m_cal->FitAllGlobal();
+
+      cout << " Writing glob hists to file :: " <<time(NULL)-starttime << endl;
+      m_cal->WriteGlobHist(".glob.root");
+
     /*
          PPeaks *thesePPeaks = (PPeaks *) rfile->Get("PhotoPeaks");
 	 if (!(thesePPeaks)) {
