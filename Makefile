@@ -9,7 +9,8 @@
 
 # note source files that start with a capital letter are just a bunch of functions and don't have a "main {} "
 
-ROOTMACRODIR=$(HOME)/root/macros
+#ROOTMACRODIR=$(HOME)/root/macros
+ROOTMACRODIR=/home/products/RootMacros/macros
 ROOTMACRODIR_LIB=$(ROOTMACRODIR)/lib
 ROOTMACRODIR_INC=$(ROOTMACRODIR)/include
 
@@ -18,7 +19,7 @@ CFLAGS =  -Wall -Wno-deprecated -W -g -fPIC -I$(ROOTMACRODIR_INC) -I./include -I
 CXXFLAGS = $(CFLAGS) $(shell root-config --cflags) -O3
 MYLIB = -L$(ROOTMACRODIR_LIB) -lmyrootlib -lInit_avdb
 DICTLIB = -L./lib -lModuleAna
-LDFLAGS = $(shell root-config --glibs) $(shell root-config --libs) -lMinuit -lSpectrum -lHistPainter -lTreePlayer -lProof -lProofPlayer $(MYLIB) $(DICTLIB)
+LDFLAGS = $(DICTLIB) $(shell root-config --glibs) $(shell root-config --libs) -lMinuit -lSpectrum -lHistPainter -lTreePlayer -lProof -lProofPlayer $(MYLIB) 
 CC =g++
 
 
@@ -74,7 +75,7 @@ check:
 .rules: .depend
 	@echo "Making rules for SW"
 	$(shell cat .depend |  tr ' ' '\n' | grep -v $(ROOTSYS) | sed '/\\/d' | grep -v $(HDRONLY) | grep -v myrootlib | grep -v libInit_avdb  | grep "[[:alnum:]]" | tr '\n' ' '  | sed  's/src\/[[:alnum:]_]*.o:/\n&/g'  | sed '/^$$/d' > .buildrules; echo "" >> .buildrules)
-	@cat .buildrules | sed 's/^src/bin/g' | sed 's/include/src/g' | sed 's/\.o//' | sed 's/\.[Ch]/\.o/g' | sed 's/\.\///g'  |  awk '{ while(++i<=NF) printf (!a[$$(i)]++) ? $$(i) FS : ""; i=split("",a); print "" }'  |  sed '/^bin\/decoder/!s/[a-zA-Z/]*decoder\.o//'   | awk '{print $$(0)"\n\t $$(CC) $$(CXXFLAGS) $$(LDFLAGS) $$^ -o $$@"}' > .binrules
+	@cat .buildrules | sed 's/^src/bin/g' | sed 's/include/src/g' | sed 's/\.o//' | sed 's/\.[Ch]/\.o/g' | sed 's/\.\///g'  |  awk '{ while(++i<=NF) printf (!a[$$(i)]++) ? $$(i) FS : ""; i=split("",a); print "" }'  |  sed '/^bin\/decoder/!s/[a-zA-Z/]*decoder\.o//'   | awk '{print $$(0)"\n\t $$(CC) $$(CXXFLAGS) -o $$@  $$^ $$(LDFLAGS)"}' > .binrules
 
 -include .binrules
 -include .depend
@@ -107,6 +108,8 @@ print:
 
 ./lib/libModuleAna.so: ./ModuleAnaDict.C $(CLASSES_C)
 	g++ -shared -o $@ `root-config --ldflags --glibs`  -lProof -lProofPlayer  $(CXXFLAGS) -I$(ROOTSYS)/include $^
+
+
 
 #./lib/Sel_GetFloods.so: ./Sel_GetFloodsDict.C $(CLASSES_C)
 #	g++ -shared -o $@ `root-config --ldflags` $(CXXFLAGS) -I$(ROOTSYS)/include $^
