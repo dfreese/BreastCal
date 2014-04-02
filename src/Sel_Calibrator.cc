@@ -60,12 +60,19 @@ void Sel_Calibrator::SlaveBegin(TTree * /*tree*/)
   TString ht;
   TString option = GetOption();
 
-  fInput->ls();
+  
 
   startloop = time (NULL);
-  //#ifdef USEPROOF 
-  fCrysCal = dynamic_cast<PixelCal *>(fInput->FindObject("CrysCalPar"));
-  //#endif
+
+//#define USEPROOF
+
+//#ifdef USEPROOF 
+  if (fUseProof) {
+fInput->ls();
+fCrysCal = dynamic_cast<PixelCal *>(fInput->FindObject("CrysCalPar"));
+  }
+//#endif
+
   endloop = time (NULL);
   cout << " Time to find fCrysCal :: " <<  endloop-startloop  << endl;
   
@@ -90,8 +97,10 @@ void Sel_Calibrator::SlaveBegin(TTree * /*tree*/)
   // see: http://root.cern.ch/drupal/content/handling-large-outputs-root-files
   // TNamed *nm = dynamic_cast<TNamed *> (fInput->FindObject(fCalFilename.Data()));
 
-#define USEPROOF
-#ifdef USEPROOF
+
+
+//#ifdef USEPROOF
+   if (fUseProof){
    //  TNamed *nm = dynamic_cast<TNamed *> (fInput->FindObject("damnit.root"));
    TNamed *nm = dynamic_cast<TNamed *> (fInput->FindObject(fCalFilename.Data()));
 
@@ -110,7 +119,7 @@ void Sel_Calibrator::SlaveBegin(TTree * /*tree*/)
       out = (TNamed *) fInput->FindObject("PROOF_OUTPUTFILE");
       if (out) fProofFile->SetOutputFileName(out->GetTitle());
    }
-#endif
+
 
   
  // Open the file
@@ -120,18 +129,26 @@ void Sel_Calibrator::SlaveBegin(TTree * /*tree*/)
    Warning("SlaveBegin", "problems opening file: %s/%s",
 	   fProofFile->GetDir(), fProofFile->GetFileName());
  }
+
+// #else 
+   } else {
+ fFile = new TFile(fCalFilename.Data(),"RECREATE");
+   }
+//#endif
   
     fCalTree = new TTree("CalTree","Energy calibrated LYSO-PSAPD module data ");
     
-   fCalTree->SetDirectory(fFile);
-   fCalTree->AutoSave();
+    fCalTree->SetDirectory(fFile);
+    fCalTree->AutoSave();
     fCalEvent   =  new ModuleCal();
     fCalTree->Branch("Calibrated Event Data",&fCalEvent);
 
-
+if (fUseProof){
+//#ifdef USEPROOF
    fOutput->Add(fCalTree);
+//#endif   
+       }
    
-     
    for (Int_t cc=0;cc<CARTRIDGES_PER_PANEL;cc++){
      for (Int_t f=0;f<FINS_PER_CARTRIDGE;f++){
        for (Int_t m=0;m<MODULES_PER_FIN;m++){
@@ -234,17 +251,30 @@ void Sel_Calibrator::SlaveTerminate()
    // Write the ntuple to the file
    if (fFile) {
       Bool_t cleanup = kFALSE;
-      TDirectory *savedir = gDirectory;
+//#ifdef USEPROOF
+      TDirectory *savedir;
+      if (fUseProof) {
+      savedir = gDirectory;
+      }
+//#endif
       if (fCalTree->GetEntries() > 0) {
          fFile->cd();
          fCalTree->Write();
-         fProofFile->Print();
-         fOutput->Add(fProofFile);
-      } else {
+	 if (fUseProof) {
+//#ifdef USEPROOF
+	     fProofFile->Print();
+	     fOutput->Add(fProofFile);
+	 }
+//#endif
+	 } else {
          cleanup = kTRUE;
       }
       fCalTree->SetDirectory(0);
+    if (fUseProof) {
+//#ifdef USEPROOF
       gDirectory = savedir;
+    }
+//#endif
       fFile->Close();
       // Cleanup, if needed
       if (cleanup) {

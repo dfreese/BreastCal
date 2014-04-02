@@ -26,15 +26,23 @@ int main(int argc, Char_t *argv[])
 	//       ModuleDat *event = 0;
 	//        ModuleCal   *calevent =  new ModuleCal();
         Bool_t genplots=0;
+	Bool_t UseProof=kFALSE;
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 	//see eg http://root.cern.ch/phpBB3/viewtopic.php?f=14&t=3498
+
 	gErrorIgnoreLevel=kError;
+
 	for(ix = 1; ix < argc; ix++) {
 
 		/*
 		 * Verbose '-v'
 		 */
+        	if(strncmp(argv[ix], "-P", 2) == 0) {
+			cout << "Using PROOF " << endl;
+			UseProof = kTRUE;
+		}
+
 		if(strncmp(argv[ix], "-v", 2) == 0) {
 			cout << "Verbose Mode " << endl;
 			gErrorIgnoreLevel=-1;
@@ -66,8 +74,9 @@ int main(int argc, Char_t *argv[])
 
 
         rootlogon(verbose);
+        
         time_t starttime = time(NULL);
-
+        time_t loctime;
 
         Char_t filebase[FILENAMELENGTH],rootfile[FILENAMELENGTH]; 
 	//        Char_t tmpname[20],tmptitle[50];
@@ -181,9 +190,10 @@ int main(int argc, Char_t *argv[])
 
        //  if (!fitonly){
 
-#define USEPROOF
+//#define USEPROOF
 
-#ifdef USEPROOF      
+//#ifdef USEPROOF      
+	   if (UseProof){
        //  TProof *proof = new TProof("proof");
        //   proof->Open("");
              	 TProof *p = TProof::Open("workers=2");
@@ -207,7 +217,6 @@ int main(int argc, Char_t *argv[])
 
 	     //	     exestring.Form("gSystem->Load(\"%slibModuleAna.so\")","/home/miil/MODULE_ANA/ANA_V5/SpeedUp/lib/");
 	     exestring.Form("%s/PAR/Sel_Calibrator.par",libpath);
-             
              p->UploadPackage(exestring.Data());
              p->EnablePackage("Sel_Calibrator");
 
@@ -220,6 +229,7 @@ int main(int argc, Char_t *argv[])
 
 #endif
        m_cal->ReadUVCenters(rfile);
+       m_cal->fUseProof = kTRUE;
        p->AddInput(CrysCal);
 
        block->SetProof();
@@ -235,19 +245,24 @@ int main(int argc, Char_t *argv[])
         cout << " Proof processed :: " << time(NULL)-starttime << endl;
 
        m_cal->SetPixelCal(CrysCal);
-
-#else
+	   } else {
+//#else
        //      block->Process("Sel_GetFloods.cc+");
+       m_cal->fUseProof=kFALSE;
        m_cal->ReadUVCenters(rfile);
        m_cal->SetPixelCal(CrysCal);
        cout << " Ready to process :: " << endl;
-      block->Process(m_cal);
-#endif
+       block->Process(m_cal);
+
+	   }
+//#endif
 
   
-      cout << " Fitting Global spectra :: " <<time(NULL)-starttime << endl;
+      cout << " Fitting Global spectra @ " <<time(NULL)-starttime << endl;
+      loctime=time(NULL);
       m_cal->FitAllGlobal();
 
+      cout << " Fitting time  :: " << time(NULL) -loctime << endl;
       cout << " Writing glob hists to file :: " <<time(NULL)-starttime << endl;
       m_cal->WriteGlobHist(".glob.root");
 

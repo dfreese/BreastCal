@@ -75,6 +75,7 @@ public :
 
 
    Bool_t verbose;
+   Bool_t fUseProof;
 
    time_t starttime,startloop,endloop;
    time_t seconds;
@@ -114,6 +115,7 @@ public :
    fFileBase= "CalTree";
    fProofFile = 0;
    fFile = 0;
+   fUseProof = kFALSE;
 
    //#ifdef UVR
    for (int cc=0;cc<CARTRIDGES_PER_PANEL;cc++){
