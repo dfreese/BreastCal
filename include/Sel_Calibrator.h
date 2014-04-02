@@ -110,8 +110,16 @@ public :
    fCalEvent = 0;
    fCalTree = 0;
    verbose = kFALSE;
-   fGlobHist = {{{{0}}}}  ; 
-   fGlobHist_com = {{{{0}}}}  ;
+   for (Int_t cc=0;cc<CARTRIDGES_PER_PANEL;cc++){
+     for (Int_t f=0;f<FINS_PER_CARTRIDGE;f++){
+       for (Int_t m=0;m<MODULES_PER_FIN;m++){
+         for (Int_t j=0;j<APDS_PER_MODULE;j++){
+	   fGlobHist[cc][f][m][j] = 0  ; 
+	   fGlobHist_com[cc][f][m][j] = 0  ;
+	 }
+       }
+     }
+   }
    fFileBase= "CalTree";
    fProofFile = 0;
    fFile = 0;

@@ -6,8 +6,8 @@
 .*
 # ignore ROOT dictionary
 ModuleAnaDict.*
-# ignore lib
-lib/*
+# ignore library
+lib/lib*
 # ignore binaries
 /bin/*
 !/bin/*sh

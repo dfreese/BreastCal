@@ -105,9 +105,20 @@ public :
        fPPeaks = 0;
        verbose = kFALSE;
       fFileBase = "dummy";
-      fEhist = {{{{{0}}}}};
-      fEhist_com = {{{{{0}}}}};
-          }
+      for (Int_t cc=0;cc<CARTRIDGES_PER_PANEL;cc++){
+	for (Int_t f=0;f<FINS_PER_CARTRIDGE;f++){
+	  for (Int_t m=0;m<MODULES_PER_FIN;m++){
+	    for (Int_t j=0;j<APDS_PER_MODULE;j++){
+	      for (Int_t k=0;k<XTALS_PER_APD;k++){
+		fEhist[cc][f][m][j][k] = 0;
+		fEhist_com[cc][f][m][j][k] = 0;
+	      }
+	    }
+	  }
+	}
+      }
+   }
+    
    
 
    virtual void   SetFileBase( const Char_t* name ) { fFileBase = name ;}
