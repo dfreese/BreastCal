@@ -235,7 +235,7 @@ int main(int argc, Char_t *argv[])
 #ifdef USEPROOF      
        //  TProof *proof = new TProof("proof");
        //   proof->Open("");
-	 	 TProof *p = TProof::Open("workers=1");
+	 	 TProof *p = TProof::Open("workers=2");
 	 //	 TProof *p = TProof::Open("");
        //       gProof->UploadPackage("/home/miil/MODULE_ANA/ANA_V5/SpeedUp/PAR/ModuleDatDict.par");
        //       gProof->EnablePackage("ModuleDatDict");
@@ -359,7 +359,9 @@ int main(int argc, Char_t *argv[])
           fhi->Close();
         
       */ 
-       cout << " closing file  rfi :: " << time(NULL)-starttime << endl;
+       cout << " writing file  rfi (" << rfi->GetName() << ") :: " << time(NULL)-starttime << endl;
+       rfi->Write();
+       cout << " closing file  rfi (" << rfi->GetName() << ") :: " << time(NULL)-starttime << endl;
        rfi->Close();
        cout << " closing file  rfile :: " << time(NULL)-starttime << endl;
 	rfile->Close();
