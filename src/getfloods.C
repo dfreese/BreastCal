@@ -4,6 +4,7 @@
 #include "TTreePerfStats.h"
 #include "TChain.h"
 #include "TProof.h"
+#include <sys/stat.h>
 
 Int_t main(int argc, Char_t *argv[])
 {
@@ -16,7 +17,7 @@ Int_t main(int argc, Char_t *argv[])
 
 	Int_t		ix;
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-	ModuleDat *event = 0;
+	//	ModuleDat *event = 0;
 	//UNIT0,UNIT1,UNIT2,UNIT3;
 
 	//     module TESTISD
@@ -62,21 +63,22 @@ Int_t main(int argc, Char_t *argv[])
 		}
        
 
-        TVector *ppVals[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE];
-        TVector *ppVals_com[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE];
+	//        TVector *ppVals[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE];
+	//        TVector *ppVals_com[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE];
         TH1F *E[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
         TH1F *E_com[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
         TH2F *floods[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
 
 
         Int_t c,f,i,j;
+	/*
         for (c=0;c<CARTRIDGES_PER_PANEL;c++){ 
 	  for (f=0;f<FINS_PER_CARTRIDGE;f++){
             ppVals[c][f] = new TVector(APDS_PER_MODULE*MODULES_PER_FIN);
             ppVals_com[c][f] = new TVector(APDS_PER_MODULE*MODULES_PER_FIN);
 	  }
 	}
-
+	*/
 	TFile *rfile = new TFile(filename,"UPDATE");
         if (!rfile || rfile->IsZombie()) {  
          cout << "problems opening file " << filename << "\n.Exiting" << endl; 
@@ -86,7 +88,8 @@ Int_t main(int argc, Char_t *argv[])
         Char_t tmpstring[60],titlestring[60];
 	//,cutstring[120],cutstring2[120];
         Char_t filebase[FILENAMELENGTH];
-        Int_t l,entries;
+	//        Int_t l
+        Int_t entries;
         TCanvas *c1;
         Char_t treename[20];
  
@@ -155,8 +158,8 @@ Int_t main(int argc, Char_t *argv[])
 
 
        Double_t pp_right,pp_low,pp_up;
-       Double_t ppeaks[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
-       Double_t ppeaks_com[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
+       //       Double_t ppeaks[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
+       //       Double_t ppeaks_com[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
 
        PPeaks *ph = new PPeaks("PhotoPeaks");
 
@@ -205,10 +208,10 @@ Int_t main(int argc, Char_t *argv[])
            pp_right_com=0;
 	 }
 	   ph->spat[c][f][i][j]=pp_right;
-           ppeaks[c][f][i][j]=pp_right;
-           ppeaks_com[c][f][i][j]=pp_right_com;
+	   //           ppeaks[c][f][i][j]=pp_right;
+	   //           ppeaks_com[c][f][i][j]=pp_right_com;
            ph->com[c][f][i][j]=pp_right_com;
-	   if ( verbose ) { cout << " ppeaks[" << c << "][" << f << "][" << i << "][" << j << "] = " << ppeaks[c][f][i][j] << endl;}
+	   if ( verbose ) { cout << " ppeaks[" << c << "][" << f << "][" << i << "][" << j << "] = " << ph->spat[c][f][i][j] << endl;}
 
 	   sprintf(tmpstring,"floods[%d][%d][%d][%d]",c,f,i,j);
 	   sprintf(titlestring,"C%dF%d, Module %d, PSAPD %d",c,f, i,j);
@@ -236,7 +239,8 @@ Int_t main(int argc, Char_t *argv[])
        //       m_getfloods->SetOutputFileName(filename);
        m_getfloods->SetOutputFileName("Testing.root");
        m_getfloods->SetFileBase(filebase);
-       m_getfloods->SetPhotoPeaks(ppeaks);
+       //       m_getfloods->SetPhotoPeaks(ppeaks);
+       m_getfloods->SetPhotoPeaks(ph->spat);
 
         #define USEPROOF
 
