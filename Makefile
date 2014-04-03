@@ -19,7 +19,7 @@ CFLAGS =  -Wall -Wno-deprecated -W -g -fPIC -I$(ROOTMACRODIR_INC) -I./include -I
 CXXFLAGS = $(CFLAGS) $(shell root-config --cflags) -O3
 MYLIB = -L$(ROOTMACRODIR_LIB) -lmyrootlib -lInit_avdb
 DICTLIB = -L./lib -lModuleAna
-LDFLAGS = $(DICTLIB) $(shell root-config --glibs) $(shell root-config --libs) -lMinuit -lSpectrum -lHistPainter -lTreePlayer -lProof -lProofPlayer $(MYLIB) 
+LDFLAGS = $(DICTLIB) $(shell root-config --glibs) $(shell root-config --libs)  -lMinuit -lSpectrum -lHistPainter -lTreePlayer -lProof -lProofPlayer $(MYLIB) 
 CC =g++
 
 
@@ -57,7 +57,7 @@ default: ./setana_env.sh ./ModuleAnaDict.C ./lib/libModuleAna.so .rules $(BINS)
 	./PAR/MakePAR.sh
 	@echo "Done making ANA CODE"
 
-all:	 default 
+all:	default 
 
 check:
 	@echo $(CLASSES_H)
@@ -107,7 +107,7 @@ print:
 #shared library .. can be static I think.
 
 ./lib/libModuleAna.so: ./ModuleAnaDict.C $(CLASSES_C)
-	g++ -shared -o $@ `root-config --ldflags --glibs`  -lProof -lProofPlayer  $(CXXFLAGS) -I$(ROOTSYS)/include $^
+	g++ -shared -o $@ $^ $(CXXFLAGS) -I$(ROOTSYS)/include `root-config --ldflags --glibs`  -lProof -lProofPlayer  
 
 
 
@@ -143,10 +143,10 @@ print:
 
 
 clean: 
-	rm .depend
-	rm .buildrules
-	rm .binrules
+	if [ -e .depend ]; then rm .depend ; fi
+	if [ -e .buildrules ]; then rm .buildrules ; fi 
+	if [ -e .binrules ]; then rm .binrules ; fi
 	rm -f ./src/*.o
-	if [[ -e ModuleDatDict.C ]]; then rm ./ModuleDatDict.* ;fi
+	if [ -e ModuleDatDict.C ]; then rm ./ModuleDatDict.* ;fi
 	rm -f ./lib/*.so
 	rm -f ./bin/decoder ./bin/chain_parsed ./bin/getfloods ./bin/anafloods ./bin/enecal ./bin/enefit ./bin/get_optimal_split ./bin/merge_4up ./bin/merge_panel ./bin/merge_coinc ./bin/chain_merged ./bin/mana ./bin/fom_ana ./bin/glob_fit_results

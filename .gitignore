@@ -9,5 +9,7 @@ ModuleAnaDict.*
 # ignore library
 lib/lib*
 # ignore binaries
-/bin/*
-!/bin/*sh
+bin/*
+!bin/*sh
+# ignore PAR packages
+PAR/*par
