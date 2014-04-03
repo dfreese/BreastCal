@@ -25,13 +25,13 @@ int main(int argc, Char_t *argv[])
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 	Char_t		filename[FILENAMELENGTH] = "";
-	Char_t		tmpstring[FILENAMELENGTH] = "";
+//	Char_t		tmpstring[FILENAMELENGTH] = "";
 	Int_t		verbose = 0;
 	Int_t		ix;
         Bool_t          fileset=0;
         Bool_t          floodlut=kFALSE;
 	Bool_t          fitonly=kFALSE;
-        ModuleDat *event = 0;
+//        ModuleDat *event = 0;
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 	for(ix = 1; ix < argc; ix++) {
@@ -84,15 +84,15 @@ int main(int argc, Char_t *argv[])
 
 	TFile *rfile = new TFile(filename,"UPDATE");
        
-        Char_t filebase[FILENAMELENGTH],newrootfile[FILENAMELENGTH]; 
-        Char_t tmpname[50],tmptitle[50];
-        Int_t i,j,k,m,lines;
-        Double_t aa, bb;
+        Char_t filebase[FILENAMELENGTH];
+	//   Char_t tmpname[50],tmptitle[50];
+	//  Int_t i,j,k,m,lines;
+	// Double_t aa, bb;
         ifstream infile;
 
 
-        TVector* ppVals = (TVector *) rfile->Get("pp_spat");
-        TVector* ppVals_com = (TVector *) rfile->Get("pp_com");
+//        TVector* ppVals = (TVector *) rfile->Get("pp_spat");
+	//      TVector* ppVals_com = (TVector *) rfile->Get("pp_com");
 
 	//        TVector* uu_c = (TVector *) rfile->Get("uu_c");
 	//        TVector* vv_c = (TVector *) rfile->Get("vv_c");
@@ -106,7 +106,7 @@ int main(int argc, Char_t *argv[])
 
 	//        TCanvas *c1 =new TCanvas();
         Char_t treename[40];
-        TDirectory *subdir[RENACHIPS];
+//        TDirectory *subdir[RENACHIPS];
 
         strncpy(filebase,filename,strlen(filename)-5);
         filebase[strlen(filename)-5]='\0';
@@ -209,24 +209,26 @@ int main(int argc, Char_t *argv[])
 	 //	 entries=block->GetEntries();
 
 
+         if (verbose){
          cout << " Read block from file :: " << time(NULL)-starttime << endl;
-         cout << " Entries in block :: " << block->GetEntries() << endl;
+         cout << " Entries in block :: " << block->GetEntries() << endl;}
          PixelCal *CrysCal = new PixelCal("CrysCalPar");
          CrysCal->SetVerbose(verbose);
 
          CrysCal->ReadCal(filebase);
+         if (verbose){
          cout << " CrysCal->X[0][0][2][1][0] = " << CrysCal->X[0][0][2][1][0] << endl;
-  cout << " fCrysCal->X[0][6][8][0][0] = " << CrysCal->X[0][6][8][0][0] << endl;
+	 cout << " fCrysCal->X[0][6][8][0][0] = " << CrysCal->X[0][6][8][0][0] << endl;}
        Sel_GetEhis *m_getEhis = new Sel_GetEhis();
 
-       cout << "FYI:: Size of Sel_GetEhis :: " << sizeof(Sel_GetEhis) << endl;
+       if  (verbose) cout << "FYI:: Size of Sel_GetEhis :: " << sizeof(Sel_GetEhis) << endl;
 
-       CrysCal->Print();
+       if (verbose) CrysCal->Print();
  
        m_getEhis->SetFileBase(filebase);
 
 
-       TFile *rfi;
+       TFile *rfi = 0;
 
        if (!fitonly){
 
@@ -317,7 +319,7 @@ int main(int argc, Char_t *argv[])
        cout << " writing CrysCal :: " << time(NULL)-starttime << endl;
        CrysCal = m_getEhis->GetPixelCal();
 
-       cout << "  CrysCal->GainSpat[0][0][2][1][0] = " <<   CrysCal->GainSpat[0][0][2][1][0] <<endl;
+       if (verbose) cout << "  CrysCal->GainSpat[0][0][2][1][0] = " <<   CrysCal->GainSpat[0][0][2][1][0] <<endl;
 
        CrysCal->WriteCalTxt(filebase);
        CrysCal->Write(); 

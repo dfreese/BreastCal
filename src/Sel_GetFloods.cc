@@ -29,6 +29,7 @@
 #include <TCanvas.h>
 #include <Riostream.h>
 #include <TMath.h>
+#include <sys/stat.h>
 //#include "getfloods.h"
 //#include "decoder.h" 
 #define USEPROOF
@@ -170,9 +171,10 @@ void Sel_GetFloods::Terminate()
   cout << " Welcome to Terminate ! " << endl;
   // fOutput->ls();
 
-    TCanvas *c2 = new TCanvas();
+  //   TCanvas *c2 = new TCanvas();
 
     // note this fH2F object is just for testing 
+/*
     fH2F = dynamic_cast<TH2F *> (fOutput->FindObject("flood_C0F0M2A0")); 
     //    fH2F = dynamic_cast<TH2F *> (fOutput->FindObject("fH2F")); 
     if (fH2F) { cout << " fH2F Found ! " << endl; fH2F->Draw("colz");
@@ -181,7 +183,7 @@ void Sel_GetFloods::Terminate()
    }
     c2->Print("Sel_Test.png");
     delete c2;
-
+*/
     TString hn;
 
 #define _NRFLOODSTODRAW 4
@@ -212,6 +214,18 @@ void Sel_GetFloods::Terminate()
 #ifndef __CINT__
 Int_t Sel_GetFloods::Makeplot(TH2F *hist[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE],Int_t c, Int_t f, Int_t NRFLOODSTODRAW,const Char_t suffix[40]) {
 
+    TString fDIR="FLOODS";
+
+// We're going to write to directory fDIR, need to make sure it exists:
+    if ( access( fDIR.Data(), 0 ) != 0 ) {
+	cout << "creating dir " << fDIR << endl; 
+        if ( mkdir(fDIR, 0777) != 0 ) { 
+	    cout << " Error making directory " << fDIR << endl;
+	    return -2;
+	}
+    }
+
+
        TCanvas *c1;
        Char_t pngstring[FILENAMELENGTH];
 
@@ -229,7 +243,7 @@ Int_t Sel_GetFloods::Makeplot(TH2F *hist[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDG
             c1->cd((i%NRFLOODSTODRAW)+1+j*NRFLOODSTODRAW);
             hist[c][f][i][j]->Draw("colz"); } //j
 	 } //i
-	 sprintf(pngstring,"%s.C%dF%dM%d-%d.%s.",fFileBase.c_str(),c,f,kk*NRFLOODSTODRAW,i-1,suffix);
+	 sprintf(pngstring,"%s/%s.C%dF%dM%d-%d.%s.",fDIR.Data(),fFileBase.c_str(),c,f,kk*NRFLOODSTODRAW,i-1,suffix);
          strcat(pngstring,"png");
          c1->Print(pngstring);
        } // kk
@@ -238,6 +252,8 @@ Int_t Sel_GetFloods::Makeplot(TH2F *hist[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDG
 
 Int_t Sel_GetFloods::WriteFloods(TFile *rfile,Int_t verbose=0){
   Char_t tmpstring[40];     
+
+
 
        for (Int_t c=0;c<CARTRIDGES_PER_PANEL;c++){
 	 for (Int_t f=0;f<FINS_PER_CARTRIDGE;f++){

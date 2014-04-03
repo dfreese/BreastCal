@@ -408,9 +408,20 @@ Int_t Sel_Calibrator::FitAllGlobal(){
    Char_t tmpstring[100];
    Float_t mean;
    Double_t xlow,xhigh,eres, d_eres;
-   sprintf(peaklocationfilename,"%s_globfits_spat.txt",fFileBase.Data());
+   TString fDIR="GLOBFITS";
+   
+ if ( access( fDIR.Data(), 0 ) != 0 ) {
+	cout << "creating dir " << fDIR << endl; 
+        if ( mkdir(fDIR, 0777) != 0 ) { 
+	    cout << " Error making directory " << fDIR << endl;
+	    return -2;
+	}
+    }
+   
+
+   sprintf(peaklocationfilename,"%s/%s_globfits_spat.txt",fDIR.Data(),fFileBase.Data());
    globpeaks.open(peaklocationfilename);
-     sprintf(peaklocationfilename,"%s_globfits_com.txt",fFileBase.Data());
+   sprintf(peaklocationfilename,"%s/%s_globfits_com.txt",fDIR.Data(),fFileBase.Data());
    globpeaks_com.open(peaklocationfilename);
 
    TPaveText *labeltxt_spat = new TPaveText(.12,.8,.5,.88,"NDC");
@@ -454,7 +465,7 @@ Int_t Sel_Calibrator::FitAllGlobal(){
                labeltxt_com->AddText(tmpstring);
 	       labeltxt_com->Draw();
 
-               sprintf(peaklocationfilename,"%s.C%dF%dM%dA%d_glob",fFileBase.Data(),cc,f,m,j);
+               sprintf(peaklocationfilename,"%s/%s.C%dF%dM%dA%d_glob",fDIR.Data(),fFileBase.Data(),cc,f,m,j);
                strcat(peaklocationfilename,".png");
 	       c1->Print(peaklocationfilename);
 

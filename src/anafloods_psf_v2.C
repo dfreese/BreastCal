@@ -13,6 +13,8 @@
 #include "TPaletteAxis.h"
 #include "TMath.h"
 
+#include <sys/stat.h>
+
 #include "decoder.h"
 #include "DetCluster.h"
 #include "FindNext.h"
@@ -26,7 +28,7 @@
 // this parameter is used to check if the segmentation is valid ::
 #define COSTTHRESHOLD 300
 
-#define DEVELOP
+//#define DEVELOP
 // wil generate some more eps style floods
 //#define PUBPLOT
 
@@ -47,7 +49,7 @@
 #include "time.h"
 #endif
 
-TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validflag,Float_t &cost, Bool_t APD);
+TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validflag,Float_t &cost, Bool_t APD, TString fDIR);
 Double_t findmean( TH1D * h1, Int_t verbose, Bool_t APD);
 Double_t findmean8( TH1D * h1, Int_t verbose,Int_t X, Bool_t APD);
 Int_t updatesegmentation(TH2F *hist, Double_t x[16], Double_t y[16], TGraph *updated,Int_t verbose);
@@ -244,6 +246,17 @@ Int_t main(int argc, Char_t *argv[])
 #endif  
 
 
+ TString fDIR="SEGMENTATION";
+
+if ( access( fDIR.Data(), 0 ) != 0 ) {
+	cout << "creating dir " << fDIR << endl; 
+        if ( mkdir(fDIR, 0777) != 0 ) { 
+	    cout << " Error making directory " << fDIR << endl;
+	    return -2;
+	}
+    }
+
+
  for (c=firstcartridge;c<lastcartridge;c++){
    for (f=firstfin;f<lastfin;f++){ 
      if (verbose)  cout << " Analyzing fin .. " << f << " in cartridge " << c << endl;   
@@ -291,7 +304,7 @@ Int_t main(int argc, Char_t *argv[])
 #endif
      //   cout << " Starttime : " << starttime;
      //     verbose=0;
-     peaks[c][f][i][j] =   PeakSearch(floods[c][f][i][j],peaklocationfilename,verbose, flag, costs[c][f][i][j],j);
+     peaks[c][f][i][j] =   PeakSearch(floods[c][f][i][j],peaklocationfilename,verbose, flag, costs[c][f][i][j],j,fDIR);
      //     verbose=1;
       }
       else{
@@ -341,7 +354,7 @@ Int_t main(int argc, Char_t *argv[])
    peaklocationfile.close();
  
    if (verbose) { cout <<" Made it here too! " <<endl;}
-   sprintf(pngstring,"%s.C%dF%d.unit%d_apd%d_flood",filebase,c,f,i,j);
+   sprintf(pngstring,"%s/%s.C%dF%d.unit%d_apd%d_flood",fDIR.Data(),filebase,c,f,i,j);
    strcat(pngstring,".png");
    //   cout << pngstring << endl;
    c1->Update();
@@ -396,7 +409,7 @@ floods[m][i][j]->Draw("colz");
 
 
 
-TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validflag,Float_t &cost, Bool_t APD){
+TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validflag,Float_t &cost, Bool_t APD, TString fDIR){
 
   cost=999.999;
 
@@ -1210,7 +1223,7 @@ Some debugging Crap
    c1->cd(k+1);floodsq[k]->Draw("colzhist");peaks_remapped[k]->Draw("PL");}
   
 
-  sprintf(pngstring,"%s_quadrants.png",filebase);
+  sprintf(pngstring,"%s/%s_quadrants.png",fDIR.Data(),filebase);
   c1->Update();
   c1->Print(pngstring);
 

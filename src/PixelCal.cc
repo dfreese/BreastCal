@@ -1,7 +1,7 @@
 #define PixelCal_cxx
 
 #include "PixelCal.h"
-
+#include <sys/stat.h>
 
 ClassImp(PixelCal)
 
@@ -16,7 +16,7 @@ PixelCal::~PixelCal() {
 }
 
 Int_t PixelCal::ReadCal(const char *filebase){
-      TFile *lutfile;
+      TFile *lutfile = 0;
       Char_t peaklocationfilename[FILENAMELENGTH];
       Char_t filename[FILENAMELENGTH];
       ifstream infile;
@@ -103,10 +103,18 @@ Int_t PixelCal::GetCrystalId(Float_t x, Float_t y, Int_t c, Int_t f, Int_t i, In
 
 
 Int_t PixelCal::WriteCalTxt(const char *filebase){
-/*         
-	   Should go in CrysPix.h  */
+  
+
+    TString fDIR="CALPAR";
     
- 
+   if ( access( fDIR.Data(), 0 ) != 0 ) {
+	cout << "creating dir " << fDIR << endl; 
+        if ( mkdir(fDIR, 0777) != 0 ) { 
+	    cout << " Error making directory " << fDIR << endl;
+	    return -2;
+	}
+    }
+
   ofstream ofile;
   Char_t calfilename[120];
 
@@ -114,7 +122,7 @@ Int_t PixelCal::WriteCalTxt(const char *filebase){
 	for (Int_t f=0;f<FINS_PER_CARTRIDGE;f++){
 	  for (Int_t i=0;i<MODULES_PER_FIN;i++){
 	    for (Int_t j=0;j<APDS_PER_MODULE;j++){
-	      sprintf(calfilename,"%s.C%dF%dM%dA%d_cal",filebase,c,f,i,j);
+		sprintf(calfilename,"%s/%s.C%dF%dM%dA%d_cal",fDIR.Data(),filebase,c,f,i,j);
 	      strcat(calfilename,".txt");
 	      if (validpeaks[c][f][i][j]){
 		ofile.open(calfilename);

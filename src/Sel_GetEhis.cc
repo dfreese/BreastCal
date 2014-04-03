@@ -284,7 +284,7 @@ Int_t Sel_GetEhis::WriteHists(TFile *rfile){
 
 Int_t Sel_GetEhis::FitApdEhis(Int_t cc, Int_t f, Int_t i, Int_t j){
   Float_t Emean, Emean_com,peak;
-  Char_t tmpstring[40];
+//  Char_t tmpstring[40];
   TF1 *spatfit  = new TF1("spatfit","gaus", EFITMIN, EFITMAX);
   TF1 *comfit =  new TF1("comfit","gaus",EFITMIN_COM,EFITMAX_COM);
 
@@ -436,7 +436,7 @@ void Sel_GetEhis::LoadEHis(TFile *rfile)
 {
 
    cout << " Welcome to Load Histogram Function ! " << endl;
-   Char_t tmpstring[40];     
+//   Char_t tmpstring[40];     
 
    TString hn;
    rfile->ls();

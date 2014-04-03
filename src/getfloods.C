@@ -484,6 +484,16 @@ Int_t	   makeplot(TH1F *hist[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_P
         TCanvas *c1;
   Char_t pngstring[FILENAMELENGTH];
 
+  TString fDIR="EHIST";
+
+// We're going to write to directory fDIR, need to make sure it exists:
+    if ( access( fDIR.Data(), 0 ) != 0 ) {
+	cout << " Creating dir " << fDIR  << endl; 
+        if ( mkdir(fDIR, 0777) != 0 ) { 
+	    cout << " Error making directory " << fDIR << endl;
+	    return -2;
+	}
+    }
         c1 = (TCanvas*)gROOT->GetListOfCanvases()->FindObject("c1");
         if (!c1) c1 = new TCanvas("c1","c1",10,10,1000,1000);
         c1->SetCanvasSize(700,700);
@@ -498,7 +508,7 @@ Int_t	   makeplot(TH1F *hist[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_P
             c1->cd((i%NRFLOODSTODRAW)+1+j*NRFLOODSTODRAW);
             hist[c][f][i][j]->Draw(); } //j
 	 } //i
-	 sprintf(pngstring,"%s.C%dF%dM%d-%d.%s.",filebase,c,f,kk*NRFLOODSTODRAW,i-1,suffix);
+	 sprintf(pngstring,"%s/%s.C%dF%dM%d-%d.%s.",fDIR.Data(),filebase,c,f,kk*NRFLOODSTODRAW,i-1,suffix);
          strcat(pngstring,"png");
          c1->Print(pngstring);
 	   } // kk

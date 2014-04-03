@@ -174,17 +174,18 @@ int main(int argc, Char_t *argv[])
 	   
 
 
+         if (verbose){
          cout << " CrysCal->X[0][0][2][1][0] = " << CrysCal->X[0][0][2][1][0] << endl;
-         cout << " CrysCal->GainSpat[0][0][2][1][0] = " << CrysCal->GainSpat[0][0][2][1][0] << endl;
+         cout << " CrysCal->GainSpat[0][0][2][1][0] = " << CrysCal->GainSpat[0][0][2][1][0] << endl;}
 
          Sel_Calibrator *m_cal = new Sel_Calibrator();
          m_cal->SetFileBase(filebase);
 
-       cout << "FYI:: Size of Sel_Calibrator :: " << sizeof(Sel_Calibrator) << endl;
+	 if (verbose)  cout << "FYI:: Size of Sel_Calibrator :: " << sizeof(Sel_Calibrator) << endl;
 
 
        //       m_getEhis->SetFileBase(filebase);
-
+ 
 
        //    TFile *rfi;
 
