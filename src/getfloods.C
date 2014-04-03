@@ -158,7 +158,7 @@ Int_t main(int argc, Char_t *argv[])
 
 
        Double_t pp_right,pp_low,pp_up;
-       //       Double_t ppeaks[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
+       Double_t ppeaks[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
        //       Double_t ppeaks_com[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
 
        PPeaks *ph = new PPeaks("PhotoPeaks");

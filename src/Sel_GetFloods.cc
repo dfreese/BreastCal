@@ -262,7 +262,7 @@ Int_t Sel_GetFloods::WriteFloods(TFile *rfile,Int_t verbose=0){
            for (Int_t i=0;i<MODULES_PER_FIN;i++){
 	     for (Int_t j=0;j<APDS_PER_MODULE;j++){
              fFloods[c][f][i][j]->Write();
-             if ( verbose ) { cout << " ppeaks[" << c << "][" << f << "][" << i << "][" << j << "] = " << fPH->spat[c][f][i][j] ;}
+	     // if ( verbose ) { cout << " ppeaks[" << c << "][" << f << "][" << i << "][" << j << "] = " << fPH->spat[c][f][i][j] ;}
 	     } // j
 	   } // i
 
