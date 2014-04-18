@@ -1,0 +1,13 @@
+# Lines starting with pound signs are ignored.
+# The two columns should be separated by a space, equals, then space.
+# The first column should be entirely P#C#, where the numbers represent whether
+#   the board is placed on the left or right side of the system, and the second
+#   number indicates the layer of readout electronics that the DAQ board
+#   services. If a panel or cartridge number is out of range for the given
+#   configuration, then it will be safely ignored.
+# The second column will be converted into a 5 bit number, thus any number not
+#   between 0 and 31 will cause an error.
+P0C0 = 0
+P0C1 = 1
+P1C0 = 2
+P1C1 = 3
