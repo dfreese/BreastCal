@@ -70,6 +70,7 @@ void usage(void){
   cout << " -pedfile [pedfilename] : pedestal file name " << endl;
   cout << " -p : calculate pedestals " << endl;
   cout << " -o : optional outputfilename " <<endl;
+  cout << " -cmap [DAQBOARD_FILE] : specify which DAQ BOARD nfo file to use rather than the default in $CURDIR/nfo" << endl;
   return;}
 
 using namespace std;
@@ -82,18 +83,23 @@ Int_t pedana( double* mean, double* rms, int  events, Short_t value ) ;
 unsigned long totalPckCnt=0;
 unsigned long droppedPckCnt=0;
 vector<unsigned int> chipRate;
+ 
 
 
 
 int main(int argc, char *argv[]){
-  float pedestals[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][CHANNELS_PER_MODULE]={{{{0}}}};
-  Int_t calcpedestal=0;
+ float pedestals[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][CHANNELS_PER_MODULE]={{{{0}}}};
+ Int_t calcpedestal=0;
 // changed this to be always one, because ana code expects the vectors containing u,v centers to be in the root file.
-  int uvcalc=1;
+// however,this is set to 0 if the user specifies "-p" on the command line.
+ int uvcalc=1;
+
  int chip;
  int module;
  int cartridge;
     int uvthreshold = -1000;
+    // FIXME hardcoded value :: 
+ pcnumber pclist[32];
 
  Int_t CHANNELLIST[36]={0};
  Int_t CHANNEL;
@@ -116,6 +122,12 @@ int main(int argc, char *argv[]){
  int threshold=DEFAULTTHRESHOLD;
  int nohit_threshold=DEFAULT_NOHIT_THRESHOLD;
  int debugmode=0;
+
+
+    Bool_t cmapspec=kFALSE;
+    TString nfofile;
+
+
  /*
  TTree *rena[RENACHIPS]; 
  Int_t evtsrena[RENACHIPS];
@@ -127,6 +139,8 @@ for (i = 0; i < 36; i++) {
   CHANNELLIST[i] = i;
 }
 // End
+
+
 
   for ( ix=1;ix< argc;ix++){
     //    cout << argv[ix] << endl;
@@ -184,6 +198,13 @@ for (i = 0; i < 36; i++) {
     /* Pedestal  '-p' -- needs to come after -pedfile and -pos !!*/
     if (strncmp(argv[ix], "-p", 2) == 0) {
       calcpedestal = 1;
+      uvcalc = 0;
+    }
+
+    /* Cartridge map specified !!*/
+    if (strncmp(argv[ix], "-cmap", 5) == 0) {
+      cmapspec = kTRUE;
+      nfofile.Form("%s",argv[ix+1]);
     }
 
     /* filename '-f' */
@@ -223,6 +244,57 @@ for (i = 0; i < 36; i++) {
     usage();
     return(-1);
   }
+
+    if (!cmapspec) {
+     char *libpath = getenv("CURDIR");
+             cout << " Loading Shared Library from " << libpath << endl;
+             cout << " (note CURDIR = " << getenv("CURDIR") << " )" << endl;
+             TString exestring;
+	     nfofile.Form("%s/nfo/%s",libpath,"DAQ_Board_Map.nfo");
+	     //	     nfofile.Form("%s/",CURDIR)
+	       }
+    cout <<" Using Cartridge map file " << nfofile << endl;
+
+    // read in cartridge map
+    ifstream carmap;
+    carmap.open(nfofile);
+      if (! carmap.good()) {
+	cout << " Error opening file " << nfofile << endl;
+        cout << " Exiting " << endl;
+        return -9;}
+   
+    string c_id;
+    string dummy;
+    int id_val;
+    string fileline;
+    int panel_id;
+    int cartridge_id;
+
+    i=0;
+    while(getline( carmap,fileline)){
+     if (fileline.size() > 0) {
+            if (fileline[0] == '#') {
+                // If a line starts with a pound sign, it is ignored
+                continue;
+            }
+        }
+
+     std::stringstream linestream(fileline);
+     std::getline(linestream,c_id, ' ');
+     std::getline(linestream,dummy, ' ');
+     if (!(linestream >> id_val )){
+       cout << " Error parsing " << fileline << " from file " << nfofile << endl;
+       break;
+     }
+     sscanf(c_id.c_str(),"P%dC%d",&panel_id,&cartridge_id);
+       cout << " PANEL :: " << panel_id  << " CARTRIDGE :: " << cartridge_id << " ID : " << id_val << endl;
+       pclist[i].panel=panel_id;
+       pclist[i].cartridge=cartridge_id;
+       i++;
+    }
+     
+    carmap.close();
+
 
   if (pedfilenamespec) {
      ifstream pedvals;
@@ -439,8 +511,22 @@ if (pedfilenamespec) {
     if (PAULS_PANELID) {
         //if (USB_VER == USB_2_0) {
         // ChipId format changed on 06/05/2012
-        int panelId = int(( packBuffer[1] & 0x40 ) >> 6 );
-        cartridgeId =  Short_t((packBuffer[1] & 0x3c) >> 2);
+        int Idnumber = int(( packBuffer[1] & 0x7C ) >> 2 );
+	//        cartridgeId =  Short_t((packBuffer[1] & 0x3c) >> 2);
+        panelId=pclist[Idnumber].panel;
+        cartridgeId=pclist[Idnumber].cartridge; 
+
+        if ((panelId >= SYSTEM_PANELS ) || ( cartridgeId >= CARTRIDGES_PER_PANEL )){
+	  if (verbose )  { 
+	    cout << " PanelId " << panelId << " or CartridgeId " << cartridgeId ;
+            cout << " doesn't match the definitions in include/Syspardef.h" << endl;
+	    cout << " Skipping." << endl;}
+           droppedPckCnt++;
+	   if (verbose) cout << "Dropped = " << packBuffer.size() << endl;
+	   packBuffer.clear();
+        continue;
+	}
+	//        GetPanelAndCartridge( ( (packBuffer[1] & 7c ) >> 2 ) , &panelId, &cartridgeId )
         int local_four_up_board = int((packBuffer[1] & 0x03) >> 0);
         int four_up_board_num = local_four_up_board;
 	//        cout << " 4up:: " << four_up_board_num << endl;
@@ -459,8 +545,10 @@ if (pedfilenamespec) {
         }
         chipId+= four_up_board_num*RENAS_PER_FOURUPBOARD;
         trigCode = int(packBuffer[2] & 0x0F);
+
 #ifdef DEBUG
 	      cout << " trigCode = 0x" << hex << trigCode << dec ;
+	      cout << " panelId = " << panelId << "; cartridgeId = " << cartridgeId << endl;
 	      cout << " chipId = " << chipId << "; fpgaId = " << fpgaId << endl;
 #endif
         //}
@@ -539,7 +627,7 @@ if (pedfilenamespec) {
         	moduletriggers +=  ( ( trigCode >> ii ) & 0x1) ;}
         // packetSize = rmChip->packetSizeMap[trigCode];
     } // else module based readout
-    //        cout << " packetSize :: " << packetSize  << "; packBuffer.size() = " << packBuffer.size() << endl;
+    //    cout << " packetSize :: " << packetSize  << "; packBuffer.size() = " << packBuffer.size() << endl;
     
     
 
@@ -682,9 +770,11 @@ if (pedfilenamespec) {
               rawdata->Fill();
 
 
+             module=iii;
+
 if (pedfilenamespec) {
 
-             module=iii;
+
              event->module=module;
              event->ct=timestamp; 
              event->chip=rawevent.chip;
@@ -801,7 +891,7 @@ if (pedfilenamespec) {
 	  //	  cout << " Packet Processed " << endl;
  } // loop over i
 
- cout << " File Processed " << endl;
+ cout << " File Processed. Dropped: " << droppedPckCnt << " out of " << totalPckCnt << " (=" << setprecision(2) << 100*droppedPckCnt/totalPckCnt <<" %)." << endl;
 
  if (uvcalc){
  if (verbose)   cout <<  " Averaging the circle Centers " << endl;

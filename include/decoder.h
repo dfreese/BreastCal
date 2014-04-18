@@ -25,6 +25,7 @@ vector<char> packBuffer;
 unsigned long long int byteCounter;
 
 
+
 // Energy histograms ::
   TH1F *E[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
   TH1F *E_com[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
@@ -36,6 +37,12 @@ TVector *vv_c[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE];
 Long64_t uventries[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][2]={{{{0}}}};
 
 TDirectory *subdir[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE];
+
+struct pcnumber
+{ Short_t panel;
+  Short_t cartridge;
+};
+
 
 struct chipevent
 { Long64_t ct;
