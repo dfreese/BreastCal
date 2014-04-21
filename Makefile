@@ -116,7 +116,7 @@ print:
 
 
 #./setana_env.sh:
-#	echo "CURDIR=`pwd`" > ./setana_env.sh
+#	echo "ANADIR=`pwd`" > ./setana_env.sh
 #	echo "source `pwd`/src/addtopath.sh `pwd`" > ./setana_env.sh
 
 # GENERATED WITH ::

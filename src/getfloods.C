@@ -250,9 +250,9 @@ Int_t main(int argc, Char_t *argv[])
        TProof *p = TProof::Open("");
 
 
-             char *libpath = getenv("CURDIR");
+             char *libpath = getenv("ANADIR");
 	     cout << " Loading Shared Library from " << libpath << endl;
-	     cout << " (note CURDIR = " << getenv("CURDIR") << " )" << endl;
+	     cout << " (note ANADIR = " << getenv("ANADIR") << " )" << endl;
 	     TString exestring;
 
      

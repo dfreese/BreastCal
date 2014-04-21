@@ -1,17 +1,17 @@
 
-CURDIR=$1
+ANADIR=$1
 
-export CURDIR
+export ANADIR
 
-echo " Adding $CURDIR to path"
+echo " Adding $ANADIR to path"
 
-if [[ $PATH != ?(*:)${CURDIR}/bin?(:*) ]]; then
- export PATH=$PATH:$CURDIR/bin
+if [[ $PATH != ?(*:)${ANADIR}/bin?(:*) ]]; then
+ export PATH=$PATH:$ANADIR/bin
 fi
 
 
-if [[ $LD_LIBRARY_PATH != ?(*:)${CURDIR}/lib?(:*) ]]; then
- export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CURDIR/lib
+if [[ $LD_LIBRARY_PATH != ?(*:)${ANADIR}/lib?(:*) ]]; then
+ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ANADIR/lib
 fi
 
 

@@ -70,7 +70,7 @@ void usage(void){
   cout << " -pedfile [pedfilename] : pedestal file name " << endl;
   cout << " -p : calculate pedestals " << endl;
   cout << " -o : optional outputfilename " <<endl;
-  cout << " -cmap [DAQBOARD_FILE] : specify which DAQ BOARD nfo file to use rather than the default in $CURDIR/nfo" << endl;
+  cout << " -cmap [DAQBOARD_FILE] : specify which DAQ BOARD nfo file to use rather than the default in $ANADIR/nfo" << endl;
   return;}
 
 using namespace std;
@@ -101,15 +101,16 @@ int main(int argc, char *argv[]){
     // FIXME hardcoded value :: 
  pcnumber pclist[32];
 
- Int_t CHANNELLIST[36]={0};
- Int_t CHANNEL;
+ // Int_t CHANNELLIST[36]={0};
+ // Int_t CHANNEL;
  // Long64_t TIMESTAMP;
- Int_t newevent,nrhits;
+ // Int_t newevent,
+ //Int_t nrhits;
 
  TFile *hfile;
  int c,r,f,i,j,m;
 
- Int_t ix,nlines,verbose;
+ Int_t ix,verbose;
  char filename[FILENAMELENGTH],outfilename[FILENAMELENGTH+5],pedfilebase[FILENAMELENGTH+10], ascifilename[FILENAMELENGTH+6], pedfilename[FILENAMELENGTH+10],pedvaluefilename[FILENAMELENGTH+10];
  int pedfilenamespec=0;
 
@@ -134,10 +135,12 @@ int main(int argc, char *argv[]){
  */
 
 // For compatibility with the original code
+/*
 CHANNEL = 36;
 for (i = 0; i < 36; i++) {
   CHANNELLIST[i] = i;
 }
+*/
 // End
 
 
@@ -246,12 +249,12 @@ for (i = 0; i < 36; i++) {
   }
 
     if (!cmapspec) {
-     char *libpath = getenv("CURDIR");
+     char *libpath = getenv("ANADIR");
              cout << " Loading Shared Library from " << libpath << endl;
-             cout << " (note CURDIR = " << getenv("CURDIR") << " )" << endl;
+             cout << " (note ANADIR = " << getenv("ANADIR") << " )" << endl;
              TString exestring;
 	     nfofile.Form("%s/nfo/%s",libpath,"DAQ_Board_Map.nfo");
-	     //	     nfofile.Form("%s/",CURDIR)
+	     //	     nfofile.Form("%s/",ANADIR)
 	       }
     cout <<" Using Cartridge map file " << nfofile << endl;
 
@@ -452,9 +455,9 @@ if (pedfilenamespec) {
 
   if (dataFile)
  {  // for ( i=0;i<10;i++){
-  nlines=0;
-  newevent=1;
-  nrhits=0;
+   //  nlines=0;
+  //  newevent=1;
+  //  nrhits=0;
   /*
   Int_t j;
   Int_t events;

@@ -247,9 +247,9 @@ int main(int argc, Char_t *argv[])
 //#define USEPAR
 
 
-             char *libpath = getenv("CURDIR");
+             char *libpath = getenv("ANADIR");
 	     cout << " Loading Shared Library from " << libpath << endl;
-	       cout << " (note CURDIR = " << getenv("CURDIR") << " )" << endl;
+	       cout << " (note ANADIR = " << getenv("ANADIR") << " )" << endl;
 	     TString exestring;
 
 //FIXME NOT SURE WHY IT DOESN'T WORK WHEN USEPAR IS NOT DEFINED ... 
