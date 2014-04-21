@@ -1,0 +1,15 @@
+Some hacks to do timing coincidence between two modules.
+I basically hardcode the right chip ( could do module as well ) in enefit.C, and run it twice. I then rename the output to "_L.root" and "_R.root" respectively. Ovbiously we have to rename before re-running. 
+
+After that we can simple execue merge_coinc -fl [filename1] -fr [filename2].
+I had to edit the source code so the right Tree and branches were selected. I also hardcoded fin number in that code.
+
+Now we should be able to run regular timing calibration:
+
+ ./BreastCal/bin/cal_apd_offset -f DAQ_20130318_896_0.merged.root
+ ./BreastCal/bin/cal_crystal_offset2 -f DAQ_20130318_896_0.merged.apdoffcal.root
+ ./BreastCal/bin/cal_edep -f DAQ_20130318_896_0.merged.apdoffcal.crystaloffcal.root
+ ./BreastCal/bin/cal_apd_offset -f DAQ_20130318_896_0.merged.apdoffcal.crystaloffcal.edepcal.root -ft 30
+ ./BreastCal/bin/cal_crystal_offset2 -f DAQ_20130318_896_0.merged.apdoffcal.crystaloffcal.edepcal.root -ft 30
+
+
