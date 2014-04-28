@@ -30,9 +30,10 @@ int main(int argc, Char_t *argv[])
 	Int_t		verbose = 0;
         Int_t ncuts=0;
         Long64_t timeinterval=0,mintime;
-	Int_t		ix,rb;
-        rb=-99;
-        Int_t    left=-9999;
+	Int_t		ix;
+//,rb;
+	//      rb=-99;
+	// Int_t    left=-9999;
 	//        modulecal       UL0,UL1,UL2,UL3;
         ModuleCal *event = new ModuleCal();
         ModuleCal *evt = new ModuleCal(); 
@@ -47,9 +48,11 @@ int main(int argc, Char_t *argv[])
 
 		if(strncmp(argv[ix], "-h", 2) == 0) {
 			cout << " Usage:  " << endl;
-                        cout << " ./merge_panel -f [Filename] -rb [renaboard] --L/--R [-v] " << endl;
-                        cout << " Renaboard is either 0,1,2 or 3" << endl;
-                        cout << " Specify which panel: --L for left; --R for right " << endl;
+// FIXME !! Update this usage()  4/27/2014 AVDB  
+         cout << " ./merge_4up -f [Filename] [-v] " << endl;
+			// cout << " ./merge_panel -f [Filename] -rb [renaboard] --L/--R [-v] " << endl;
+			//                      cout << " Renaboard is either 0,1,2 or 3" << endl;
+//                        cout << " Specify which panel: --L for left; --R for right " << endl;
 			return -1;
 		}
 
@@ -62,12 +65,13 @@ int main(int argc, Char_t *argv[])
 			verbose = 1;
 		}
 
+/*
 		if(strncmp(argv[ix], "-rb", 3) == 0) {
 			rb = atoi(argv[ix+1]);
                         if (verbose) cout << "Rena board : " << rb <<endl;
                          ix++;
 		}
-
+*/
 
 		if(strncmp(argv[ix], "-nc", 3) == 0) {
 			ncuts = atoi(argv[ix+1]);
@@ -103,6 +107,7 @@ int main(int argc, Char_t *argv[])
                     }
 		
 
+/*
                 if (strncmp(argv[ix],"--L",3) ==0 ){
                   if (verbose) cout << " Left panel used " << endl;
                   left=1;
@@ -114,8 +119,10 @@ int main(int argc, Char_t *argv[])
                   left=0;
 
 		}
+*/
 	}
 
+/*
 	if (left==-9999) {
           cout << "Please specify which panel we're using: Add --L or --R to command line"  << endl;  return -1;}         
 
@@ -124,7 +131,7 @@ int main(int argc, Char_t *argv[])
             return -1;
 
 	  }           
-
+*/
 	if ( lasttime<0) {
 	  cout << "Please specify last time as calculated by get_opt_split :: -lt [value]" << endl;
           return -1;}
@@ -177,7 +184,7 @@ int main(int argc, Char_t *argv[])
 
 	//        for (m=0;m<RENACHIPS;m++){
 
-	  sprintf(treename,"cal");
+	  sprintf(treename,"CalTree");
           cal = (TTree *) file_left->Get(treename);
           if (!(cal))    {
 	    cout << " Problem reading " << treename << " from file. Exiting." << endl;
@@ -260,7 +267,7 @@ int main(int argc, Char_t *argv[])
 	  // Open Calfile //
 	//        strncpy(filebase,filenamel,strlen(filenamel)-13);
 	//        filebase[strlen(filenamel)-13]='\0';
-	   sprintf(rootfile,"%s.4up%d_part%d.root",filebase,rb,kk);
+	   sprintf(rootfile,"%s_part%d.root",filebase,kk);
 	//        strcat(rootfile,".panel.root");
 
 	   if (verbose) cout << " Opening file " << rootfile << " for writing " << endl;
@@ -315,9 +322,14 @@ int main(int argc, Char_t *argv[])
 		    event->y=unsrt_evt->y;
                     /* assigning chip number = from 0 - > 32 for each cartridge so 0->7; 8->15; 16->23; 24->32; 
                        the chip number will be more for debugging */
+                    event->fin=unsrt_evt->fin;
+		    event->m=unsrt_evt->m;
+
+// This code was here for the USB stuff, where we assigned fin and module number. With ethernet it's already determined.            
+/*
                     event->chip=unsrt_evt->chip+(rb)*8;
 		    //                    event.m=m*4+j+(rb)*32;
-                    /* Assigning fin number */
+                    // Assigning fin number 
                     m=unsrt_evt->chip;
                     if (left==1) { if (rb<2) finincr=0; else finincr=1;} 
                     else { if (rb<2) finincr=0; else finincr=1;}
@@ -325,10 +337,12 @@ int main(int argc, Char_t *argv[])
                     else { if (m<4) { event->fin = 4+finincr;}
 		      else { if (m<6) { event->fin = 2+finincr;}
 			else { event->fin = finincr; }}}
-		    /* Assigning module number */ 
+
+		    // Assigning module number 
                     event->m=unsrt_evt->m +(unsrt_evt->chip%2)*4+(rb%2)*8;
-		    /* note :: we can plot using  event.m+(event.fin)*16; */
-                    event->apd=unsrt_evt->apd;
+		    // note :: we can plot using  event.m+(event.fin)*16;
+*/  
+                  event->apd=unsrt_evt->apd;
                     event->id=unsrt_evt->id;
                     event->pos=unsrt_evt->pos;
                     if (kk > 0 ) mintime=timecut[kk-1];
