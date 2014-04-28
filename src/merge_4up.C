@@ -420,7 +420,7 @@ int main(int argc, Char_t *argv[])
 	//  cout << " Cloning Successfull !! " << endl;
 	//  fourup->SetName("fourup");
 
-        TTree *fourup = new TTree("fourup","Time Sorted data one 4-up board");
+        TTree *fourup = new TTree("SCalTree","Time Sorted Calibrated data");
         fourup->Branch("Time Sorted Data",&evt);
 	/*
         fourup->Branch("ct",&evt.ct,"ct/L");
