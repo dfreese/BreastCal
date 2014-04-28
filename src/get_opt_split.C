@@ -36,7 +36,7 @@ int main(int argc, Char_t *argv[])
 	Int_t		verbose = 0;
 	Int_t		ix;
 
-        Int_t    left=-9999;
+	//  Int_t    left=-9999;
 	//        modulecal       UL0,UL1,UL2,UL3;
 
         TTree*           cal;
@@ -48,8 +48,9 @@ int main(int argc, Char_t *argv[])
 
 		if(strncmp(argv[ix], "-h", 2) == 0) {
 			cout << " Usage:  " << endl;
-                        cout << " ./merge_panel -f [Filename] --L/--R [-v] " << endl;
-                        cout << " Specify which panel: --L for left; --R for right " << endl;
+//                        cout << " ./merge_panel -f [Filename] --L/--R [-v] " << endl;
+                   cout << " ./merge_panel -f [Filename] [-v] " << endl;
+//                        cout << " Specify which panel: --L for left; --R for right " << endl;
 			return -1;
 		}
 
@@ -76,7 +77,7 @@ int main(int argc, Char_t *argv[])
 			ix++;
                     }
 		
-
+/*
                 if (strncmp(argv[ix],"--L",3) ==0 ){
 		  cout << " Left panel used " << endl;
                   left=1;
@@ -87,12 +88,12 @@ int main(int argc, Char_t *argv[])
 		  cout << " Right panel used " << endl;
                   left=0;
 
-		}
+		  }*/
 	}
-
+/*
 	if (left==-9999) {
           cout << "Please specify which panel we're using: Add --L or --R to command line"  << endl;  return -1;}         
-
+*/
 
              TCanvas *c1;
              c1 = (TCanvas*)gROOT->GetListOfCanvases()->FindObject("c1");
@@ -137,7 +138,7 @@ int main(int argc, Char_t *argv[])
 	//        for (m=0;m<RENACHIPS;m++){
 
 
-	  sprintf(treename,"cal");
+	  sprintf(treename,"CalTree");
           cal = (TTree *) file_left->Get(treename);
 
           if (verbose) { cal->Print();}
