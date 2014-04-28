@@ -159,7 +159,20 @@ This program calculates FOMs and is usefull for performance evaluation. A root f
 Because there are many fits involved again, the fom\_ana runs only per cartridge. So you would have to launch the program multiple times in order to calculate fom for all cartridges.
 
 \section{Individual programs Step II}
-Step II merges several data streams together. Since coincidence sorting will be needed it is important that everything remains strictly time ordered. When performing the merging I have choosen to keep everything memory-resident. As a consequence files can't be bigger than the physical available memory. In order to reduce the burden on memory I split the files in different parts {\bf based on timestamps}. This is unlike the split performed by the DAQ which is purely based on size. One noisy trigger could for instance result in many files for a particular panel, yet the total coarse time would be the same for all files in the entire dataset. 
+Step II merges several data streams together. Since coincidence sorting will
+be needed it is important that everything remains strictly time ordered. When
+performing the merging I have choosen to keep everything memory-resident. As a
+consequence files can't be bigger than the physical available memory. In order
+to reduce the burden on memory I split the files in different parts {\bf based
+  on timestamps}. This is unlike the split performed by the DAQ which is
+purely based on size. One noisy trigger could for instance result in many
+files for a particular panel, yet the total coarse time would be the same for
+all files in the entire dataset. 
+
+One particular shortcoming the repository has ( also in above programs ) is
+that the tree name in the file is hardcoded. I am sure there's a better
+solution, but for now you need to keep track of how the TTrees are called in
+the files. At least an effort should be made to make the TTree names consistent.
 
 \subsection{get\_opt\_split}
 This program is very simple. It checks the time needed in between splits so that each file has at most MAXHITS events. We need to run this on each stream (e.g. 2 streams for ethernet, and 8 streams for the USB ), and select the minimum timestep on all these streams. This is done by grepping the output for the {\tt FINDME} keyword. \\
