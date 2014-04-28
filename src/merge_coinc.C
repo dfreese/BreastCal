@@ -118,7 +118,8 @@ int main(int argc, Char_t *argv[])
         if (verbose) cout << " Opening file " << filenamel << endl;
         TFile *file_left = new TFile(filenamel,"OPEN");
         if (!file_left || file_left->IsZombie()) {  cout << "problems opening file " << filenamel << "\n.Exiting" << endl; return -11;} 
-        TTree *car_l = (TTree *) file_left->Get("cartridge");
+//        TTree *car_l = (TTree *) file_left->Get("cartridge");
+        TTree *car_l = (TTree *) file_left->Get("SCalTree");
         ModuleCal *EL=0;
         ModuleCal *ER=0;
 
@@ -145,7 +146,7 @@ int main(int argc, Char_t *argv[])
         if (verbose) cout << " Opening file " << filenamer <<endl;
         TFile *file_right = new TFile(filenamer,"OPEN");
         if (!file_right || file_right->IsZombie()) {  cout << "problems opening file " << filenamel << "\n.Exiting" << endl; return -11;} 
-        TTree *car_r = (TTree *) file_right->Get("cartridge");
+        TTree *car_r = (TTree *) file_right->Get("SCalTree");
 	ofstream asciiout;
 
 	//        car_r->SetBranchAddress("event",&ER);
