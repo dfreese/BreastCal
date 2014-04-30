@@ -291,11 +291,26 @@ for (i = 0; i < 36; i++) {
      }
      sscanf(c_id.c_str(),"P%dC%d",&panel_id,&cartridge_id);
        cout << " PANEL :: " << panel_id  << " CARTRIDGE :: " << cartridge_id << " ID : " << id_val << endl;
-       pclist[i].panel=panel_id;
-       pclist[i].cartridge=cartridge_id;
+       pclist[id_val].panel=panel_id;
+       pclist[id_val].cartridge=cartridge_id;
        i++;
     }
-     
+
+    if (verbose) {  
+      cout << " pclist.daqid     = " ;
+      for ( i=0;i<32;i++){
+	cout << pclist[i].panel << " ";}
+      cout << endl;
+
+      cout << " pclist.panel     = " ;
+      for ( i=0;i<32;i++){
+	cout << pclist[i].panel << " ";}
+      cout << endl;
+      cout << " pclist.cartridge = " ;
+      for (i=0;i<32;i++){
+	cout << pclist[i].cartridge << " ";}
+      cout << endl;
+    }
     carmap.close();
 
 
@@ -551,6 +566,7 @@ if (pedfilenamespec) {
 
 #ifdef DEBUG
 	      cout << " trigCode = 0x" << hex << trigCode << dec ;
+              cout << " idnumber = " << Idnumber ;
 	      cout << " panelId = " << panelId << "; cartridgeId = " << cartridgeId << endl;
 	      cout << " chipId = " << chipId << "; fpgaId = " << fpgaId << endl;
 #endif
