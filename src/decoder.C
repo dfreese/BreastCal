@@ -76,7 +76,7 @@ void usage(void){
 using namespace std;
 void parsePack(const vector<char> &packBuffer, int coin = -1, int usbNum = -1);
 Float_t finecalc(Short_t u, Short_t v, Float_t u_cent, Float_t v_cent);
-void getfinmodule(Short_t chip, Short_t &module, Short_t &fin);
+void getfinmodule(Short_t panel, Short_t chip, Short_t &module, Short_t &fin);
 Int_t pedana( double* mean, double* rms, int  events, Short_t value ) ;
 
 // huh, global variable ..
@@ -803,7 +803,7 @@ if (pedfilenamespec) {
 	     event->c=rawevent.c - pedestals[event->cartridge][chipId][module][2];
 	     event->d=rawevent.d - pedestals[event->cartridge][chipId][module][3];
 	    
-             getfinmodule(event->chip,event->module,event->fin);
+             getfinmodule(panelId,event->chip,event->module,event->fin);
 	     //	     cout << " R" <<event->chip << "M" << event->module << "F" << event->fin <<endl;
 	     event->E=event->a+event->b+event->c+event->d;
 	     event->x= event->c + event->d - ( event->b + event->a );
@@ -1101,14 +1101,26 @@ if (verbose){
  
   return 0;}
 
- void getfinmodule(Short_t chip, Short_t &module, Short_t &fin){
+void getfinmodule(Short_t panel, Short_t chip, Short_t &module, Short_t &fin){
                Short_t fourup=TMath::Floor(chip/8);
                Short_t localchip=chip%8;
 	       fin = 6-2*TMath::Floor(localchip/2) ;
 	       //   cout << " locchip " << localchip << " fin " << fin << endl;
-               if (chip>=16) fin++;
-               if (fourup%2)  module+=(MODULES_PER_FIN/2 );
-	       if (chip%2) module+=MODULES_PER_RENA;
+	       //      cout << " P" << panel << "R" << chip << "M"<< module << " (locchip: " << localchip << ", fourup: "<< fourup ;
+
+               if (panel) { 
+		    if (chip < 16) fin++; 
+                    module=(3-module)%4;
+                    if (!(chip%2)) module+=MODULES_PER_RENA; 
+		    if (!(fourup%2))  module+=(MODULES_PER_FIN/2 );
+                }
+               else {
+		    if (chip>=16) fin++; 
+                    if (chip%2) module+=MODULES_PER_RENA; 
+		    if (fourup%2)  module+=(MODULES_PER_FIN/2 );
+	       }
+
+	       //   cout << "): fin " << fin << " module " << module << endl; 
 	     }
 
  Int_t pedana( double* mean, double* rms, int  events, Short_t value ) {
