@@ -72,6 +72,9 @@ int main(int argc, char *argv[]){
 
   cout << " Chaining ROOT files; output file generated will be : " << outfilename << endl;
 
+  // making dummy histogram according to http://root.cern.ch/phpBB3/viewtopic.php?f=3&t=13607
+  TH1F* dummy = new TH1F("dummy", "dummy", 10, 0, 1);
+
   ifstream chainfile,rootfile;
   chainfile.open(filelist);
 
@@ -129,6 +132,8 @@ int main(int argc, char *argv[]){
          return -11;}
  
 	// FIXME:: Read circle centers from first file - should have a way to check if there are enough entries to have reliable centers. 
+
+        if (verbose) cout << " Reading circle centers " << endl;
 	
 	if ( filesread == 1 ) {
 	  for (Int_t c=0;c<CARTRIDGES_PER_PANEL;c++){ 
@@ -140,13 +145,16 @@ int main(int argc, char *argv[]){
 	    } //r
 	  } //c
 	}// filesread
+
+        if (verbose) cout << " Reading histograms " << endl;
 	
 	//    decodedfile->ls();        
 	  for (Int_t c=0;c<CARTRIDGES_PER_PANEL;c++){ 
 	    for (Int_t f=0;f<FINS_PER_CARTRIDGE;f++){
 	      for (Int_t m=0;m<MODULES_PER_FIN;m++){
 		for (Int_t j=0;j<APDS_PER_MODULE;j++){
-		  sprintf(tmpstring,"C%dF%d/E[%d][%d][%d][%d]",c,f,c,f,m,j); //  cout <<  tmpstring  ;
+		  sprintf(tmpstring,"C%dF%d/E[%d][%d][%d][%d]",c,f,c,f,m,j);  
+		  //		  if (verbose) cout <<  tmpstring  << endl;
 		  if (filesread==1) { 
 		    E[c][f][m][j]= (TH1F *) decodedfile->Get(tmpstring); 
 		    E[c][f][m][j]->SetDirectory(0);
@@ -157,6 +165,7 @@ int main(int argc, char *argv[]){
 		    delete ETMP[c][f][m][j]; //}
 		  }
 		  sprintf(tmpstring,"C%dF%d/E_com[%d][%d][%d][%d]",c,f,c,f,m,j);
+		  //		  if (verbose) cout <<  tmpstring << endl ;
 		  if (filesread==1) { 
 		    E_com[c][f][m][j]= (TH1F *) decodedfile->Get(tmpstring); 
 		    E_com[c][f][m][j]->SetDirectory(0); }
@@ -170,6 +179,8 @@ int main(int argc, char *argv[]){
 	    } // f
 	 }//c
 	
+	  if (verbose) cout << " Closing file " << curfilename << endl;
+
 	 decodedfile->Close();
 
     //	 }
