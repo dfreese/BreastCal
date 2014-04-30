@@ -8,6 +8,6 @@
 # The second column will be converted into a 5 bit number, thus any number not
 #   between 0 and 31 will cause an error.
 P0C0 = 0
-P0C1 = 1
-P1C0 = 2
+P0C1 = 2
+P1C0 = 1
 P1C1 = 3
