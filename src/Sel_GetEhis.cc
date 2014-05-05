@@ -88,10 +88,10 @@ void Sel_GetEhis::SlaveBegin(TTree * /*tree*/)
 	 for (Int_t j=0;j<APDS_PER_MODULE;j++){
 	   for (Int_t k=0;k<XTALS_PER_APD;k++){
 	     hn.Form("Ehist_C%dF%dM%dA%dP%d",cc,f,m,j,k);
-             ht.Form("C%dF%d Unit %d Module %d Pixel %d",cc,f,m,j,k);
+             ht.Form("C%dF%d Module %d APD %d Pixel %d",cc,f,m,j,k);
 	     fEhist[cc][f][m][j][k] = new TH1F(hn.Data(),ht.Data(), Ebins_pixel,E_low,E_up);
 	     hn.Form("Ehist_com_C%dF%dM%dA%dP%d",cc,f,m,j,k);
-             ht.Form("C%dF%d Unit %d Module %d Common Pixel %d",cc,f,m,j,k);
+             ht.Form("C%dF%d Module %d APD %d Common Pixel %d",cc,f,m,j,k);
 	     fEhist_com[cc][f][m][j][k] = new TH1F(hn.Data(),ht.Data(), Ebins_com_pixel,E_low_com,E_up_com);
 	     fOutput->Add(fEhist[cc][f][m][j][k]);
 	     fOutput->Add(fEhist_com[cc][f][m][j][k]);

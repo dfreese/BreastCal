@@ -40,7 +40,7 @@ Int_t PixelCal::ReadCal(const char *filebase){
 	       if ( floodmap[c][f][i][j]->GetEntries() ) validpeaks[c][f][i][j]=1;
              }//floodmap
              else {
-	       sprintf(peaklocationfilename,"./CHIPDATA/%s.C%dF%d.unit%d_apd%d_peaks",filebase,c,f,i,j);
+	       sprintf(peaklocationfilename,"./CHIPDATA/%s.C%dF%d.module%d_apd%d_peaks",filebase,c,f,i,j);
              strcat(peaklocationfilename,".txt");
              infile.open(peaklocationfilename);
              lines = 0;

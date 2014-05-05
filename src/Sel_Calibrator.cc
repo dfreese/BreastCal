@@ -155,10 +155,10 @@ if (fUseProof){
        for (Int_t m=0;m<MODULES_PER_FIN;m++){
          for (Int_t j=0;j<APDS_PER_MODULE;j++){
 	     hn.Form("GlobEhist_C%dF%dM%dA%d",cc,f,m,j);
-             ht.Form("C%dF%d Unit %d Module %d",cc,f,m,j);
+             ht.Form("C%dF%d Module %d APD %d",cc,f,m,j);
 	     fGlobHist[cc][f][m][j] = new TH1F(hn.Data(),ht.Data(), Ebins_pixel,E_low,E_up);
              hn.Form("GlobEhist_com_C%dF%dM%dA%d",cc,f,m,j);
-             ht.Form("C%dF%d Unit %d Module %d Common",cc,f,m,j);
+             ht.Form("C%dF%d Module %d APD %d Common",cc,f,m,j);
              fGlobHist_com[cc][f][m][j] = new TH1F(hn.Data(),ht.Data(), Ebins_com_pixel,E_low_com,E_up_com);
 	     fOutput->Add(fGlobHist[cc][f][m][j]);
 	     fOutput->Add(fGlobHist_com[cc][f][m][j]);

@@ -270,7 +270,7 @@ if ( access( fDIR.Data(), 0 ) != 0 ) {
       if (modevents[c][f][i][j]){
   	 c1->Clear();
 	 c1->Divide(2,2);
-	 if (verbose)        cout << " Crystal segmentation Unit " << i << ",  apd " << j << endl;
+	 if (verbose)        cout << " Crystal segmentation Module " << i << ",  apd " << j << endl;
 
 					     //	i=2;{		
 			 //	 i=0;{
@@ -297,7 +297,7 @@ if ( access( fDIR.Data(), 0 ) != 0 ) {
 
      //  m=0;
 
-     sprintf(peaklocationfilename,"%s.C%dF%d.unit%d_apd%d",filebase,c,f,i,j);
+     sprintf(peaklocationfilename,"%s.C%dF%d.module%d_apd%d",filebase,c,f,i,j);
 
 #ifdef TIMING
      starttime = time (NULL );
@@ -337,11 +337,11 @@ if ( access( fDIR.Data(), 0 ) != 0 ) {
     
     if (flag==15) { 
       validsegment[c][f][i][j]=1;nvalid++;
-      sprintf(peaklocationfilename,"%s.C%dF%d.unit%d_apd%d_peaks",filebase,c,f,i,j);
+      sprintf(peaklocationfilename,"%s.C%dF%d.module%d_apd%d_peaks",filebase,c,f,i,j);
       }
     else  {
       validsegment[c][f][i][j]=0; 
-      sprintf(peaklocationfilename,"%s.C%dF%d.unit%d_apd%d_peaks.failed",filebase,c,f,i,j);
+      sprintf(peaklocationfilename,"%s.C%dF%d.module%d_apd%d_peaks.failed",filebase,c,f,i,j);
     }
    strcat(peaklocationfilename,".txt");
      peaklocationfile.open(peaklocationfilename);
@@ -354,7 +354,7 @@ if ( access( fDIR.Data(), 0 ) != 0 ) {
    peaklocationfile.close();
  
    if (verbose) { cout <<" Made it here too! " <<endl;}
-   sprintf(pngstring,"%s/%s.C%dF%d.unit%d_apd%d_flood",fDIR.Data(),filebase,c,f,i,j);
+   sprintf(pngstring,"%s/%s.C%dF%d.module%d_apd%d_flood",fDIR.Data(),filebase,c,f,i,j);
    strcat(pngstring,".png");
    //   cout << pngstring << endl;
    c1->Update();
@@ -362,12 +362,12 @@ if ( access( fDIR.Data(), 0 ) != 0 ) {
 #ifdef PUBPLOT
    set2dcolor(4);
    c1->Clear();
-   sprintf(pngstring,"%s.C%dF%d.unit%d_apd%d_flood",filebase,c,f,i,j);
+   sprintf(pngstring,"%s.C%dF%d.module%d_apd%d_flood",filebase,c,f,i,j);
    strcat(pngstring,".eps");
 floods[m][i][j]->Draw("colz");
  peaks[m][i][j]->Draw("PL");	
    c1->Print(pngstring);
-   sprintf(pngstring,"%s.C%dF%d.unit%d_apd%d_singleflood",filebase,c,f,i,j);
+   sprintf(pngstring,"%s.C%dF%d.module%d_apd%d_singleflood",filebase,c,f,i,j);
    strcat(pngstring,".eps");
  TPaletteAxis *palette = (TPaletteAxis*)floods[c][f][i][j]->GetListOfFunctions()->FindObject("palette");
  palette->SetLabelSize(0.04);
