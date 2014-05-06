@@ -92,7 +92,7 @@ int main(int argc, char *argv[]){
  Int_t calcpedestal=0;
 // changed this to be always one, because ana code expects the vectors containing u,v centers to be in the root file.
 // however,this is set to 0 if the user specifies "-p" on the command line.
- int uvcalc=1;
+ int uvcalc;//=1;
 
  int chip;
  int module;
@@ -356,6 +356,12 @@ for (i = 0; i < 36; i++) {
   if (verbose) {
     cout << " threshold :: " << threshold << endl; }
   
+  if (!uvcalc){
+    cout << " ======================================================================== " << endl;
+    cout << " |  Warning you did not enable UV calc, this will affect chain_parsed ! | " << endl;
+    cout << " ======================================================================== " << endl;
+  }
+
 
   if (!(outfileset)) {
      sprintf(outfilename,"%s.root",filename);
@@ -417,6 +423,12 @@ if (pedfilenamespec) {
   mdata->Branch("eventdata",&event);
  } // pedfilenamespec
 
+   dataFile.open(filename, ios::in | ios::binary);
+  if (!dataFile.good()) {
+    cout << "Cannot open file \"" << filename << "\" for read operation. Exiting." << endl;
+    return -1;     }
+
+
 
   if (genascifile){ ascifile.open(ascifilename);}
   /*
@@ -460,13 +472,6 @@ if (pedfilenamespec) {
   rawdata->Branch("pos",&rawevent.pos,"pos/I");
   //}
 
-
-
-
-   dataFile.open(filename, ios::in | ios::binary);
-  if (!dataFile.good()) {
-    cout << "Cannot open file \"" << filename << "\" for read operation. Exiting." << endl;
-    return -1;     }
 
   if (dataFile)
  {  // for ( i=0;i<10;i++){
@@ -784,14 +789,14 @@ if (pedfilenamespec) {
               rawevent.b=adcBlock[UNUSEDCHANNELOFFSET+BYTESPERCOMMON*nrchips+1+kk*VALUESPERSPATIAL - even*nrchips*SHIFTFACSPAT];  //3
               rawevent.c=adcBlock[UNUSEDCHANNELOFFSET+BYTESPERCOMMON*nrchips+2+kk*VALUESPERSPATIAL - even*nrchips*SHIFTFACSPAT];  //4
               rawevent.d=adcBlock[UNUSEDCHANNELOFFSET+BYTESPERCOMMON*nrchips+3+kk*VALUESPERSPATIAL - even*nrchips*SHIFTFACSPAT];  //5
-               rawevent.pos=sourcepos;
+              rawevent.pos=sourcepos;
               kk++;
               rawdata->Fill();
 
 
              module=iii;
 
-if (pedfilenamespec) {
+	     if (pedfilenamespec) {
 
 
              event->module=module;
@@ -819,35 +824,35 @@ if (pedfilenamespec) {
 	     cout << " chipId = " << chipId << " module = " << module << endl;
 #endif 
 
-   if ( (rawevent.com1h - pedestals[event->cartridge][chipId][module][5]) < threshold ) { 
-     if ( (rawevent.com2h - pedestals[event->cartridge][chipId][module][7]) > nohit_threshold ) { 
-       totaltriggers[event->cartridge][chipId][module][0]++;
-       event->apd=0; 
-       // FIXME
-       //       event->ft=finecalc(rawevent.u1h,rawevent.v1h,uu_c[chipId][module][0],vv_c[chipId][module][0])  ;
-       event->ft= (  ( ( rawevent.u1h & 0xFFFF ) << 16  )  | (  rawevent.v1h & 0xFFFF ) ) ;
-       event->Ec= rawevent.com1 - pedestals[event->cartridge][chipId][module][4];
-       event->Ech=rawevent.com1h - pedestals[event->cartridge][chipId][module][5];
-       mdata->Fill(); }
-     else doubletriggers[event->cartridge][chipId][module]++;
-   }
-   else {
-     if ( (rawevent.com2h - pedestals[event->cartridge][chipId][module][7]) < threshold ) {
-        if ( (rawevent.com1h - pedestals[event->cartridge][chipId][module][5]) > nohit_threshold ) { 
-     totaltriggers[event->cartridge][chipId][module][1]++;
-     event->apd=1;   
-     event->y*=-1;
-     // FIXME :: need to find solution for ft. 
-     //     event->ft=finecalc(rawevent.u2h,rawevent.v2h,uu_c[chipId][module][1],vv_c[chipId][module][1])  ;
-     event->ft= (  ( ( rawevent.u2h & 0xFFFF ) << 16  )  | (  rawevent.v2h & 0xFFFF ) ) ;
-     //  ,rawevent.v2h,uu_c[chipId][module][1],vv_c[chipId][module][1])  ;
-     event->Ec = rawevent.com2 - pedestals[event->cartridge][chipId][module][6];
-     event->Ech=rawevent.com2h- pedestals[event->cartridge][chipId][module][7];
-     mdata->Fill(); }
-     else doubletriggers[event->cartridge][chipId][module]++;
-    }
-     else belowthreshold[event->cartridge][chipId][module]++;
-   }
+	     if ( (rawevent.com1h - pedestals[event->cartridge][chipId][module][5]) < threshold ) { 
+	       if ( (rawevent.com2h - pedestals[event->cartridge][chipId][module][7]) > nohit_threshold ) { 
+		 totaltriggers[event->cartridge][chipId][module][0]++;
+		 event->apd=0; 
+		 // FIXME
+		 //       event->ft=finecalc(rawevent.u1h,rawevent.v1h,uu_c[chipId][module][0],vv_c[chipId][module][0])  ;
+		 event->ft= (  ( ( rawevent.u1h & 0xFFFF ) << 16  )  | (  rawevent.v1h & 0xFFFF ) ) ;
+		 event->Ec= rawevent.com1 - pedestals[event->cartridge][chipId][module][4];
+		 event->Ech=rawevent.com1h - pedestals[event->cartridge][chipId][module][5];
+		 mdata->Fill(); }
+	       else doubletriggers[event->cartridge][chipId][module]++;
+	     }
+	     else {
+	       if ( (rawevent.com2h - pedestals[event->cartridge][chipId][module][7]) < threshold ) {
+		 if ( (rawevent.com1h - pedestals[event->cartridge][chipId][module][5]) > nohit_threshold ) { 
+		   totaltriggers[event->cartridge][chipId][module][1]++;
+		   event->apd=1;   
+		   event->y*=-1;
+		   // FIXME :: need to find solution for ft. 
+		   //     event->ft=finecalc(rawevent.u2h,rawevent.v2h,uu_c[chipId][module][1],vv_c[chipId][module][1])  ;
+		   event->ft= (  ( ( rawevent.u2h & 0xFFFF ) << 16  )  | (  rawevent.v2h & 0xFFFF ) ) ;
+		   //  ,rawevent.v2h,uu_c[chipId][module][1],vv_c[chipId][module][1])  ;
+		   event->Ec = rawevent.com2 - pedestals[event->cartridge][chipId][module][6];
+		   event->Ech=rawevent.com2h- pedestals[event->cartridge][chipId][module][7];
+		   mdata->Fill(); }
+		 else doubletriggers[event->cartridge][chipId][module]++;
+	       }
+	       else belowthreshold[event->cartridge][chipId][module]++;
+	     }
    // fill energy histogram
 #ifdef DEBUG
    if (( event->module > MODULES_PER_FIN ) || ( event->apd > 1 ) || ( event->apd < 0) || (event->fin > FINS_PER_CARTRIDGE ) )  { cout << "ERROR !!" ;
