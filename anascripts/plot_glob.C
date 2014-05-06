@@ -4,7 +4,7 @@
  TH2F *pphisto_1 = new TH2F("pphisto_1","pp global ", 16,0,16,8,0,8);
 
 
-Int_t plot_glob(string s, Int_t DAQ){
+Int_t plot_glob(string s, Int_t thiscartridge){
   ifstream infile;
  
 
@@ -30,6 +30,8 @@ Int_t plot_glob(string s, Int_t DAQ){
  Int_t finnr;
  Int_t modnr;
  Int_t chipnr;
+ Int_t cartridgeId;
+ Int_t finId;
  Int_t apdnr;
  Int_t unitnr;
  /*
@@ -39,21 +41,22 @@ Int_t plot_glob(string s, Int_t DAQ){
 
  while ( infile >> dummy >> eres >> d_eres >> pp ){
    j++;
-   sscanf(dummy,"R%dM%dA%d",&chipnr,&unitnr,&apdnr);
+   sscanf(dummy,"C%dF%dM%dA%d",&cartridgeId,&finId,&modnr,&apdnr);
 
+   if (cartridgeId != thiscartridge) continue;
 
-
-   finnr=(3-(TMath::Floor(chipnr/2)))*2;
-   modnr=unitnr+4*(chipnr%2);
+   //   finnr=(3-(TMath::Floor(chipnr/2)))*2;
+   //   modnr=unitnr+4*(chipnr%2);
  
 
-   if (DAQ>=2) finnr++;
-   if (DAQ%2) modnr+=8;
+   //   if (DAQ>=2) finnr++;
+   //   if (DAQ%2) modnr+=8;
 
    //finnr=7-finnr;
 
    //  cout << " DAQ BOARD : " << DAQ << " RENA : " << chipnr << " FIN : " << finnr << " MODULE : " << modnr << endl; 
   
+   finnr=finId;
 
    if ( apdnr==1 ){ 
     ereshisto_1->SetBinContent( modnr+1, finnr+1,eres);

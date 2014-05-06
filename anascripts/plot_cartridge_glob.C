@@ -1,17 +1,19 @@
 
 
 
-Int_t plot_cartrigdge(Char_t filebase[50]="PT_DAQ_1309181722"){
+Int_t plot_cartrigdge(Char_t filebase[50]="PT_DAQ_1309181722",Int_t cartridge=0){
 
-gROOT->ProcessLine(".L /home/miil/MODULE_ANA/ANA_V5/ModuleClass/anascripts/plot_glob.C");
+  //gROOT->ProcessLine(".L /home/miil/MODULE_ANA/ANA_V5/ModuleClass/anascripts/plot_glob.C");
+
+ gROOT->ProcessLine(".L ./plot_glob.C");
 
   Char_t filename[100];
 
 
-  for (Int_t i=0; i<4;i++){
-  sprintf(filename,"./L%d/%s_L%d_globfits_spat.txt",i,filebase,i);
-  plot_glob(filename,i);
-  }
+  //  for (Int_t i=0; i<4;i++){
+  sprintf(filename,"./Left/%s_L_globfits_spat.txt",filebase);
+  plot_glob(filename,cartridge);
+  // }
 
 /*
 plot_glob("./L0/PT_DAQ_1309181722_L0_globfits_spat.txt",0);
@@ -20,23 +22,28 @@ plot_glob("./L2/PT_DAQ_1309181722_L2_globfits_spat.txt",2);
 plot_glob("./L3/PT_DAQ_1309181722_L3_globfits_spat.txt",3);
 */
 
+  TString Title;
 
  TH2F *Left_0 = ereshisto_0->Clone();
  Left_0->SetName("Left_0");
- Left_0->SetTitle("Global Energy Resolution LEFT APD0");
+ Title.Form("Global Energy Resolution LEFT C%d APD0",cartridge);
+ Left_0->SetTitle(Title.Data());
  TH2F *Left_1 = ereshisto_1->Clone();
  Left_1->SetName("Left_1");
- Left_1->SetTitle("Global Energy Resolution LEFT APD1");
+ Title.Form("Global Energy Resolution LEFT C%d APD1",cartridge);
+ Left_1->SetTitle(Title.Data());
 
  ereshisto_0->Reset();
  ereshisto_1->Reset();
 
  TH2F *Leftpp_0 = pphisto_0->Clone();
  Leftpp_0->SetName("Leftpp_0");
- Leftpp_0->SetTitle("Global PP LEFT APD0");
+ Title.Form("Global PP LEFT C%d APD0",cartridge);
+ Leftpp_0->SetTitle(Title.Data());
  TH2F *Leftpp_1 = pphisto_1->Clone();
  Leftpp_1->SetName("Leftpp_1");
- Leftpp_1->SetTitle("Global PP LEFT APD1");
+ Title.Form("Global PP LEFT C%d APD1",cartridge);
+ Leftpp_1->SetTitle(Title.Data());
 
  pphisto_0->Reset();
  pphisto_1->Reset();
@@ -55,16 +62,21 @@ Leftpp_0->Draw("colz");
 c1->cd(4);
 Leftpp_1->Draw("colz");
 
- c1->Print("plot_cartridge_glob_L.png");
- c1->Print("plot_cartridge_glob_L.C");
+ TString outputfilename;
+
+ outputfilename.Form("plot_cartridge_glob_L_C%d.png",cartridge);
+ c1->Print(outputfilename.Data());
+ outputfilename.Form("plot_cartridge_glob_L_C%d.C",cartridge);
+ c1->Print(outputfilename.Data());
+
 
  DumpContent(Leftpp_0);
  DumpContent(Leftpp_1);
 
-for (Int_t i=0; i<4;i++){
- sprintf(filename,"./R%d/%s_R%d_globfits_spat.txt",i,filebase,i);
- plot_glob(filename,i);
- }
+ //for (Int_t i=0; i<4;i++){
+ sprintf(filename,"./Right/%s_R_globfits_spat.txt",filebase);
+ plot_glob(filename,0);
+ // }
 
 /* 
 plot_glob("./R0/PT_DAQ_1309181722_R0_globfits_spat.txt",0);
@@ -75,17 +87,23 @@ plot_glob("./R3/PT_DAQ_1309181722_R3_globfits_spat.txt",3);
 
  TH2F *Right_0 = ereshisto_0->Clone();
  Right_0->SetName("Right_0");
- Right_0->SetTitle("Global Energy Resolution RIGHT APD0");
+ Title.Form("Global Energy Resolution RIGHT C%d APD0",cartridge);
+ Right_0->SetTitle(Title.Data());
  TH2F *Right_1 = ereshisto_1->Clone();
  Right_1->SetName("Right_1");
- Right_1->SetTitle("Global Energy Resolution RIGHT APD1");
+ Title.Form("Global Energy Resolution RIGHT C%d APD1",cartridge);
+ Right_1->SetTitle(Title.Data());
 
  TH2F *Rightpp_0 = pphisto_0->Clone();
  Rightpp_0->SetName("Rightpp_0");
  Rightpp_0->SetTitle("Global PP RIGHT APD0");
+ Title.Form("Global PP RIGHT C%d APD0",cartridge);
+ Rightpp_0->SetTitle(Title.Data());
  TH2F *Rightpp_1 = pphisto_1->Clone();
  Rightpp_1->SetName("Rightpp_1");
- Rightpp_1->SetTitle("Global PP RIGHT APD1");
+ Title.Form("Global PP RIGHT C%d APD1",cartridge);
+ Rightpp_1->SetTitle(Title.Data());
+
 
 
  TCanvas *c2 = new TCanvas("c2","Right",400,800);
@@ -100,8 +118,11 @@ c2->cd(3);
 Rightpp_0->Draw("colz");
 c2->cd(4);
 Rightpp_1->Draw("colz");
-c2->Print("plot_cartridge_glob_R.png");
-c2->Print("plot_cartridge_glob_R.C");
+ outputfilename.Form("plot_cartridge_glob_R_C%d.png",cartridge);
+ c2->Print(outputfilename.Data());
+ outputfilename.Form("plot_cartridge_glob_R_C%d.C",cartridge);
+ c2->Print(outputfilename.Data());
+
 
  DumpContent(Rightpp_0);
  DumpContent(Rightpp_1);
