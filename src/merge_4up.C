@@ -354,7 +354,7 @@ int main(int argc, Char_t *argv[])
 		      if (( curtime-timecut[kk])>10000 ) { stop=1;} }   
 		     // we stop the while loop and close the file if the timedifference is larger than 10
 #ifdef DEBUG
-    	     cout << " filling chip " << unsrt_evt->chip << " UNIT " << event->m ;
+    	     cout << " filling chip " << unsrt_evt->chip << " MODULE " << event->m ;
 	      cout << " (l="<<l<<")"<< endl;
 #endif
 		    //	    } // if mod >= 0

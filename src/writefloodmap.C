@@ -86,10 +86,10 @@ Int_t main(Int_t argc, Char_t** argv){
  	  for (j=0;j<APDS_PER_MODULE;j++){
 	       //         validpeaks[m][j][i]=0;
 	       sprintf(tmpstring,"floodmap[%d][%d][%d]",m,i,j);
-	       sprintf(titlestring,"FLOOD LUT RENA %d UNIT %d APD %d",m,i,j);
+	       sprintf(titlestring,"FLOOD LUT RENA %d MODULE %d APD %d",m,i,j);
 	       if (verbose) { cout << titlestring << endl;} 
          floodmap[m][i][j] = new TH2S(tmpstring,titlestring,FLOODBINS,FLOODMIN,FLOODMAX,FLOODBINS,FLOODMIN,FLOODMAX);
-         sprintf(peaklocationfilename,"./CHIPDATA/%s.RENA%d.unit%d_apd%d_peaks",filebase,m,i,j);
+         sprintf(peaklocationfilename,"./CHIPDATA/%s.RENA%d.module%d_apd%d_peaks",filebase,m,i,j);
          strcat(peaklocationfilename,".txt");
          infile.open(peaklocationfilename);
 	 k=0;lines=0;

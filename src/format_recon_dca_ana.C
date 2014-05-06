@@ -104,14 +104,14 @@ int main(int argc, Char_t *argv[])
 	//        rootlogon(verbose);
 
 
-         TFile *f = new TFile("DCA.root","UPDATE");
+         TFile *f = new TFile("DCA.root","RECREATE");
          TH1D *DCA[NROFPOINTSOURCES];
          TString name;
          TString title;
           for (Int_t i=0;i<NROFPOINTSOURCES;i++){
 	    name.Form("DCA[%d]",i);
             title.Form(" Source position %d",i);
-	    DCA[i] = new TH1D(name.Data(),title.Data(),200,0,20);   
+	    DCA[i] = new TH1D(name.Data(),title.Data(),400,0,10);   
 	  }
 
 
@@ -231,7 +231,14 @@ int main(int argc, Char_t *argv[])
           		      z2 = -ZPITCH/2+(4-data->fin2)*ZPITCH;
 			      // z1=0;
 			      //  z2=0;
- 
+
+
+			      /*
+                              sourcepos=0;
+                              x0[sourcepos]=0;y0[sourcepos]=0;z0[sourcepos]=0;
+			      x1=1;y1=1;z1=1;
+                              x2=-1;y2=1;z2=1;
+			      */
 
                               x10 = x1- x0[sourcepos];
                               y10 = y1- y0[sourcepos];
@@ -246,10 +253,12 @@ int main(int argc, Char_t *argv[])
 			      x21_2 = x21*x21 + y21*y21 + z21*z21;
                               x10x21 = ( x10*x21 + y10*y21 + z10*z21);
 
-                              d = ( x10_2*x21_2 - x10x21*x10x21) / ( x21*x21 + y21*y21 +z21*z21 ) ;
+                              d = TMath::Sqrt(( x10_2*x21_2 - x10x21*x10x21) / ( x21*x21 + y21*y21 +z21*z21 )) ;
   
+			      //	 cout << d << endl;
+
 			      DCA[sourcepos]->Fill(d);
- 
+  
 
              // this is a good data now ..
              // do something+ write to disk
@@ -283,6 +292,8 @@ int main(int argc, Char_t *argv[])
       DCA->Draw();
       c1->Print("DCA.png");
       */
+
+      f->cd();
 
       for (Int_t i=0;i<NROFPOINTSOURCES;i++){
 	DCA[i]->Write();}

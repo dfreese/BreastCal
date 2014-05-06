@@ -179,10 +179,10 @@ int main(int argc, Char_t *argv[])
             for (i=0;i<2;i++){
 	      for (k=0;k<64;k++){
                 sprintf(tmpname,"Ehist[%d][%d][%d][%d]",m,j,i,k);
-                sprintf(tmptitle,"RENA %d Unit %d Module %d Pixel %d",m,j,i,k);
+                sprintf(tmptitle,"RENA %d Module %d APD %d Pixel %d",m,j,i,k);
                 Ehist[m][j][i][k] = new TH1F(tmpname,tmptitle,Ebins_pixel,E_low,E_up);
                 sprintf(tmpname,"Ehist_com[%d][%d][%d][%d]",m,j,i,k);
-                sprintf(tmptitle,"RENA %d Unit %d Module %d Pixel %d Common",m,j,i,k);
+                sprintf(tmptitle,"RENA %d Module %d APD %d Pixel %d Common",m,j,i,k);
                 Ehist_com[m][j][i][k] = new TH1F(tmpname,tmptitle,Ebins_com_pixel,E_low_com,E_up_com);
 		//                sprintf(tmpname,"Efits[%d][%d][%d]",i,j,k);
 		//                sprintf(tmptitle,"Unit %d Module %d Pixel %d",i,j,k);

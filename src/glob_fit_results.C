@@ -153,7 +153,7 @@ int main(int argc, Char_t *argv[])
             c1->Clear();
             if (globhist[m][i][j]->GetEntries() > MINHISTENTRIES){
 	    if (verbose){
-	      cout << "Fitting global energy histogram RENA " << m << " UNIT " << i << " MODULE " << j << endl;}
+	      cout << "Fitting global energy histogram RENA " << m << " Module " << i << " MODULE " << j << endl;}
       	       globfits[m][i][j]=fitapdspec(globhist[m][i][j],xlow,xhigh,1,verbose);
 	       sprintf(tmpname,"globfits[%d][%d][%d]",m,i,j);
                globfits[m][i][j]->SetName(tmpname);
@@ -174,7 +174,7 @@ int main(int argc, Char_t *argv[])
                sprintf(tmpstring,"Eres = %.2f #pm %.2f FWHM",100*eres,100*d_eres);
                labeltxt->Clear();
                labeltxt->AddText(tmpstring);
-               sprintf(peaklocationfilename,"%s.RENA%d.unit%d_apd%d_glob",filebase,m,i,j);
+               sprintf(peaklocationfilename,"%s.RENA%d.module%d_apd%d_glob",filebase,m,i,j);
                strcat(peaklocationfilename,".png");
                labeltxt->Draw();
 	       c1->Print(peaklocationfilename);
