@@ -43,7 +43,7 @@
 #define E_low_com -200
 #define Ebins_com 160
 #define Ebins_com_pixel 160
-#define PP_LOW_EDGE 600
+#define PP_LOW_EDGE 700
 #define PP_UP_EDGE 2800
 #define PP_LOW_EDGE_COM 350
 #define PP_UP_EDGE_COM 1200
