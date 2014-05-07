@@ -13,3 +13,7 @@ bin/*
 !bin/*sh
 # ignore PAR packages
 PAR/*par
+# ignore LATEX
+*toc
+*aux
+DOC/*log
