@@ -28,7 +28,7 @@
 // this parameter is used to check if the segmentation is valid ::
 #define COSTTHRESHOLD 300
 
-//#define DEVELOP
+#define DEVELOP
 // wil generate some more eps style floods
 //#define PUBPLOT
 
@@ -49,7 +49,7 @@
 #include "time.h"
 #endif
 
-TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validflag,Float_t &cost, Bool_t APD, TString fDIR);
+TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validflag,Float_t &cost, Bool_t APD, TString fDIR, Float_t yoffset);
 Double_t findmean( TH1D * h1, Int_t verbose, Bool_t APD);
 Double_t findmean8( TH1D * h1, Int_t verbose,Int_t X, Bool_t APD);
 Int_t updatesegmentation(TH2F *hist, Double_t x[16], Double_t y[16], TGraph *updated,Int_t verbose);
@@ -57,7 +57,7 @@ Int_t updatesegpoint(TH2F *hist, Double_t x, Double_t y, Double_t &xxx, Double_t
 Int_t validate_sort(TGraph *gr, Int_t verbose);
 
 void usage(void){
-    cout << "   anafloods -f [filename] [ -v -c [cartridgeId] -l [finId] -m [moduleId] -a [apdId] ] " << endl;
+    cout << "   anafloods -f [filename] [ -v -c [cartridgeId] -l [finId] -m [moduleId] -a [apdId] -yoff [y cordinate of split]] " << endl;
 }
 
 Int_t main(int argc, Char_t *argv[])
@@ -76,6 +76,7 @@ Int_t main(int argc, Char_t *argv[])
         Int_t           firstmodule=0,lastmodule=MODULES_PER_FIN;
         Int_t           firstapd=0,lastapd=APDS_PER_MODULE;
         Bool_t          used;
+	Float_t         yoffset=-99;
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -92,6 +93,13 @@ Int_t main(int argc, Char_t *argv[])
                      firstcartridge=CARTRIDGE;lastcartridge=firstcartridge+1;
 		     cout << "Looking at Cartridge " << CARTRIDGE <<endl;  }
 		  else { cout << " ignoring request for cartridge " << CARTRIDGE << endl;}
+		}
+
+		if(strncmp(argv[ix],"-yoff",5) == 0 ){
+		  used=kTRUE;
+		  ix++;
+		  yoffset = atof(argv[ix]);
+                  cout << "Using y = " << yoffset << " for quadrant splitting\n ";
 		}
 
 		if(strncmp(argv[ix], "-l", 2) == 0) {
@@ -304,7 +312,7 @@ if ( access( fDIR.Data(), 0 ) != 0 ) {
 #endif
      //   cout << " Starttime : " << starttime;
      //     verbose=0;
-     peaks[c][f][i][j] =   PeakSearch(floods[c][f][i][j],peaklocationfilename,verbose, flag, costs[c][f][i][j],j,fDIR);
+     peaks[c][f][i][j] =   PeakSearch(floods[c][f][i][j],peaklocationfilename,verbose, flag, costs[c][f][i][j],j,fDIR, yoffset);
      //     verbose=1;
       }
       else{
@@ -409,7 +417,7 @@ floods[m][i][j]->Draw("colz");
 
 
 
-TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validflag,Float_t &cost, Bool_t APD, TString fDIR){
+TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validflag,Float_t &cost, Bool_t APD, TString fDIR, Float_t yoffset){
 
   cost=999.999;
 
@@ -445,7 +453,9 @@ TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validfl
 
    projY = (TH1D*) flood->ProjectionY("",xlowbin,xhighbin);
    projY->SetName("projY");
-
+   if (yoffset>-99) { meanY = yoffset;}
+   else {
+ 
    if (( projY->GetEntries() < 1000 ) && ( meanX!=12345) ){
        projY->Reset();
        projY = (TH1D*) flood->ProjectionY("",xlowbin-5,xhighbin+5);
@@ -456,7 +466,7 @@ TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validfl
 
      if (verbose)  cout << " finding Y center " << endl;
      meanY = findmean8(projY,verbose,0,APD);
-
+   }
 #ifdef DEVELOP
    TFile *f = new TFile("proj.root","RECREATE");
    projX->Write();
@@ -521,7 +531,7 @@ TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validfl
    Int_t i,j,k,l;
 
    /* creating the histograms */
-  for (k=0;k<4;k++){
+  for(k=0;k<4;k++){
      sprintf(tmpstr,"floodsq[%d]",k);
      sprintf(tmpstr2,"%s, Quadrant %d",filebase,k);
      switch(k){
