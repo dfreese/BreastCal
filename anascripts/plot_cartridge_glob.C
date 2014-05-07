@@ -5,13 +5,13 @@ Int_t plot_cartrigdge(Char_t filebase[50]="PT_DAQ_1309181722",Int_t cartridge=0)
 
   //gROOT->ProcessLine(".L /home/miil/MODULE_ANA/ANA_V5/ModuleClass/anascripts/plot_glob.C");
 
- gROOT->ProcessLine(".L ./plot_glob.C");
+ gROOT->ProcessLine(".L /home/products/BreastCal/dev/anascripts/plot_glob.C");
 
   Char_t filename[100];
 
 
   //  for (Int_t i=0; i<4;i++){
-  sprintf(filename,"./Left/%s_L_globfits_spat.txt",filebase);
+  sprintf(filename,"./Left/GLOBFITS/%s_L_globfits_spat.txt",filebase);
   plot_glob(filename,cartridge);
   // }
 
@@ -74,7 +74,7 @@ Leftpp_1->Draw("colz");
  DumpContent(Leftpp_1);
 
  //for (Int_t i=0; i<4;i++){
- sprintf(filename,"./Right/%s_R_globfits_spat.txt",filebase);
+ sprintf(filename,"./Right/GLOBFITS/%s_R_globfits_spat.txt",filebase);
  plot_glob(filename,0);
  // }
 
