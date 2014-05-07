@@ -93,17 +93,21 @@ Int_t sort16(Float_t *xpeaks, Float_t *ypeaks, Double_t **sortedxpeaks, Double_t
           // that results in an error, which will appear from the angle between the current candidate point and 
 	  // the next point to be around -90 degrees, smaller than 0  which we check for. 
 	  if (j<15) jj=j+1; else jj=j;
-          while (jj<16) { if (flagged[xmap[jj]]) jj++;
-			  else break;}
+          while (jj<16) { 
+	    if (flagged[xmap[jj]]) jj++;
+	    else break;}
+	  
 	  if (verbose) { cout << " jj after  while loop :: " << jj << endl;}
-        	       angle=atan2(ypeaks[xmap[jj]]-ypeaks[xmap[j]],xpeaks[xmap[jj]]-xpeaks[xmap[j]]);
-                       length=TMath::Sqrt(TMath::Power(ypeaks[xmap[j]]-ypeaks[xmap[jj]],2)+
-                                           TMath::Power(xpeaks[xmap[j]]-xpeaks[xmap[jj]],2));
-		       if (verbose){
-                         cout << " Angle with next point :: " ;
-	                 cout << angle << ", length = " << length;
-                         cout << " (x,y)_next = (" << xpeaks[xmap[jj]] << "," << ypeaks[xmap[jj]] <<")" << endl;}
-	               if ((length<0.075 )&&(angle < 0.)) { if (verbose) cout << " ----> Negative, increasing j !  (cur j=" << j <<")"<<endl;
+          if (jj>15) return -1; // AVDB 5-7-2014 ADDED THIS STATEMENT
+          angle=atan2(ypeaks[xmap[jj]]-ypeaks[xmap[j]],xpeaks[xmap[jj]]-xpeaks[xmap[j]]);
+          length=TMath::Sqrt(TMath::Power(ypeaks[xmap[j]]-ypeaks[xmap[jj]],2)+
+                             TMath::Power(xpeaks[xmap[j]]-xpeaks[xmap[jj]],2));
+	  if (verbose){
+             cout << " Angle with next point :: " ;
+	     cout << angle << ", length = " << length;
+             cout << " (x,y)_next = (" << xpeaks[xmap[jj]] << "," << ypeaks[xmap[jj]] <<")" << endl;}
+	  if ((length<0.075 )&&(angle < 0.)) { 
+	    if (verbose) cout << " ----> Negative, increasing j !  (cur j=" << j <<")"<<endl;
 			   j++; }
 			 //     else { // 
 			 //we finish the loop here, because the situation we checked for only occurs if the wrong point along the same

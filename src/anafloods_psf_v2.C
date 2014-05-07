@@ -777,6 +777,9 @@ if (npeaks_q[k] != 16 ) {
 #endif 
 
 #ifdef sortps
+
+   //   verbose=1;
+
    Double_t oria,a,b;
    oria=0;
    Int_t stepback=0;
