@@ -77,7 +77,7 @@ using namespace std;
 void parsePack(const vector<char> &packBuffer, int coin = -1, int usbNum = -1);
 Float_t finecalc(Short_t u, Short_t v, Float_t u_cent, Float_t v_cent);
 void getfinmodule(Short_t panel, Short_t chip, Short_t &module, Short_t &fin);
-Int_t pedana( double* mean, double* rms, int  events, Short_t value ) ;
+Int_t pedana( double* mean, double* rms, int  *events, Short_t value ) ;
 
 // huh, global variable ..
 unsigned long totalPckCnt=0;
@@ -949,25 +949,38 @@ if (verbose){
     double ped_ana[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][CHANNELS_PER_MODULE][2]={{{{{0}}}}};
     int ped_evts[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]={{{0}}};
 
- for (int  ii = 0 ; ii< rawdata->GetEntries(); ii++ ){
+    // for (int  ii = 0 ; ii< rawdata->GetEntries(); ii++ ){
+
+   // skip first 20 entries to prevent outliers
+ for (int  ii = 20 ; ii< rawdata->GetEntries(); ii++ ){
+
    rawdata->GetEntry(ii);
    
    chip= rawevent.chip;
    module = rawevent.module;
    cartridge = rawevent.cartridge;
-   //   if (rawevent.module==0){
-   //     cout << " ped_evts[ " << chip << "][" << module << "] :::: "<< ped_evts[chip][module] << endl;
-   //   cout << " C" << cartridge << "R" << chip << "M" << module << endl;
+   /*
+   if ((rawevent.chip==23)&&(rawevent.module==3)&&(rawevent.a<0)){
+        cout << " ped_evts[ " << cartridge << "][" << chip << "][" <<  module << "] :::: "<< ped_evts[cartridge][chip][module] << endl;
+        cout << " rawevent.a = " << rawevent.a  << "( average = " << std::setprecision(8) <<  ped_ana[cartridge][chip][module][0][0] ;
+        cout << ", std dev = " << TMath::Sqrt(ped_ana[cartridge][chip][module][0][1]/ped_evts[cartridge][chip][module])<< ")" <<endl;}
+   */
+	//    cout << " C" << cartridge << "R" << chip << "M" << module << endl;
      ped_evts[cartridge][chip][module]++;
-     pedana( &ped_ana[cartridge][chip][module][0][0], &ped_ana[cartridge][chip][module][0][1], ped_evts[cartridge][chip][module], rawevent.a );
-     pedana( &ped_ana[cartridge][chip][module][1][0], &ped_ana[cartridge][chip][module][1][1], ped_evts[cartridge][chip][module], rawevent.b );
-     pedana( &ped_ana[cartridge][chip][module][2][0], &ped_ana[cartridge][chip][module][2][1], ped_evts[cartridge][chip][module], rawevent.c );
-     pedana( &ped_ana[cartridge][chip][module][3][0], &ped_ana[cartridge][chip][module][3][1], ped_evts[cartridge][chip][module], rawevent.d );
-     pedana( &ped_ana[cartridge][chip][module][4][0], &ped_ana[cartridge][chip][module][4][1], ped_evts[cartridge][chip][module], rawevent.com1 );
-     pedana( &ped_ana[cartridge][chip][module][5][0], &ped_ana[cartridge][chip][module][5][1], ped_evts[cartridge][chip][module], rawevent.com1h );
-     pedana( &ped_ana[cartridge][chip][module][6][0], &ped_ana[cartridge][chip][module][6][1], ped_evts[cartridge][chip][module], rawevent.com2 );
-     pedana( &ped_ana[cartridge][chip][module][7][0], &ped_ana[cartridge][chip][module][7][1], ped_evts[cartridge][chip][module], rawevent.com2h );
+     pedana( &ped_ana[cartridge][chip][module][0][0], &ped_ana[cartridge][chip][module][0][1], &ped_evts[cartridge][chip][module], rawevent.a );
+     pedana( &ped_ana[cartridge][chip][module][1][0], &ped_ana[cartridge][chip][module][1][1], &ped_evts[cartridge][chip][module], rawevent.b );
+     pedana( &ped_ana[cartridge][chip][module][2][0], &ped_ana[cartridge][chip][module][2][1], &ped_evts[cartridge][chip][module], rawevent.c );
+     pedana( &ped_ana[cartridge][chip][module][3][0], &ped_ana[cartridge][chip][module][3][1], &ped_evts[cartridge][chip][module], rawevent.d );
+     pedana( &ped_ana[cartridge][chip][module][4][0], &ped_ana[cartridge][chip][module][4][1], &ped_evts[cartridge][chip][module], rawevent.com1 );
+     pedana( &ped_ana[cartridge][chip][module][5][0], &ped_ana[cartridge][chip][module][5][1], &ped_evts[cartridge][chip][module], rawevent.com1h );
+     pedana( &ped_ana[cartridge][chip][module][6][0], &ped_ana[cartridge][chip][module][6][1], &ped_evts[cartridge][chip][module], rawevent.com2 );
+     pedana( &ped_ana[cartridge][chip][module][7][0], &ped_ana[cartridge][chip][module][7][1], &ped_evts[cartridge][chip][module], rawevent.com2h );
 
+     /*
+     if ((rawevent.chip==23)&&(rawevent.module==3)&&(rawevent.a<0)){
+       cout << " ped_evts[ " << cartridge << "][" << chip << "][" <<  module << "] :::: "<< ped_evts[cartridge][chip][module] << endl;
+       cout << " average = " << ped_ana[cartridge][chip][module][0][0] << endl;
+       }*/
   }
 
  if (verbose) {cout << " pedana done. " << endl;}
@@ -977,10 +990,15 @@ if (verbose){
    for (r=0; r<RENAS_PER_CARTRIDGE;r++){
      for (i=0;i<MODULES_PER_RENA;i++){
        pedfile << "C" << c << "R" << r << "M" << i  << " " << ped_evts[c][r][i] << " ";    
+       if (r < 10 ) pedfile << " ";
+       pedfile << std::setw(6) ;
        for (int jjj=0;jjj<CHANNELS_PER_MODULE;jjj++){
+         pedfile << std::setprecision(0) << std::fixed;
 	 pedfile << ped_ana[c][r][i][jjj][0] << " ";
+         pedfile <<  std::setprecision(2) << std::fixed << std::setw(6);
          if ( ped_evts[c][r][i] ) pedfile  << TMath::Sqrt(ped_ana[c][r][i][jjj][1]/ped_evts[c][r][i]) << " ";
          else pedfile << "0 " ;
+         pedfile <<  std::setw(6);
        }
        pedfile << endl;
      }
@@ -1128,10 +1146,30 @@ void getfinmodule(Short_t panel, Short_t chip, Short_t &module, Short_t &fin){
 	       //   cout << "): fin " << fin << " module " << module << endl; 
 	     }
 
- Int_t pedana( double* mean, double* rms, int  events, Short_t value ) {
+ Int_t pedana( double* mean, double* rms, int*  events, Short_t value ) {
+
+   double val = value;
+ 
+   // if the value is an outlier (or < 0) , then we reset the value to the current mean. 
+   // Otherwise I had to include an event array for every channel value
+
+   if ( value < 0 ) { // *events--; 
+     val=*mean;
+     //      return 0;
+   }
+   
+   if (*events > 10) {
+     if ( TMath::Abs( value - *mean ) >  12*(TMath::Sqrt(*rms /(*events)) )) { 
+       val=*mean;
+       //       *events--;
+       //    return 0;
+    }
+   }
+   
+
    double tmp=*mean;
-   *mean+=(value-tmp)/events;
-   *rms+=(value-*mean)*(value-tmp);
+   *mean+=(val-tmp)/(*events);
+   *rms+=(val-*mean)*(val-tmp);
    return 0;
  }
 
