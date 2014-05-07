@@ -488,7 +488,11 @@ Int_t	   makeplot(TH1F *hist[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_P
         TCanvas *c1;
   Char_t pngstring[FILENAMELENGTH];
 
-  TString fDIR="EHIST";
+  TString fDIR;
+
+  if (strncmp(suffix,"Ecom",4)==0){
+    fDIR.Form("EHIST_COM");}
+  else fDIR.Form("EHIST_SPAT");
 
 // We're going to write to directory fDIR, need to make sure it exists:
     if ( access( fDIR.Data(), 0 ) != 0 ) {
