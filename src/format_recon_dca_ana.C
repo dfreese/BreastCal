@@ -111,12 +111,17 @@ int main(int argc, Char_t *argv[])
 
     TFile *f = new TFile("DCA.root","RECREATE");
     TH1D *DCA[NROFPOINTSOURCES];
-    TString name;
-    TString title;
+    TH2D *HITMAP[NROFPOINTSOURCES];
     for (Int_t i=0;i<NROFPOINTSOURCES;i++){
+        TString name;
+        TString title;
         name.Form("DCA[%d]",i);
         title.Form(" Source position %d",i);
         DCA[i] = new TH1D(name.Data(),title.Data(),400,0,10);   
+
+        name.Form("HITMAP[%d]",i);
+        title.Form(" Hit positions %d",i);
+        HITMAP[i] = new TH2D(name.Data(),title.Data(),180,-90,90,100,-50,50);   
     }
 
 
@@ -236,6 +241,8 @@ int main(int argc, Char_t *argv[])
                             x2 +=  ( 7-TMath::Floor(data->crystal2/8)  + 0.5  )*XCRYSTALPITCH;
 
 
+                            HITMAP[sourcepos]->Fill(x1,y1);
+                            HITMAP[sourcepos]->Fill(x2,y2);
 
                             z1 = -ZPITCH/2+(4-data->fin1)*ZPITCH;
                             z2 = -ZPITCH/2+(4-data->fin2)*ZPITCH;
@@ -324,9 +331,9 @@ int main(int argc, Char_t *argv[])
     */
 
     f->cd();
-
     for (Int_t i=0;i<NROFPOINTSOURCES;i++) {
         DCA[i]->Write();
+        HITMAP[i]->Write();
     }
     f->Close();
 
