@@ -100,7 +100,7 @@ int main(int argc, char *argv[]){
 
 for (i=0;i<=nrfiles;i++){
   if (random)  sprintf(curfilename,"%s_part%d.delaywindow%d.merged.root",filebase,i,delay);
-  else  sprintf(curfilename,"%s_part%d.merged.root",filebase,i);
+  else  sprintf(curfilename,"%s_part%d.root",filebase,i);
    m->Add(curfilename);
 	 }
 

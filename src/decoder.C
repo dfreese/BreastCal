@@ -539,7 +539,7 @@ if (pedfilenamespec) {
         panelId=pclist[Idnumber].panel;
         cartridgeId=pclist[Idnumber].cartridge; 
 
-        if ((panelId >= SYSTEM_PANELS ) || ( cartridgeId >= CARTRIDGES_PER_PANEL )){
+        if ((panelId >= SYSTEM_PANELS ) || ( cartridgeId >= CARTRIDGES_PER_PANEL ) || (panelId < 0 ) || (cartridgeId < 0)){
 	  if (verbose )  { 
 	    cout << " PanelId " << panelId << " or CartridgeId " << cartridgeId ;
             cout << " doesn't match the definitions in include/Syspardef.h" << endl;
@@ -691,7 +691,8 @@ if (pedfilenamespec) {
         timestamp = 0;
         for (int ii=3; ii<=8; ii++){
             timestamp = timestamp << 7;
-            timestamp += Long64_t(packBuffer[ii]);
+            timestamp += Long64_t((packBuffer[ii]&0x7F));
+            //timestamp += Long64_t((packBuffer[ii]&0x3F));
         }
     }
     else {
@@ -708,8 +709,10 @@ if (pedfilenamespec) {
         Short_t value;
         for (unsigned int counter = 9; counter<(packetSize-1); counter+=2) {
             value = (Short_t)packBuffer[counter];
+	    //	    cout << " val 1 = " << value;
             value = value << 6;
             value += (Short_t)packBuffer[counter+1];
+	    //            cout << " val 2 = " << (Short_t)packBuffer[counter+1] << " totval: " << value << endl;
             adcBlock.push_back(value);
         }
     }
@@ -750,6 +753,7 @@ if (pedfilenamespec) {
         }
         cout << endl;
     */
+
 
 #define SHIFTFACCOM 4
 #define SHIFTFACSPAT 12
@@ -793,12 +797,13 @@ if (pedfilenamespec) {
               kk++;
               rawdata->Fill();
 
+	      //	      if ((rawevent.a) < 0 ) cout << " !!!!!! rawevent.a = " << rawevent.a << "(INDEX ::" << UNUSEDCHANNELOFFSET+BYTESPERCOMMON*nrchips+kk*VALUESPERSPATIAL - even*nrchips*SHIFTFACSPAT<<endl;
 
              module=iii;
 
 	     if (pedfilenamespec) {
 
-
+	   
              event->module=module;
              event->ct=timestamp; 
              event->chip=rawevent.chip;
@@ -821,7 +826,7 @@ if (pedfilenamespec) {
 	     event->id=-1;
 	     event->pos=rawevent.pos;
 #ifdef DEBUG
-	     cout << " chipId = " << chipId << " module = " << module << endl;
+	     cout << " chipId = " << chipId << " module = " << module << " cartridge : " << event->cartridge << endl;
 #endif 
 
 	     if ( (rawevent.com1h - pedestals[event->cartridge][chipId][module][5]) < threshold ) { 
@@ -959,12 +964,13 @@ if (verbose){
    chip= rawevent.chip;
    module = rawevent.module;
    cartridge = rawevent.cartridge;
-   /*
+
+     /*   
    if ((rawevent.chip==23)&&(rawevent.module==3)&&(rawevent.a<0)){
         cout << " ped_evts[ " << cartridge << "][" << chip << "][" <<  module << "] :::: "<< ped_evts[cartridge][chip][module] << endl;
         cout << " rawevent.a = " << rawevent.a  << "( average = " << std::setprecision(8) <<  ped_ana[cartridge][chip][module][0][0] ;
         cout << ", std dev = " << TMath::Sqrt(ped_ana[cartridge][chip][module][0][1]/ped_evts[cartridge][chip][module])<< ")" <<endl;}
-   */
+     */
 	//    cout << " C" << cartridge << "R" << chip << "M" << module << endl;
      ped_evts[cartridge][chip][module]++;
      pedana( &ped_ana[cartridge][chip][module][0][0], &ped_ana[cartridge][chip][module][0][1], &ped_evts[cartridge][chip][module], rawevent.a );

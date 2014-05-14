@@ -117,11 +117,11 @@ int main(int argc, Char_t *argv[])
         TString title;
         name.Form("DCA[%d]",i);
         title.Form(" Source position %d",i);
-        DCA[i] = new TH1D(name.Data(),title.Data(),400,0,10);   
+        DCA[i] = new TH1D(name.Data(),title.Data(),100,0,10);   
 
         name.Form("HITMAP[%d]",i);
         title.Form(" Hit positions %d",i);
-        HITMAP[i] = new TH2D(name.Data(),title.Data(),180,-90,90,100,-50,50);   
+        HITMAP[i] = new TH2D(name.Data(),title.Data(),724,-90,90,404,-50,50);   
     }
 
 

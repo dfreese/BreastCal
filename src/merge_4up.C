@@ -21,6 +21,13 @@
 #include "time.h"
 #include "ModuleCal.h"
 
+//#define DEBUG
+
+void usage(void){
+cout << " Usage:  " << endl;
+cout << " ./merge_4up -f [Filename] [-v] -nc [splits] -ts [timesplit] -lt [lasttime]" << endl;
+ return;
+}
 int main(int argc, Char_t *argv[])
 {
   	cout << "Welcome to Merge_4up. Sorting data from each 4up. " << endl;
@@ -40,6 +47,7 @@ int main(int argc, Char_t *argv[])
         ModuleCal *unsrt_evt=0;
         TTree*           cal;
         Long64_t lasttime=-1;
+	Bool_t filenamespec = kFALSE;
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
      
@@ -47,12 +55,10 @@ int main(int argc, Char_t *argv[])
 	for(ix = 1; ix < argc; ix++) {
 
 		if(strncmp(argv[ix], "-h", 2) == 0) {
-			cout << " Usage:  " << endl;
-// FIXME !! Update this usage()  4/27/2014 AVDB  
-         cout << " ./merge_4up -f [Filename] [-v] " << endl;
-			// cout << " ./merge_panel -f [Filename] -rb [renaboard] --L/--R [-v] " << endl;
-			//                      cout << " Renaboard is either 0,1,2 or 3" << endl;
-//                        cout << " Specify which panel: --L for left; --R for right " << endl;
+		  usage();
+// cout << " ./merge_panel -f [Filename] -rb [renaboard] --L/--R [-v] " << endl;
+//   cout << " Renaboard is either 0,1,2 or 3" << endl;
+//    cout << " Specify which panel: --L for left; --R for right " << endl;
 			return -1;
 		}
 
@@ -97,6 +103,7 @@ int main(int argc, Char_t *argv[])
 		if(strncmp(argv[ix], "-f", 2) == 0) {
 			if(strlen(argv[ix + 1]) < FILENAMELENGTH) {
 				sprintf(filenamel, "%s", argv[ix + 1]);
+				filenamespec = kTRUE;
 			}
 			else {
 				cout << "Filename " << argv[ix + 1] << " too long !" << endl;
@@ -107,6 +114,7 @@ int main(int argc, Char_t *argv[])
                     }
 		
 
+	
 /*
                 if (strncmp(argv[ix],"--L",3) ==0 ){
                   if (verbose) cout << " Left panel used " << endl;
@@ -120,7 +128,14 @@ int main(int argc, Char_t *argv[])
 
 		}
 */
-	}
+	} // loop over input arguments
+
+	if (!filenamespec){
+		  cout << " Please provide an input file. " << endl;
+		  usage();
+		  return -99;
+		}
+
 
 /*
 	if (left==-9999) {
@@ -196,6 +211,10 @@ int main(int argc, Char_t *argv[])
 
         // Create Tree //
         entries=cal->GetEntries();
+
+        cal->GetEntry(0);
+        Long64_t firsttime=unsrt_evt->ct;
+
 	/*       if (verbose) cout << " Entries " << treename << ": " << entries << endl; 
 	//        if (entries[m]>maxentries) {maxentries=entries[m];maxchip=m;}
         maxentries=entries;
@@ -219,6 +238,7 @@ int main(int argc, Char_t *argv[])
         Int_t k;
         Int_t nrrollovers=0;
         Long64_t timecut[MAXCUTS];
+        Long64_t partentries[MAXCUTS]={0};
 
 	/*
 	for (k=0;k<cuts;k++) {
@@ -238,7 +258,7 @@ int main(int argc, Char_t *argv[])
 	//	  cout << " Timestep = " << timestep << endl;
   
 
-	  for (k=0; k<ncuts; k++) { timecut[k]=timeinterval*(k+1);}
+	  for (k=0; k<ncuts; k++) { timecut[k]=firsttime+timeinterval*(k+1);}
           
           if (ncuts>0){
             // make sure that timecut[ncuts-1] > last possible time; used to be:
@@ -259,6 +279,9 @@ int main(int argc, Char_t *argv[])
 
        //  while (curtime<lasttimes[6]) {
        //    while ((curtime<lasttime)&&(kk<2)) {
+
+	  //	  kk=17; lasttime = timecut[kk-1];
+	  
          while ((curtime<lasttime)) {
 	   if (verbose) cout << "\n Split number :: " << kk << ", timecut = " << timecut[kk] << endl;
 	   //           if (kk > 42) verbose=1;
@@ -293,13 +316,24 @@ int main(int argc, Char_t *argv[])
 	      cal->GetEntry(l);
 	      //              thischiptime=UL[m*4+2].ct ;
               curtime=unsrt_evt->ct ;
-
-              if ( ( ( curtime-lasteventtime) > 50e9  ) &&  ( lasteventtime>0)) {
+              // if we get a negative number, skip
+	      //              if ( curtime < 0 ) {l++; continue;}
+	      //	      if ( ( curtime - lasteventtime ) < 0 ) { l++; continue;}
+#ifdef DEBUG
+              cout << " L : " << l << " curtime : " << curtime << " (= " << curtime/COARSECLOCKFREQUENCY << " s), lasteventtime : " << lasteventtime << " timecut[ " << kk << "] : " << timecut[kk] << endl;
+#endif
+	      // note that 60e6 at 12 MHz is 5 seconds, unlikely to have more tha 5 s between events
+	      // note that 11e9 at 12 MHz is 5 seconds, unlikely to have more than 15 min between events
+	      // FIXME :: HARDCODED VALUE DEALING WITH CORRUPTED DATA FROM LEFT AVDB 2014/05/12
+	      if ((  TMath::Abs(curtime-lasteventtime)   > 600e6) && ( lasteventtime > 0 ) && (l>100) &&
+		  ( (curtime -lasteventtime)<10e9))  { l++; if (l>entries){stop=1;} continue;}
+              if ( ( ( curtime-lasteventtime) > 10e9  ) &&  ( lasteventtime>0)) {
                 if (verbose) cout << " CT BUG :: Event " << l << ": curtime = " << curtime << ", lasteventtime = " << lasteventtime << endl;
-                l++; continue ; }
+                l++; if ( l> entries ) {stop=1;} continue ; }
 	      if (( curtime+1e12 ) < lasteventtime ) { 
                 // rollover occured !! 
 		// FIXME :: only one rollover supported as of now. 
+		cout << " ROLLOVER ! curtime: " << curtime << " lasttime: " << lasteventtime << " l= " << l << endl;
 		nrrollovers=1;}
               if (nrrollovers) { 
 		curtime+=nrrollovers*ROLLOVERTIME;}
@@ -351,30 +385,39 @@ int main(int argc, Char_t *argv[])
                     else {
 		      // we're going to need to go back a number of steps
                       extra++;
-		      if (( curtime-timecut[kk])>10000 ) { stop=1;} }   
+		      // 		      if (( curtime-timecut[kk])>10000 ) { 
+	           if (( curtime-timecut[kk])>10000 ) { 
+			if (verbose) { 
+			  cout << "STOPPING LOOP @ EVENT " << l << ": curtime -timecut[" << kk << "] : " << curtime-timecut[kk] << endl;}
+			stop=1;} 
+		    }   
 		     // we stop the while loop and close the file if the timedifference is larger than 10
 #ifdef DEBUG
     	     cout << " filling chip " << unsrt_evt->chip << " MODULE " << event->m ;
 	      cout << " (l="<<l<<")"<< endl;
 #endif
 		    //	    } // if mod >= 0
-	    //   } // loop over 4 modules in chip
+	     //   } // loop over 4 modules in chip
 	      l++;
               if (l>=entries) stop=1;
      //              if (verbose) cout << " Extra entries :: " << extra << "; l = " << l << endl;
 	      //              l-=extra;
               if (l<0 ) l=0; // safety
 	      //              if ( l >= entries[m] ) { skipchip[m]=1; stop=0; continue;}
-              if ((verbose)&&(l>0)&&((l%5000000)==0)) cout << " Processed " << l/10e6 << " million events " << endl;
+              if ((verbose)&&(l>0)&&((l%5000000)==0)) cout << " Processed " << l/1e6 << " million events " << endl;
               lasteventtime=curtime;  
 			 	 }  // while !stop
 
              if (verbose) cout << " Extra entries :: " << extra << "; l = " << l << endl;
+
+	     // the extra here is to prevent roll-off between splits
 	       l-=extra;
 
 	    curevent=l;
             if (verbose) cout << " Curevent[" << m << "] = " << curevent << "; curtime = " << curtime << endl;
 //	  } // loop m
+
+	  partentries[kk]=panel->GetEntries();
 	    kk++;
 	  //          if (kk >10 ) break;
 
@@ -410,8 +453,8 @@ int main(int argc, Char_t *argv[])
           time_after_sorting=clock();
         
           if (verbose){
-          printf("Time to merge  8 chips (sec): %f",(double)(time_before_sorting-time_before_filling)/(CLOCKS_PER_SEC));
-          printf("Time to sort the merged chips (sec): %f\n",(double)(time_after_sorting-time_before_sorting)/(CLOCKS_PER_SEC));
+          printf("Time to merge chips (sec): %f",(double)(time_before_sorting-time_before_filling)/(CLOCKS_PER_SEC));
+          printf(" Time to sort the merged chips (sec): %f\n",(double)(time_after_sorting-time_before_sorting)/(CLOCKS_PER_SEC));
 	  }
 
 	  if (verbose) cout << N << " entries in tree; cloning tree :: " << endl;
@@ -459,6 +502,7 @@ int main(int argc, Char_t *argv[])
  
           if (verbose) printf("Time to clone the Tree (sec): %f\n",(double)(time_after_filling-time_after_sorting)/(CLOCKS_PER_SEC));
 
+
 	 	  	 	fourup->Write();
 	//        panel->Write();
           calfile->Close();
@@ -470,5 +514,12 @@ int main(int argc, Char_t *argv[])
       } // while loop 
 	
 
+	 Long64_t allpartentries=0;
+	 cout << " Total entries ::" << entries << endl;
+	   for (k=0;k<ncuts;k++){
+	     cout << " Entries part " << k << " : " << partentries[k] << endl;
+	     allpartentries+=partentries[k];
+	   }
+	 cout << " Total entries each part: " << allpartentries << "( = " << 100*allpartentries/entries  << " %)"<<endl;
        return 0;}
 

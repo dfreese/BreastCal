@@ -40,7 +40,7 @@ void usage(void);
 
 
 void usage(void){
- cout << " Chain parsed -f [filelist] [ -o [outputfilename] ]" <<endl;
+ cout << " Chain parsed -f [filelist]  -o [outputfilename] " <<endl;
   return;}
 
 
@@ -51,6 +51,7 @@ int main(int argc, char *argv[]){
   Char_t treename[40];
   int i;
   Bool_t verbose=0;
+  Bool_t ofilenamespec=kFALSE;
   for (i=0;i<argc;i++) {
 
     if (strncmp(argv[i],"-v",2)==0) {
@@ -64,6 +65,7 @@ int main(int argc, char *argv[]){
     }
       if (strncmp(argv[i],"-o",2)==0) { 
       sprintf(outfilename,"%s",argv[i+1]);
+      ofilenamespec = kTRUE;
       //      cout << " outputfile = " << outfilename << endl;        
       i++;
       }
@@ -82,6 +84,11 @@ int main(int argc, char *argv[]){
   Char_t chainname[40];
 
 
+  if (!ofilenamespec) {
+      cout << " Please specify an outputfilename " << endl;
+      usage();
+      return -99;
+    }
   TFile *rfile = new TFile(outfilename,"RECREATE");
 
   //  for (i=0;i<RENACHIPS;i++){

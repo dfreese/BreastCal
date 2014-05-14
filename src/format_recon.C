@@ -1,9 +1,14 @@
 #include "format_recon.h"
-//void usage(void);
+void usage(void);
 
-//void usage(void){
-// cout << " mergecal -fl [filename] -fr [filename] [-t [threshold] -v ]" <<endl;
-//  return;}
+void usage(void){
+ cout << " format_recon [-r -v -a] -f [filename] -p [panelseparation] -t [finetimewindow] -ft [threshold] -mt [maxtime]]" <<endl;
+ cout << " -r : needed for randoms " << endl;
+ cout << " -v : verbose " << endl;
+ cout << " -a : ascii  " << endl;
+ cout << " -mt :: only give the first maxtime minutes " << endl;
+
+  return;}
 
 
 
@@ -17,10 +22,10 @@ int main(int argc, Char_t *argv[])
 	Int_t		verbose = 0, threshold=-1000;
 	Int_t		ix,ascii;
 	 buf buffer; 
-         Int_t PANELDISTANCE=-1; // mm
+         Float_t PANELDISTANCE=-1; // mm
          Bool_t RANDOMS=0;
 	 Float_t FINETIMEWINDOW=40;
-
+	 Int_t MAXTIME=999999999;
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
         ascii=0;
@@ -34,8 +39,14 @@ int main(int argc, Char_t *argv[])
 			cout << "Verbose Mode " << endl;
 			verbose = 1;
 		}
+
+		if(strncmp(argv[ix], "-h", 2) == 0) {
+		  usage();
+		  return 0;
+		}
+
     
- 	if(strncmp(argv[ix], "-r", 2) == 0) {
+        	if(strncmp(argv[ix], "-r", 2) == 0) {
 			cout << "RANDOMS SELECTION " << endl;
 			RANDOMS = 1;
 		}
@@ -43,7 +54,7 @@ int main(int argc, Char_t *argv[])
 
                 if (strncmp(argv[ix],"-p",2) ==0 ) {
                   ix++;
-		  PANELDISTANCE=atoi(argv[ix]);
+		  PANELDISTANCE=atof(argv[ix]);
                   cout << " Using panel distance " << PANELDISTANCE << " mm." << endl;
 		}
  
@@ -57,6 +68,13 @@ int main(int argc, Char_t *argv[])
                   FINETIMEWINDOW = atoi( argv[ix+1]);
                   ix++;
 		}
+
+		if(strncmp(argv[ix], "-mt", 3) == 0) {
+                  MAXTIME = atoi( argv[ix+1]);
+		  cout <<"Only events within first " << MAXTIME << " minutes." << endl;
+                  ix++;
+		}
+
 
 
 		if(strncmp(argv[ix], "-f", 2) == 0) {
@@ -125,7 +143,8 @@ int main(int argc, Char_t *argv[])
         cout << " Opening file " << rootfile << " for writing " << endl;
 	// OPEN YOUR OUTPUTFILE HERE ! 
      
-        sprintf(outfile,"%s.cuda",filebase);
+        if (RANDOMS) sprintf(outfile,"%s_p%.2f_random.cuda",filebase,PANELDISTANCE);
+	else  sprintf(outfile,"%s_p%.2f_t%.0f.cuda",filebase,PANELDISTANCE, FINETIMEWINDOW);
         outputfile.open(outfile);
 
        Long64_t entries_m = m->GetEntries();
@@ -161,12 +180,19 @@ int main(int argc, Char_t *argv[])
     cout << " mm, APD1 @ " << PANELDISTANCE+YOFFSET+YDISTANCEBETWEENAPDS << " mm."<<endl ;
     cout << "Z:: ZPITCH : " << ZPITCH << " mm."<<endl;
 
+    Int_t p2=0;
+    Int_t p1=0;
+
+
+    Long64_t firsteventtime=0;
+    Long64_t firsteventtimeset=kFALSE;
+
       for (i=0;i<entries_m;i++){
 
 	m->GetEntry(i);
 
 	// YOUR CODE HERE -- YOU HAVE ACCESS TO THE STRUCT DATA AND ITS MEMBERS TO DO WHATEVER CONSTRAINTS //
-
+ 
 	// The different constraint here compared to merged_ana, is that we assume that merged_ana already did a valid random selection on dtc,
         // the selection is only converted to CUDA readable format. 
         if ((RANDOMS) || ( TMath::Abs(data->dtf)<FINETIMEWINDOW)) {  
@@ -174,25 +200,79 @@ int main(int argc, Char_t *argv[])
         	  if ( ( data->E2<700 ) && (data->E2> 400 ) ) {
 		    if ( (data->crystal1>=0 ) && (data->crystal1<64 )) {
            		    if ( (data->crystal2>=0 ) && (data->crystal2<64 )) {
-				//	if ( data->apd1 ) continue;
+
+			      if (!firsteventtimeset){ 
+				firsteventtime=data->ct;
+				firsteventtimeset=kTRUE;
+				cout << "firsteventtime : " << firsteventtime/(60*COARSECLOCKFREQUENCY) << " min" << endl; }
+
+			      //  if (!((data->pos == 80600 )||(data->pos == 80000))) continue;
+			
+				      if ((data->ct - firsteventtime) > MAXTIME*60*COARSECLOCKFREQUENCY) continue; 
+
+			      // if (data->pos != 80000) continue;
+
+			      
+		 	      //	if ( data->apd1 ) continue;
+			      //			      if (data->m1 != 0 ) continue;
+			      //    if (data->m2 > 7 ) continue;
+                              // FIXME ::: HARDCODED VALUES !! 
+			      if (( data->fin2 ==5 ) && ( data->m2 == 2) && (data->apd2 >0 )) continue;
+			      // if (data->fin1 > 1) continue;
+
+			      /*
+                 	      if (data->pos==80000) p1++; 
+			      if (p2>384204) continue;
+			      if (data->pos==80600) p2++; 
+			      */
+
+
+			      //			      420000
 
 
                               y1 = TOTALPANELDISTANCE/2;
                               y2 = -TOTALPANELDISTANCE/2;
                               y1 +=   data->apd1*YDISTANCEBETWEENAPDS;
                               y2 -=   data->apd2*YDISTANCEBETWEENAPDS;
+
+			      
 			      y1 +=  (( 7-TMath::Floor(data->crystal1%8) * YCRYSTALPITCH ) + 0.5  );
 			      y2 -=  (( 7-TMath::Floor(data->crystal2%8) * YCRYSTALPITCH ) + 0.5  );                              
-			
-			      x1 = (XMODULEPITCH-8*XCRYSTALPITCH)/2+(data->m1-8)*XMODULEPITCH;  
-			      x2 = (XMODULEPITCH-8*XCRYSTALPITCH)/2+(7-data->m2)*XMODULEPITCH;  
-			      x1 +=  ( TMath::Floor(data->crystal1/8)  + 0.5  )*XCRYSTALPITCH;
-			      x2 +=  ( 7-TMath::Floor(data->crystal2/8)  + 0.5  )*XCRYSTALPITCH;
+			      
+
+
+			      // NOTE:: X was pointing differently before !
+
+                              x1 = (XMODULEPITCH-8*XCRYSTALPITCH)/2+(data->m1-8)*XMODULEPITCH;  
+                              x2 = (XMODULEPITCH-8*XCRYSTALPITCH)/2+(data->m2-8)*XMODULEPITCH;  
+                              x1 +=  ( TMath::Floor(data->crystal1/8)  + 0.5  )*XCRYSTALPITCH;
+                              x2 +=  ( 7-TMath::Floor(data->crystal2/8)  + 0.5  )*XCRYSTALPITCH;
+
+			      /*
+			      x1 = (XMODULEPITCH-8*XCRYSTALPITCH)/2+(7-data->m1)*XMODULEPITCH;  
+			      x2 = (XMODULEPITCH-8*XCRYSTALPITCH)/2+(7-m2tmp)*XMODULEPITCH;  
+
+
+			      // This "x2" is for ROTATED SETUP:: x2 = (XMODULEPITCH-8*XCRYSTALPITCH)/2+(7-data->m2)*XMODULEPITCH;  
+			      //			      x2 = (XMODULEPITCH-8*XCRYSTALPITCH)/2+(7-data->m2)*XMODULEPITCH;  
+
+
+	       		      x1 +=  ( TMath::Floor(data->crystal1/8)  + 0.5  )*XCRYSTALPITCH;
+			      //   x2 +=  ( 7-TMath::Floor(data->crystal2/8)  + 0.5  )*XCRYSTALPITCH;
+	       		
+
+			      x2 +=  ( TMath::Floor(data->crystal2/8)  + 0.5  )*XCRYSTALPITCH;
+                              */
                               
-                              
-                              
+						      /*                              
                               z1 = -ZPITCH/2+(4-data->fin1)*ZPITCH;
           		      z2 = -ZPITCH/2+(4-data->fin2)*ZPITCH;
+						      */
+
+                              z1 = ZPITCH/2+(data->fin1-4)*ZPITCH;
+          		      z2 = ZPITCH/2+(data->fin2-4)*ZPITCH;
+
+
 			      // z1=0;
 			      //  z2=0;
  
@@ -221,6 +301,8 @@ int main(int argc, Char_t *argv[])
       
            
       }
+
+      cout << " p1 : "<< p1 <<" p2 : " << p2 << endl;
        // loop over entries
       if (ascii) asciiout.close();
 

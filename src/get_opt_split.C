@@ -131,6 +131,7 @@ int main(int argc, Char_t *argv[])
         ModuleCal *calevent=0;
         Long64_t entries;
         Long64_t lasttime=0;
+	Long64_t firsttime=0;
         Long64_t maxentries=0;
         Long64_t totentries=0;
         Int_t maxchip=0;
@@ -175,6 +176,11 @@ int main(int argc, Char_t *argv[])
 
  //        for (m=0;m<RENACHIPS;m++){
         if(entries) {
+
+	  cal->GetEntry(0);
+          cout << " First Timestamp: "  <<  calevent->ct << endl;
+	  firsttime=calevent->ct;
+
 	  cal->GetEntry(entries-1);
           cout << " Last Timestamp Chip "  << calevent->chip  << ": " << calevent->ct << endl;
           
@@ -194,6 +200,8 @@ int main(int argc, Char_t *argv[])
 	totentries=entries;
 
         cout << " Last timestamp = " << lasttime << endl;
+	cout << " Acquisition time = " << (Int_t ) ((lasttime-firsttime)/COARSECLOCKFREQUENCY )/60 << " min " ;
+        cout <<  (Int_t ) ((lasttime-firsttime)/COARSECLOCKFREQUENCY)%60  <<  " sec" <<   endl;
         cout << " Total Entries : " << totentries << endl;
         cout << " Maximum entries : " << maxentries << " (chip " << maxchip << ")." << endl;	
 
@@ -206,13 +214,18 @@ int main(int argc, Char_t *argv[])
          }
 
        // note it could be that the last time stamp is slightly smaller than a previous one, because the events aren't sorted.
-       if ( maxtime > ( lasttime + 100000 )) {
+
+       if ( maxtime > ( lasttime + 600e12 )) {
 	 cout << " Rollover occured ! " << endl; 
-       rollover=true; }
- 
+         cout << " =========== WARNING ============ " << endl;
+         cout << " DETECTED ROLLOVER, NEED TO CHECK MANUALLY, ROLLOVERS ARE IGNORED " << endl; }
+       //       rollover=true; }
+       // I removed rollovercheck, because there was a false reading in a datafile creating havoc - AVDB 2014-5-8
+
 
 
         Int_t cuts = TMath::Ceil((Double_t) totentries/MAXHITS);
+
 
         if ( cuts > MAXCUTS ) {
           cout << " ERROR ! THERE ARE OVER " << MAXCUTS*MAXHITS << " EVENTS TO PROCESS. " << endl;
@@ -229,7 +242,7 @@ int main(int argc, Char_t *argv[])
         Long64_t timecut[MAXCUTS];
 	for (k=0;k<cuts;k++) {
           cal->GetEntry(TMath::Min((Long64_t) (k+1)*MAXHITS,entries-1));
-          timecut[k]=calevent->ct;
+          timecut[k]=calevent->ct-firsttime;
 	  cout << " Time cut " << k << ": " << timecut[k]  << endl;}
 
 
@@ -244,10 +257,10 @@ int main(int argc, Char_t *argv[])
         // TMath::Power(2/42)/ ( 12e6*3600)  -- 42 bit timestamp and 12 MHz clock ( 48 MHz but we omit
         // the 2 LSB  
 	if (rollover) { lasttime+=ROLLOVERTIME;}
-          cout << " Total time : " << lasttime << endl;
-	  cout << " Timestep   : " << lasttime/cuts << endl;
-          cout << " FINDME::: Timestep: " << lasttime/cuts << " Splits: " << cuts << " Last: ";
+          cout << " Total time : " << lasttime-firsttime << endl;
+	  cout << " Timestep   : " << (lasttime-firsttime)/cuts << endl;
+          cout << " FINDME::: Timestep: " << (lasttime-firsttime)/cuts << " Splits: " << cuts << " Last: ";
           cout << lasttime << endl;
-  
+	  cout << " merge_4up -nc " << cuts << " -ts " << (lasttime-firsttime)/cuts << " -lt " << lasttime << endl;  
 
         return 0; }

@@ -9,6 +9,7 @@
 
 class CoincEvent : public TObject {
  public:
+  Long64_t ct;
   Long64_t dtc;
   Double_t dtf;
   Float_t E1;
@@ -38,7 +39,7 @@ class CoincEvent : public TObject {
   CoincEvent();
   virtual ~CoincEvent();
 
-  ClassDef(CoincEvent,2)
+  ClassDef(CoincEvent,3)
 
 };
 

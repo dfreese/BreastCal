@@ -18,7 +18,8 @@
 #include "decoder.h"
 #include "DetCluster.h"
 #include "FindNext.h"
-
+#include "Kmeans.h"
+#include "Cluster.h"
 //#include "./convertconfig.h"
 
 #include "Apd_Sort16_v2.h"
@@ -28,7 +29,7 @@
 // this parameter is used to check if the segmentation is valid ::
 #define COSTTHRESHOLD 300
 
-#define DEVELOP
+//#define DEVELOP
 // wil generate some more eps style floods
 //#define PUBPLOT
 
@@ -49,7 +50,7 @@
 #include "time.h"
 #endif
 
-TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validflag,Float_t &cost, Bool_t APD, TString fDIR, Float_t yoffset);
+TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validflag,Float_t &cost, Bool_t APD, TString fDIR, Float_t yoffset, Float_t xoffset);
 Double_t findmean( TH1D * h1, Int_t verbose, Bool_t APD);
 Double_t findmean8( TH1D * h1, Int_t verbose,Int_t X, Bool_t APD);
 Int_t updatesegmentation(TH2F *hist, Double_t x[16], Double_t y[16], TGraph *updated,Int_t verbose);
@@ -57,7 +58,7 @@ Int_t updatesegpoint(TH2F *hist, Double_t x, Double_t y, Double_t &xxx, Double_t
 Int_t validate_sort(TGraph *gr, Int_t verbose);
 
 void usage(void){
-    cout << "   anafloods -f [filename] [ -v -c [cartridgeId] -l [finId] -m [moduleId] -a [apdId] -yoff [y cordinate of split]] " << endl;
+    cout << "   anafloods -f [filename] [ -v -c [cartridgeId] -l [finId] -m [moduleId] -a [apdId] -yoff [y cordinate of split] -xoff [x cordinate of split]] " << endl;
 }
 
 Int_t main(int argc, Char_t *argv[])
@@ -77,6 +78,7 @@ Int_t main(int argc, Char_t *argv[])
         Int_t           firstapd=0,lastapd=APDS_PER_MODULE;
         Bool_t          used;
 	Float_t         yoffset=-99;
+	Float_t         xoffset=-99;
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -100,6 +102,13 @@ Int_t main(int argc, Char_t *argv[])
 		  ix++;
 		  yoffset = atof(argv[ix]);
                   cout << "Using y = " << yoffset << " for quadrant splitting\n ";
+		}
+
+		if(strncmp(argv[ix],"-xoff",5) == 0 ){
+		  used=kTRUE;
+		  ix++;
+		  xoffset = atof(argv[ix]);
+                  cout << "Using x = " << xoffset << " for quadrant splitting\n ";
 		}
 
 		if(strncmp(argv[ix], "-l", 2) == 0) {
@@ -255,6 +264,7 @@ Int_t main(int argc, Char_t *argv[])
 
 
  TString fDIR="SEGMENTATION";
+ TString fSDIR="./SEGMENTATION/FLOODS";
 
 if ( access( fDIR.Data(), 0 ) != 0 ) {
 	cout << "creating dir " << fDIR << endl; 
@@ -263,6 +273,15 @@ if ( access( fDIR.Data(), 0 ) != 0 ) {
 	    return -2;
 	}
     }
+
+if ( access( fSDIR.Data(), 0 ) != 0 ) {
+	cout << "creating dir " << fSDIR << endl; 
+        if ( mkdir(fSDIR, 0777) != 0 ) { 
+	    cout << " Error making directory " << fDIR << endl;
+	    return -2;
+	}
+    }
+
 
 
  for (c=firstcartridge;c<lastcartridge;c++){
@@ -312,7 +331,7 @@ if ( access( fDIR.Data(), 0 ) != 0 ) {
 #endif
      //   cout << " Starttime : " << starttime;
      //     verbose=0;
-     peaks[c][f][i][j] =   PeakSearch(floods[c][f][i][j],peaklocationfilename,verbose, flag, costs[c][f][i][j],j,fDIR, yoffset);
+     peaks[c][f][i][j] =   PeakSearch(floods[c][f][i][j],peaklocationfilename,verbose, flag, costs[c][f][i][j],j,fDIR, yoffset, xoffset);
      //     verbose=1;
       }
       else{
@@ -332,6 +351,8 @@ if ( access( fDIR.Data(), 0 ) != 0 ) {
      if (verbose){     cout << "CHECK FLAG == " << flag <<  endl;}
      /* NEED TO REWRITE ALL THIS CODE :: */
 
+        c1->SetCanvasSize(700,700);
+
   c1->Clear();
     set2dcolor(4);
   c1->Divide(2,2);
@@ -340,7 +361,7 @@ if ( access( fDIR.Data(), 0 ) != 0 ) {
    floods[c][f][i][j]->Draw("colz");
    c1->cd(2);floods[c][f][i][j]->Draw("histcolz");
    c1->cd(3);peaks[c][f][i][j]->Draw("APL");
-    c1->cd(4);floods[c][f][i][j]->Draw("colz");
+   c1->cd(4);floods[c][f][i][j]->Draw("colz");
     peaks[c][f][i][j]->Draw("PL");	
     
     if (flag==15) { 
@@ -362,7 +383,7 @@ if ( access( fDIR.Data(), 0 ) != 0 ) {
    peaklocationfile.close();
  
    if (verbose) { cout <<" Made it here too! " <<endl;}
-   sprintf(pngstring,"%s/%s.C%dF%d.module%d_apd%d_flood",fDIR.Data(),filebase,c,f,i,j);
+   sprintf(pngstring,"%s/%s.C%dF%d.module%d_apd%d_flood",fSDIR.Data(),filebase,c,f,i,j);
    strcat(pngstring,".png");
    //   cout << pngstring << endl;
    c1->Update();
@@ -417,7 +438,7 @@ floods[m][i][j]->Draw("colz");
 
 
 
-TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validflag,Float_t &cost, Bool_t APD, TString fDIR, Float_t yoffset){
+TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validflag,Float_t &cost, Bool_t APD, TString fDIR, Float_t yoffset, Float_t xoffset){
 
   cost=999.999;
 
@@ -432,6 +453,10 @@ TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validfl
    Double_t xval,yval,value;
 
    /* find mean based on projection*/
+   Float_t xc,yc;
+   kmeans2d( flood, &xc, &yc, 0)   ;
+   if (verbose)  cout << " KMEANS :: " << xc << "  " << yc << endl; 
+
    if (verbose) cout << " welcome to PeakSearch " << endl;
    projX = (TH1D*) flood->ProjectionX("",120,136);
    projX->SetName("projX");
@@ -454,6 +479,7 @@ TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validfl
    projY = (TH1D*) flood->ProjectionY("",xlowbin,xhighbin);
    projY->SetName("projY");
    if (yoffset>-99) { meanY = yoffset;}
+   if (xoffset>-99) { meanX = xoffset;}
    else {
  
    if (( projY->GetEntries() < 1000 ) && ( meanX!=12345) ){
@@ -490,6 +516,10 @@ TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validfl
 
    projX->SetAxisRange(-.25,.25);
    projY->SetAxisRange(-.25,.25);
+
+   //   meanX = xc;
+   //   meanY = yc;
+
    midbinx=flood->GetXaxis()->FindBin(meanX);
    midbiny=flood->GetYaxis()->FindBin(meanY);
    /*
@@ -511,8 +541,6 @@ TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validfl
    c1->Clear();
    gStyle->SetOptDate(0);
 
-#ifdef DEVELOP
-   c1->Divide(2,1); c1->cd(1); projX->Draw();c1->cd(2); projY->Draw(); c1->Print("projection.png");
    TLine *lineX = new TLine();
    TLine *lineY = new TLine();
    lineX->SetY1(projY->GetBinLowEdge(1));
@@ -523,6 +551,8 @@ TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validfl
    lineY->SetX2(projX->GetBinLowEdge(1)+projX->GetBinWidth(1)*projX->GetNbinsX());
    lineY->SetY1(meanY);
    lineY->SetY2(meanY);
+#ifdef DEVELOP
+   c1->Divide(2,1); c1->cd(1); projX->Draw();c1->cd(2); projY->Draw(); c1->Print("projection.png");
    c1->Clear();
    flood->Draw("colz"); lineX->Draw(); lineY->Draw(); 
    c1->Print("split.ps");
@@ -1230,15 +1260,6 @@ Some debugging Crap
 
 
 
-  c1->Clear();c1->Divide(2,2)  ;
-  for (k=0;k<4;k++){
-    //    cout << "Totcost quadrant " << k << " = " << totcost[k] <<endl;
-   c1->cd(k+1);floodsq[k]->Draw("colzhist");peaks_remapped[k]->Draw("PL");}
-  
-
-  sprintf(pngstring,"%s/%s_quadrants.png",fDIR.Data(),filebase);
-  c1->Update();
-  c1->Print(pngstring);
 
 #ifdef PUBPLOT
   set2dcolor(4);
@@ -1250,6 +1271,27 @@ Some debugging Crap
  TGraph *peaks_sorted = new TGraph(64);
  peaks_sorted->SetName("peaks_sorted");
  mergegraphs(peaks_remapped,peaks_sorted);
+
+
+  c1->Clear();c1->Divide(2,3)  ;
+  c1->SetCanvasSize(600,900);
+
+  for (k=0;k<4;k++){
+    //    cout << "Totcost quadrant " << k << " = " << totcost[k] <<endl;
+   c1->cd(k+3);floodsq[k]->Draw("colzhist");peaks_remapped[k]->Draw("PL");}
+  
+  c1->cd(1); 
+  flood->Draw("colz");peaks_sorted->Draw("PL");
+
+  c1->cd(2); 
+  flood->Draw("colz");
+   flood->Draw("colz"); lineX->Draw(); lineY->Draw(); 
+
+
+  sprintf(pngstring,"%s/%s_quadrants.png",fDIR.Data(),filebase);
+  c1->Update();
+  c1->Print(pngstring);
+
 
  for (k=0;k<4;k++){ 
    delete floodsq[k];

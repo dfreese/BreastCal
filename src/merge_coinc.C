@@ -32,7 +32,8 @@ int main(int argc, Char_t *argv[])
 	Int_t		ix,ascii,DELAY=0;
 	//module UNIT0,UNIT1,UNIT2,UNIT3;
         CoincEvent       *evt = new CoincEvent();
-
+	Bool_t outfilespec=kFALSE;
+        Char_t rootfile[FILENAMELENGTH]; 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
         ascii=0;
@@ -92,6 +93,17 @@ int main(int argc, Char_t *argv[])
 			}
 		}
 
+		if(strncmp(argv[ix], "-of",3) == 0){
+		  if (strlen(argv[ix+1]) <FILENAMELENGTH){
+		      sprintf(rootfile,"%s",argv[ix+1]);
+		      outfilespec = kTRUE;}
+		    else { 
+		      cout << " Outpufilename " << argv[ix+1] << " too long !" << endl;
+		      cout << "Exiting.." << endl;
+		      return -99;
+			}
+		      ix++;
+		}
 	}
 
         if (verbose) cout << endl;
@@ -99,7 +111,7 @@ int main(int argc, Char_t *argv[])
 
 
 
-        Char_t filebase[FILENAMELENGTH],rootfile[FILENAMELENGTH]; 
+        Char_t filebase[FILENAMELENGTH];
         Char_t asciifile[FILENAMELENGTH]; 
 	//       Char_t tmpname[20],tmptitle[50];
 	//        Int_t i,j,k,m,lines;
@@ -125,7 +137,7 @@ int main(int argc, Char_t *argv[])
 
 	//        car_l->SetBranchAddress("event",&EL);
 	//        car_l->SetBranchAddress("event",&EL);
-        car_l->SetBranchAddress("CalData",&EL);
+        car_l->SetBranchAddress("Time Sorted Data",&EL);
 	/*
 	car_l->SetBranchAddress("ct",&EL.ct);
         car_l->SetBranchAddress("ft",&EL.ft);
@@ -151,7 +163,7 @@ int main(int argc, Char_t *argv[])
 
 	//        car_r->SetBranchAddress("event",&ER);
 	//        car_r->SetBranchAddress("event",&ER);
-        car_r->SetBranchAddress("CalData",&ER);
+        car_r->SetBranchAddress("Time Sorted Data",&ER);
 	/*
 	car_r->SetBranchAddress("ct",&ER.ct);
         car_r->SetBranchAddress("ft",&ER.ft);
@@ -171,9 +183,10 @@ int main(int argc, Char_t *argv[])
 	  // Open Calfile //
         strncpy(filebase,filenamel,strlen(filenamel)-13);
         filebase[strlen(filenamel)-13]='\0';
+	if (!outfilespec){
         sprintf(rootfile,"%s",filebase);
         if (DELAY) sprintf(rootfile,"%s.delaywindow%d",filebase,DELAY);
-        strcat(rootfile,".merged.root");
+        strcat(rootfile,".merged.root");}
         if (ascii){
 	  sprintf(asciifile,"%s.merged.ascii",filebase);
           asciiout.open(asciifile);
@@ -303,6 +316,7 @@ int main(int argc, Char_t *argv[])
      
 
        if ((TMath::Abs(lefttime+DELAY-righttime) < COARSEDIFF ) && (!(skipevt))){
+	 evt->ct=lefttime;
 	 evt->dtc= lefttime-righttime;
          evt->dtf= EL->ft-ER->ft;
 #ifdef DEBUG2
