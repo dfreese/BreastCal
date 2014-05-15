@@ -15,6 +15,13 @@
 #define LASTCHIP 9
 */
 
+void usage(void){
+  cout << "calibrate -f filename [ -v -P -c [calibrationfile] -plots ]" << endl;
+  cout << "  -P     :: use PROOF ( results in unsorted events ) " << endl;
+  cout << "  -c [ ] :: use calibrationfile [] " << endl;
+  cout << "  -plots :: Currently unused " << endl;
+}
+
 int main(int argc, Char_t *argv[])
 {
  	cout << " Welcome to calibrate. Calibrate every pixel & Fill calibrated Tree. " ;
@@ -36,6 +43,10 @@ int main(int argc, Char_t *argv[])
 	gErrorIgnoreLevel=kError;
 
 	for(ix = 1; ix < argc; ix++) {
+
+	  if ( strncmp(argv[ix],"-h",2) == 0 ) {
+	    usage();
+	  }
 
 	  if ( strncmp(argv[ix],"-c",2)== 0){
 	  calparspec=kTRUE;
@@ -177,6 +188,8 @@ int main(int argc, Char_t *argv[])
 
          if (!(calparspec)){calparfile.Form("%s.par.root",filebase);}
          TFile *calfile = new TFile(calparfile);
+
+	 if (calfile->IsZombie()) { cout << " Error opening file : " << calparfile << "\nExiting" << endl; return -2;}
 
          PixelCal *CrysCal = new PixelCal("CrysCalPar");
          CrysCal = (PixelCal *) calfile->Get("CrysCalPar");
