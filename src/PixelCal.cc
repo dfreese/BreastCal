@@ -24,10 +24,18 @@ Int_t PixelCal::ReadCal(const char *filebase){
       Char_t tmpstring[FILENAMELENGTH] = "";
       Float_t aa,bb;
       Int_t k;
+      Bool_t filesread=kFALSE;
 
       sprintf(filename,"%s.floodmap.root",filebase);
 
-      if (floodlut){ lutfile =  new TFile(filename,"OPEN");	}
+      if (floodlut){ 
+	lutfile =  new TFile(filename,"OPEN");
+        if (lutfile->IsZombie()) {
+	    cout << " Error opening file " << filename;
+	    cout << "\n Exiting" << endl;
+	    return -99;}
+	filesread=kTRUE;
+	  }
 
       for (Int_t c=0;c<CARTRIDGES_PER_PANEL;c++){
 	for (Int_t f=0;f<FINS_PER_CARTRIDGE;f++){
@@ -40,7 +48,7 @@ Int_t PixelCal::ReadCal(const char *filebase){
 	       if ( floodmap[c][f][i][j]->GetEntries() ) validpeaks[c][f][i][j]=1;
              }//floodmap
              else {
-	       sprintf(peaklocationfilename,"./CHIPDATA/%s.C%dF%d.module%d_apd%d_peaks",filebase,c,f,i,j);
+             sprintf(peaklocationfilename,"./CHIPDATA/%s.C%dF%d.module%d_apd%d_peaks",filebase,c,f,i,j);
              strcat(peaklocationfilename,".txt");
              infile.open(peaklocationfilename);
              lines = 0;
@@ -53,12 +61,25 @@ Int_t PixelCal::ReadCal(const char *filebase){
                 }
 	      if (verbose) cout << "Found " << lines-1 << " peaks in  file " << peaklocationfilename << endl;
 	      infile.close();
-	      if (lines==65){ if (verbose) cout << "Setting Validpeaks " << endl; validpeaks[c][f][i][j]=1; }
+	      if (lines==65){ 
+		if (verbose) cout << "Setting Validpeaks " << endl; 
+		validpeaks[c][f][i][j]=1; 
+	        filesread=kTRUE;}
 	     } // else floodmap
 	    }//j
 	  }//i
 	}//f
       }//c
+
+      if (!filesread){
+        cout << "========================================================================" << endl;
+        cout << " ERROR:: I DID NOT READ ANY CRYSTAL PIXEL FILES IN DIRECTORY ./CHIPDATA " << endl;
+	cout << " PLEASE CHECK ./CHIPDATA "  << endl;
+	cout << " Exiting " << endl;
+        cout << "========================================================================" << endl;
+	return -99;
+      }
+
 
       return 0;}  //ReadCal
 
