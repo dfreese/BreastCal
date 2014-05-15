@@ -17,7 +17,7 @@
 
 int main(int argc, Char_t *argv[])
 {
- 	cout << " Welcome to enefit. Calibrate every pixel & Fill calibrated Tree. " ;
+ 	cout << " Welcome to calibrate. Calibrate every pixel & Fill calibrated Tree. " ;
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 	Char_t		filename[FILENAMELENGTH] = "";
@@ -27,6 +27,8 @@ int main(int argc, Char_t *argv[])
 	//        ModuleCal   *calevent =  new ModuleCal();
         Bool_t genplots=0;
 	Bool_t UseProof=kFALSE;
+         TString calparfile;
+	 Bool_t calparspec=kFALSE;
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 	//see eg http://root.cern.ch/phpBB3/viewtopic.php?f=14&t=3498
@@ -34,6 +36,13 @@ int main(int argc, Char_t *argv[])
 	gErrorIgnoreLevel=kError;
 
 	for(ix = 1; ix < argc; ix++) {
+
+	  if ( strncmp(argv[ix],"-c",2)== 0){
+	  calparspec=kTRUE;
+	  calparfile.Form("%s",argv[ix+1]);
+	  ix++;
+	  cout << " Using calibration file " << calparfile.Data();
+	}
 
 		/*
 		 * Verbose '-v'
@@ -164,9 +173,9 @@ int main(int argc, Char_t *argv[])
 
          cout << " Read block from file :: " << time(NULL)-starttime << endl;
          cout << " Read block from file :: " << time(NULL)-starttime << endl;
-         TString calparfile;
-        calparfile.Form("%s.par.root",filebase);
- 
+
+
+         if (!(calparspec)){calparfile.Form("%s.par.root",filebase);}
          TFile *calfile = new TFile(calparfile);
 
          PixelCal *CrysCal = new PixelCal("CrysCalPar");
