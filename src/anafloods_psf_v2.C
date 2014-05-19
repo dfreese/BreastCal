@@ -340,6 +340,7 @@ if ( access( fSDIR.Data(), 0 ) != 0 ) {
           cout << " ------------- Not enough events ------------------------- " << endl;
 	} //verbose
           peaks[c][f][i][j] = new TGraph(64);
+          flag=0;
       } // else - modevents[m][i][j]
       sprintf(tmpstring,"peaks[%d][%d][%d][%d]",c,f,i,j);
      peaks[c][f][i][j]->SetName(tmpstring);
@@ -454,7 +455,7 @@ TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validfl
 
    /* find mean based on projection*/
    Float_t xc,yc;
-   kmeans2d( flood, &xc, &yc, 0)   ;
+   kmeans2d( flood, &xc, &yc, verbose)   ;
    if (verbose)  cout << " KMEANS :: " << xc << "  " << yc << endl; 
 
    if (verbose) cout << " welcome to PeakSearch " << endl;
@@ -478,9 +479,8 @@ TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validfl
 
    projY = (TH1D*) flood->ProjectionY("",xlowbin,xhighbin);
    projY->SetName("projY");
-   if (yoffset>-99) { meanY = yoffset;}
-   if (xoffset>-99) { meanX = xoffset;}
-   else {
+
+
  
    if (( projY->GetEntries() < 1000 ) && ( meanX!=12345) ){
        projY->Reset();
@@ -492,7 +492,7 @@ TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validfl
 
      if (verbose)  cout << " finding Y center " << endl;
      meanY = findmean8(projY,verbose,0,APD);
-   }
+   
 #ifdef DEVELOP
    TFile *f = new TFile("proj.root","RECREATE");
    projX->Write();
@@ -512,13 +512,18 @@ TGraph *PeakSearch(TH2F *flood,Char_t filebase[200],Int_t verbose,Int_t &validfl
 	 meanY = findmean(projY,verbose,APD);
     }
 
-
-
    projX->SetAxisRange(-.25,.25);
    projY->SetAxisRange(-.25,.25);
 
-   //   meanX = xc;
-   //   meanY = yc;
+
+   // overwrite with k-means value
+   meanX = xc;
+   meanY = yc;
+
+   // override with user specified values
+   if (yoffset>-99) { meanY = yoffset;}
+   if (xoffset>-99) { meanX = xoffset;}
+
 
    midbinx=flood->GetXaxis()->FindBin(meanX);
    midbiny=flood->GetYaxis()->FindBin(meanY);
@@ -1285,7 +1290,7 @@ Some debugging Crap
 
   c1->cd(2); 
   flood->Draw("colz");
-   flood->Draw("colz"); lineX->Draw(); lineY->Draw(); 
+  flood->Draw("colz"); lineX->Draw(); lineY->Draw(); 
 
 
   sprintf(pngstring,"%s/%s_quadrants.png",fDIR.Data(),filebase);
