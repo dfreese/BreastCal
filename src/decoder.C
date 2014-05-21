@@ -180,28 +180,33 @@ for (i = 0; i < 36; i++) {
 
 
 
-    if (strncmp(argv[ix], "-pedfile", 8) == 0) {
-      ix++;
-       if (strlen(argv[ix])<FILENAMELENGTH) {  
-	sprintf( pedvaluefilename,"%s", argv[ix]);
-        pedfilenamespec=1; }
+
+
+    if (strncmp(argv[ix], "-p", 2) == 0) {
+
+      if (strncmp(argv[ix], "-pedfile", 8) == 0) {
+	ix++;
+	if (strlen(argv[ix])<FILENAMELENGTH) {  
+	  sprintf( pedvaluefilename,"%s", argv[ix]);
+	  pedfilenamespec=1; }
         else  {
-        cout << "Filename " << argv[ix] << " too long !" <<endl;
-        cout << "Exiting.." <<endl;
+	  cout << "Filename " << argv[ix] << " too long !" <<endl;
+	  cout << "Exiting.." <<endl;
 	return -99;}
-    }
-
-
-    if (strncmp(argv[ix],"-pos",4) == 0){
+      }
+    else {
+      if (strncmp(argv[ix],"-pos",4) == 0){
         sourcepos=atoi(argv[ix+1]);
 	//        cout << " sourcepos :: " << sourcepos << endl;
 	ix++;
       }
-
-    /* Pedestal  '-p' -- needs to come after -pedfile and -pos !!*/
-    if (strncmp(argv[ix], "-p", 2) == 0) {
+    
+      else {
+    /* Pedestal  '-p' if not  '-pedfile' and not '-pos' !!*/
       calcpedestal = 1;
       uvcalc = 0;
+      }
+    }
     }
 
     /* Cartridge map specified !!*/
