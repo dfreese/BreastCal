@@ -42,8 +42,10 @@ void Sel_Calibrator::Begin(TTree * /*tree*/)
    // When running with PROOF Begin() is only called on the client.
    // The tree argument is deprecated (on PROOF 0 is passed).
 
+#ifdef DEBUG
  cout << " Welcome to Begin Sel_Calibrator " << endl;
- 
+#endif 
+
   TString option = GetOption();
  starttime = time(NULL);
 }
@@ -54,8 +56,9 @@ void Sel_Calibrator::SlaveBegin(TTree * /*tree*/)
    // When running with PROOF SlaveBegin() is called on each slave server.
    // The tree argument is deprecated (on PROOF 0 is passed).
 
+#ifdef DEBUG
   cout << " Welcome to SlaveBegin Sel_Calibrator " << endl;
-
+#endif
 
   TString hn;
   TString ht;
@@ -77,13 +80,12 @@ fCrysCal = dynamic_cast<PixelCal *>(fInput->FindObject("CrysCalPar"));
   endloop = time (NULL);
   cout << " Time to find fCrysCal :: " <<  endloop-startloop  << endl;
   
-
+#ifdef DEBUG
   cout << " fCrysCal->ValidPeaksX[0][0][2][1] = " << fCrysCal->validpeaks[0][0][2][1] << endl;
   cout << " fCrysCal->X[0][0][2][1][0] = " << fCrysCal->X[0][0][2][1][0] << endl;
   cout << " fCrysCal->GainSpat[0][0][2][1][0] = " << fCrysCal->GainSpat[0][0][2][1][0] << endl;
-
   cout << " *uu_c[0][0])[2*2+1]  = " << (*uu_c[0][0])[2*2+1]  << endl;
- 
+#endif
   
   startloop = time (NULL);
   
@@ -91,8 +93,11 @@ fCrysCal = dynamic_cast<PixelCal *>(fInput->FindObject("CrysCalPar"));
     TString fCalFilename;   
 
 
-  
+
+#ifdef DEBUG  
    cout << " fFileBase " << endl;
+#endif 
+
    fCalFilename = fFileBase + ".cal.root" ;
 
   // see: http://root.cern.ch/drupal/content/handling-large-outputs-root-files
@@ -372,8 +377,9 @@ Int_t Sel_Calibrator::ReadUVCenters(TFile *rfile){
     }
   }
 
+#ifdef DEBUG
  cout << " *uu_c[0][0])[2*2+1]  = " << (*uu_c[0][0])[2*2+1]  << endl;
- 
+#endif
 
   return 0;}
 
