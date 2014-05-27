@@ -82,6 +82,10 @@ Int_t pedana( double* mean, double* rms, int  *events, Short_t value ) ;
 // huh, global variable ..
 unsigned long totalPckCnt=0;
 unsigned long droppedPckCnt=0;
+unsigned long droppedFirstLast=0;
+unsigned long droppedOutOfRange=0;
+unsigned long droppedTrigCode=0;
+unsigned long droppedSize=0;
 vector<unsigned int> chipRate;
  
 
@@ -532,6 +536,7 @@ if (pedfilenamespec) {
   if ( (int(packBuffer[0] & 0xFF )) != 0x80 ) {
               // first packet needs to be 0x80
               droppedPckCnt++;
+	      droppedFirstLast++;
               packBuffer.clear();
               continue;
 	    }           
@@ -550,6 +555,7 @@ if (pedfilenamespec) {
             cout << " doesn't match the definitions in include/Syspardef.h" << endl;
 	    cout << " Skipping." << endl;}
            droppedPckCnt++;
+	   droppedOutOfRange++;
 	   if (verbose) cout << "Dropped = " << packBuffer.size() << endl;
 	   packBuffer.clear();
         continue;
@@ -645,6 +651,7 @@ if (pedfilenamespec) {
     else { // MODULE_BASED_READOUT
         if (trigCode == 0) {
             droppedPckCnt++;
+	    droppedTrigCode++;
             packBuffer.clear();
             continue;
         }
@@ -666,6 +673,7 @@ if (pedfilenamespec) {
 
     if (packBuffer.size()!=packetSize) {
         droppedPckCnt++;
+	droppedSize++;
         if (verbose) cout << "Dropped = " << packBuffer.size() << endl;
         packBuffer.clear();
         continue;
@@ -926,6 +934,10 @@ if (pedfilenamespec) {
  } // loop over i
 
  cout << " File Processed. Dropped: " << droppedPckCnt << " out of " << totalPckCnt << " (=" << setprecision(2) << 100*droppedPckCnt/totalPckCnt <<" %)." << endl;
+ cout << "                 StartCode: " << 100*droppedFirstLast/droppedPckCnt << " %" ;
+ cout << " Out of Range: " << 100*droppedOutOfRange/droppedPckCnt << " %"; 
+ cout << " Tigger Code: " << 100*droppedTrigCode/droppedPckCnt << " %" ;
+ cout << " Packet Size: " << 100*droppedSize/droppedPckCnt << " %" << endl;
 
  if (uvcalc){
  if (verbose)   cout <<  " Averaging the circle Centers " << endl;
