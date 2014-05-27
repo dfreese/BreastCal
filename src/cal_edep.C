@@ -38,7 +38,7 @@ int main(int argc, Char_t *argv[])
   Bool_t common=0;
 
 
- 	cout << "Welcome " << endl;
+ 	cout << " Welcome to cal_edep " << endl;
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 	Char_t		filenamel[FILENAMELENGTH] = "";
@@ -226,7 +226,7 @@ int main(int argc, Char_t *argv[])
        cout << " Total  entries: " << entries << endl; 
 
        
-       cout << " Filling crystal spectra on the left. " << endl;
+       if (verbose) cout << " Filling crystal spectra on the left. " << endl;
 
        Long64_t checkevts=0;
 
@@ -255,9 +255,10 @@ int main(int argc, Char_t *argv[])
 	 }
        } // loop over entries
 	  
+       if (verbose){
        cout << " Done looping over entries " << endl;
        cout << " I made " << checkevts << " calls to Fill() " << endl;         
-
+       }
 
        TH1F *profehist[2];
        TF1 *profehistfit[2];
@@ -284,7 +285,7 @@ int main(int argc, Char_t *argv[])
 	c1->Print(psfile);
 
 
-       cout << " Filling crystal spectra on the right. " << endl;
+        if (verbose) cout << " Filling crystal spectra on the right. " << endl;
 	checkevts=0;
 
 
@@ -309,9 +310,10 @@ int main(int argc, Char_t *argv[])
 	 }
        } // loop over entries
 
+	if (verbose){
        cout << " Done looping over entries " << endl;
        cout << " I made " << checkevts << " calls to Fill() " << endl;         
-
+	}
 
        ii=1;
 
@@ -346,7 +348,7 @@ int main(int argc, Char_t *argv[])
 
       TH1F *tres = new TH1F("tres","Time Resolution After Time walk correction",100,-25,25);
        
-      cout << " Opening file " << rootfile << " for writing " << endl;
+      if (verbose) cout << " Opening file " << rootfile << " for writing " << endl;
       TFile *calfile = new TFile(rootfile,"RECREATE");
       TTree *merged = new  TTree("merged","Merged and Calibrated LYSO-PSAPD data ");
 
@@ -354,7 +356,7 @@ int main(int argc, Char_t *argv[])
 
 
 
-      cout << "filling new Tree :: " << endl;
+      if (verbose) cout << "filling new Tree :: " << endl;
 
         for (i=0;i<entries; i++) {
 	 mm->GetEntry(i);

@@ -43,7 +43,7 @@ int main(int argc, Char_t *argv[])
 
  Int_t DTF_low, DTF_hi, FINELIMIT,DTFLIMIT;
 
- 	cout << "Welcome " << endl;
+ 	cout << " Welcome to cal_apd_offset" << endl;
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 	Char_t		filenamel[CALFILENAMELENGTH] = "";
@@ -200,7 +200,7 @@ int main(int argc, Char_t *argv[])
         TTree *mm  = (TTree *) rtfile->Get("merged");
 
         if (!mm) {
-	  cout << " Problem reading Tree merged "   << " from file " << filenamel << ". Trying tree mana." << endl;
+	  if (verbose) cout << " Problem reading Tree merged "   << " from file " << filenamel << ". Trying tree mana." << endl;
           mm  = (TTree *) rtfile->Get("mana"); }
       
         if (!mm) {
@@ -213,14 +213,14 @@ int main(int argc, Char_t *argv[])
        Long64_t entries = mm->GetEntries();
  
        cout << " Total  entries: " << entries << endl; 
-       cout << " Filling crystal spectra on the left. " << endl;
+       if (verbose) cout << " Filling crystal spectra on the left. " << endl;
        Long64_t checkevts=0;
 
 
         strncpy(filebase,filenamel,strlen(filenamel)-5);
         filebase[strlen(filenamel)-5]='\0';
         sprintf(rootfile,"%s",filebase);
-        cout << " ROOTFILE = " << rootfile << endl;
+        if (verbose) cout << " ROOTFILE = " << rootfile << endl;
 
 	for (i=0;i<entries; i++) {
           mm->GetEntry(i);
@@ -240,8 +240,9 @@ int main(int argc, Char_t *argv[])
 	 }
           // loop over entries
 
+	if (verbose){
        cout << " Done looping over entries " << endl;
-       cout << " I made " << checkevts << " calls to Fill() " << endl;         
+       cout << " I made " << checkevts << " calls to Fill() " << endl;         }
 
        Float_t mean_apdoffset[2][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
        Int_t npeaks;
@@ -287,7 +288,7 @@ int main(int argc, Char_t *argv[])
 	  calpars << endl;}
       calpars.close();
 
-       cout << " Filling crystal spectra on the right. " << endl;
+      if (verbose)  cout << " Filling crystal spectra on the right. " << endl;
 	checkevts=0;
 
 
@@ -312,9 +313,10 @@ int main(int argc, Char_t *argv[])
 	 }
        } // loop over entries
 
+	if (verbose){
        cout << " Done looping over entries " << endl;
        cout << " I made " << checkevts << " calls to Fill() " << endl;         
-
+	}
 ii=1;
 
 
@@ -353,7 +355,7 @@ ii=1;
 
     TH1F *tres = new TH1F("tres","Time Resolution After Time walk correction",100,-25,25);
        
-      cout << " Opening file " << rootfile << " for writing " << endl;
+    if (verbose) cout << " Opening file " << rootfile << " for writing " << endl;
       TFile *calfile = new TFile(rootfile,"RECREATE");
       TTree *merged = new  TTree("merged","Merged and Calibrated LYSO-PSAPD data ");
       //   merged->SetDirectory(0);
@@ -363,7 +365,7 @@ ii=1;
       //      merged->Branch("event",&calevt->dtc,"dtc/L:dtf/D:E1/D:Ec1/D:Ech1/D:ft1/D:E2/D:Ec2/D:Ech2/D:ft2/D:x1/D:y1/D:x2/D:y2/D:chip1/I:fin1/I:m1/I:apd1/I:crystal1/I:chip2/I:fin2/I:m2/I:apd2/I:crystal2/I:pos/I");
 
      checkevts=0;
-      cout << "filling new Tree :: " << endl;
+     if (verbose) cout << "filling new Tree :: " << endl;
 
         for (i=0;i<entries; i++) {
 	 mm->GetEntry(i);
@@ -415,9 +417,10 @@ Float_t getmax(TSpectrum *s,Int_t npeaks){
   Int_t maxpeakheight=-1000000;
   Float_t maxpos = 0;
   if (npeaks>1 ) {
+    /*
     for (Int_t i=0;i<npeaks;i++) { 
-      cout << " Peak " << i << " :  " << *(s->GetPositionX()+i) << " " << *(s->GetPositionY()+i) << endl;
-    }
+      if (verbose)  cout << " Peak " << i << " :  " << *(s->GetPositionX()+i) << " " << *(s->GetPositionY()+i) << endl;
+      }*/
   }
 
   for (Int_t i=0;i<npeaks;i++) {

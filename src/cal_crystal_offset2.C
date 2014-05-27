@@ -42,7 +42,7 @@ int main(int argc, Char_t *argv[])
 
  Int_t DTF_low, DTF_hi, FINELIMIT,DTFLIMIT;
 
- 	cout << "Welcome " << endl;
+ 	cout << " Welcome to cal_crystal_ofset2 " << endl;
 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 	Char_t		filenamel[FILENAMELENGTH] = "";
@@ -188,7 +188,7 @@ int main(int argc, Char_t *argv[])
        cout << " Total  entries: " << entries << endl; 
 
        
-       cout << " Filling crystal spectra on the left. " << endl;
+       if (verbose) cout << " Filling crystal spectra on the left. " << endl;
 
        Long64_t checkevts=0;
 
@@ -215,9 +215,10 @@ int main(int argc, Char_t *argv[])
 	   }
 	 }
        } // loop over entries
-	  
+
+       if (verbose){
        cout << " Done looping over entries " << endl;
-       cout << " I made " << checkevts << " calls to Fill() " << endl;         
+       cout << " I made " << checkevts << " calls to Fill() " << endl;         }
 
        Float_t mean_crystaloffset[2][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][64]={{{{{0}}}}};
 
@@ -241,7 +242,7 @@ int main(int argc, Char_t *argv[])
        sprintf(calparfilename,"%s_calpar_0.txt",rootfile);
        writval(mean_crystaloffset[0],calparfilename);
 
-       cout << " Filling crystal spectra on the right. " << endl;
+       if (verbose) cout << " Filling crystal spectra on the right. " << endl;
 	checkevts=0;
 
 
@@ -266,9 +267,10 @@ int main(int argc, Char_t *argv[])
 	 }
        } // loop over entries
 
+	if (verbose){
        cout << " Done looping over entries " << endl;
        cout << " I made " << checkevts << " calls to Fill() " << endl;         
-
+	}
 
        ii=1;
 
@@ -295,13 +297,13 @@ int main(int argc, Char_t *argv[])
         strcat(rootfile,".crystaloffcal.root");
 
        
-      cout << " Opening file " << rootfile << " for writing " << endl;
+	if (verbose) cout << " Opening file " << rootfile << " for writing " << endl;
       TFile *calfile = new TFile(rootfile,"RECREATE");
       TTree *merged = new  TTree("merged","Merged and Calibrated LYSO-PSAPD data ");
       merged->Branch("Event",&calevt);
 
 
-      cout << "filling new Tree :: " << endl;
+      if (verbose) cout << "filling new Tree :: " << endl;
 
         for (i=0;i<entries; i++) {
 	 mm->GetEntry(i);
