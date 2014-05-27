@@ -236,7 +236,6 @@ NOHIT=-50;
     echo -n " SUBMITTING JOB "
     echo "${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 -pos $pos -n $NOHIT; "
     ${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 -pos $pos -n  $NOHIT > $data.conv.out &
-#    pedconv $i pedconv_$j.out &
     pids+=($!);
     (( RUNNINGJOBS++ ));
     else
@@ -318,3 +317,141 @@ cd ..
 done;
 
 fi
+
+
+#############################################################################################################
+
+if [[ $dosort -eq 1 ]]; then
+SPLITS=0
+for k in Left Right; do
+cd $k
+KK=${k:0:1}
+
+BASE=`ls DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
+log "Estimating split level ${1}"
+VAR=$1;
+LR=`echo "${VAR:0:1}"`;
+log "get_opt_split -f ./${BASE}.cal.root   > opt_split_${KK}.txt"
+get_opt_split -f ./${BASE}.cal.root   > opt_split_${KK}.txt
+check ${?} "get_opt_split ${k}";
+THISSPLITS=`grep FINDME opt_split_${KK}.txt | awk '{print $5}'`
+THISTIME=`grep FINDME opt_split_${KK}.txt | awk '{print $7}'`
+THISSPLITTIME=`grep FINDME opt_split_${KK}.txt | awk '{print $3}'`
+if [ "${THISSPLITS}" -gt "${SPLITS}" ] ; then
+SPLITS=${THISSPLITS};
+TOTIME=${THISTIME};
+SPLITTIME=${THISSPLITTIME};
+fi;
+cd ..
+done;
+
+#echo $SPLITS 
+#echo $TOTIME
+#echo $SPLITTIME
+
+RUNNINGJOBS=0
+
+for k in Left Right; do
+cd $k
+KK=${k:0:1}
+i=0;
+# note:: in the future, we may have up to 3 L's : L0 L1 and L3
+while [ $i -le 0 ] ; do
+   BASE=`ls ./DAQ*${KK}${i}*root | head -n 1 | cut -d ${KK} -f 1`${KK} 
+if [ $RUNNINGJOBS -lt $CORES ]; then 
+    merge_4up -f ./${BASE}.cal.root -nc ${SPLITS} -ts ${SPLITTIME} -lt ${TOTIME} > merge_4up.${KK}${i}.out   &
+    check $? "merge_4up panel ${k}${i}"
+    pids+=($!);
+    (( RUNNINGJOBS++ ));
+    (( i++ ));
+else
+    log " RUNNINGJOBS before waitsome @merging : $RUNNINGJOBS  ( pids :: ${pids[@]} )"
+    waitsome $pids 1
+    RUNNINGJOBS=${#pids[@]}
+    merge_4up -f ./${BASE}.cal.root -nc ${SPLITS} -ts ${SPLITTIME} -lt ${TOTIME} > merge_4up.${KK}${i}.out   &
+    check $? "merge_4up panel ${k}${i}"
+    pids+=($!);
+    (( RUNNINGJOBS++ ));
+fi;
+done;
+cd ..
+done;
+
+waitall $pids
+
+fi
+
+
+#############################################################################################################
+
+if [[ $domerge -eq 1 ]]; then
+# estimate number of splits
+LEFTSPLITS=`ls -ltr ./Left/*part*root  | wc -l`
+RIGHTSPLITS=`ls -ltr ./Right/*part*root  | wc -l`
+
+  if [ $LEFTSPLITS -ne $RIGHTSPLITS ]; then
+      echo "Error: Counted $LEFTSPLITS files on the left, and $RIGHTSPLITS files on the right, these should be equal"
+      exit -99;
+  fi;
+
+BASE=` ls -1 ./Left/DAQ*part*root | head -n 1 | cut -d / -f 3 | cut -d _ -f 1-3` 
+
+RUNNINGJOBS=0;
+j=0;
+
+# counting from zero
+(( LEFTSPLITS-- )) ;
+
+for i in `seq 0 $LEFTSPLITS` ; do 
+    if [ $RUNNINGJOBS -lt $CORES ]; then 
+	(( j++ ));
+ #   echo " SUBMITTING JOB "
+	merge_coinc -fl ./Left/${BASE}_L_part${i}.root -fr ./Right/${BASE}_R_part${i}.root -of  ./${BASE}_part${i}.root &  
+	pids+=($!);
+	(( RUNNINGJOBS++ ));
+    else
+	log " merge_coinc RUNNINGJOBS : $RUNNINGJOBS"
+	waitsome $pids 1
+	RUNNINGJOBS=${#pids[@]}
+	log " merge_coinc LOOP RUNNINGJOBS after waitsome : $RUNNINGJOBS"
+	(( j++ )) ;
+	merge_coinc -fl ./Left/${BASE}_L_part${i}.root -fr ./Right/${BASE}_R_part${i}.root -of  ./${BASE}_part${i}.root & 
+	pids+=($!);
+	(( RUNNINGJOBS++ ));
+    fi;
+done;
+   
+ waitall $pids
+
+ # This is confusing, but the argument to "-n" gets augmented by one in chain_merged.C
+
+ chain_merged -f ${BASE} -n ${LEFTSPLITS}
+
+fi;
+
+
+#############################################################################################################
+
+if [[ $dotimecal -eq 1 ]]; then
+ BASE=`ls *all.merged.root | cut -d _ -f 1-3`
+ merge_ana -f ${BASE}_all.merged.root
+ log "TIMING CALIBRATION"
+ T_CAL_STARTTIME=`date +%s`
+ cal_apd_offset -f ${BASE}_all.merged.ana.root 
+ echo -n "CAL_APD_OFFSET: "
+ timing ${T_CAL_STARTTIME}
+ cal_crystal_offset2 -f ${BASE}_all.merged.ana.apdoffcal.root -ft 60
+ echo -n "CAL_CRYSTAL_OFFSET: "
+ timing ${T_CAL_STARTTIME}
+ cal_edep -f ${BASE}_all.merged.ana.apdoffcal.crystaloffcal.root  -ft 40
+ echo -n "CAL_EDEP: "
+ timing ${T_CAL_STARTTIME}
+ cal_crystal_offset2  -f ${BASE}_all.merged.ana.apdoffcal.crystaloffcal.edepcal.root  -ft 30
+ echo -n "CAL_CRYSTAL_OFFSET: "
+ timing ${T_CAL_STARTTIME}
+fi
+#############################################################################################################
+## ONLY STEP TO DO:  format_recon -f ${BASE}_all.merged.ana.apdoffcal.crystaloffcal.edepcal.crystaloffcal.root -p 64.262 -t 20
+## -p :: paneldistance in mm
+## -t :: fine time window, e.g: -t 2- ::   -20 < ft < 20 
+############################################################################################################
