@@ -935,10 +935,11 @@ if (pedfilenamespec) {
 
  cout << " File Processed. Dropped: " << droppedPckCnt << " out of " << totalPckCnt << " (=" << setprecision(2) << 100*droppedPckCnt/totalPckCnt <<" %)." << endl;
  cout << setprecision(1) << fixed;
+ if (droppedPckCnt){
  cout << "                 StartCode: " << (Float_t )100*droppedFirstLast/droppedPckCnt << " %" ;
  cout << " Out of Range: " << (Float_t) 100*droppedOutOfRange/droppedPckCnt << " %"; 
  cout << " Tigger Code: " << (Float_t) 100*droppedTrigCode/droppedPckCnt << " %" ;
- cout << " Packet Size: " << (Float_t) 100*droppedSize/droppedPckCnt << " %" << endl;
+ cout << " Packet Size: " << (Float_t) 100*droppedSize/droppedPckCnt << " %" << endl;}
 
  if (uvcalc){
  if (verbose)   cout <<  " Averaging the circle Centers " << endl;
