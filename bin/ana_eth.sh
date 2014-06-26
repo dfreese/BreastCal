@@ -23,7 +23,7 @@ function timing ()
 
 function pedconv ()
 {  
-    decoder -p -f $1 >> $2 ;  
+    decoder -p -f $1 -cmap "../DAQ_Board_Map.nfo" >> $2 ;  
     check ${?} "converting pedfile ${1}"; 
     #    sleep 10
 }
@@ -110,11 +110,14 @@ function usage()
     echo "ana_eth.sh [ -v -d -c -s -m -t -a -h -C [] ]"
     echo " with: -v: verbose"
     echo "       -d: decode binary data ( Left and Right )"
+    echo "       -g: segment data (Left and Right)"
     echo "       -c: calibrate data ( Left and Right )"
     echo "       -s: time sort Left and Right data"
     echo "       -m: merge Left and Right"
     echo "       -t: time calibrate"
     echo "       -a: do all of the above"
+    echo "       -u: do decode and segment"
+    echo "       -l: do -c -s -m -t"
     echo "       -h: display this help"
     echo "       -C [] : number of cores"
 }
@@ -125,6 +128,7 @@ CORES=2
 STARTTIME=`date +%s`
 verbose=0
 dodecode=0
+dosegmentation=0
 docalibrate=0
 dosort=0
 domerge=0
@@ -136,11 +140,14 @@ do
     case "$1" in
 	-v) verbose=1;;
 	-d) dodecode=1;;
+    -g) dosegmentation=1;;
 	-c) docalibrate=1;;
 	-s) dosort=1;;
 	-m) domerge=1;;
 	-t) dotimecal=1;;
-	-a) dodecode=1;docalibrate=1;dosort=1;domerge=1;dotimecal=1;;
+	-a) dodecode=1;dosegmentation=1;docalibrate=1;dosort=1;domerge=1;dotimecal=1;;
+    -u) dodecode=1;dosegmentation=1;;
+    -l) docalibrate=1;dosort=1;domerge=1;dotimecal=1;;
 	-h) usage ; exit; break;;
 	-C) CORES=$2;shift;;
 	*) usage; break;;
@@ -180,15 +187,17 @@ if [[ $dodecode -eq 1 ]]; then
             paste daqfiles pedfiles  > files
         else 
             # echo "different"; 
-            pedcount=0; 
+            pedcount=1; 
+            #pedcount=0; 
             if [ -e files ] ; then 
                 rm files;
             fi;
             while read data; do 
                 echo -n $data" " >> files; 
-                if  [ `basename $data .dat | rev | cut -f1 -d'_'` -eq 0   ]; then 
-                    (( pedcount++ ))  ; 
-                fi;  
+                # This logic seems to fail if there is more than 9 files
+                #if  [ `basename $data .dat | rev | cut -f1 -d'_'` -eq 0   ]; then 
+                #    (( pedcount++ ))  ; 
+                #fi;  
                 PEDFILE=`sed -n "${pedcount}p" ./pedfiles`; 
                 echo $PEDFILE  >> files;
             done < ./daqfiles
@@ -248,7 +257,7 @@ if [[ $dodecode -eq 1 ]]; then
                 (( c++ ));
                 echo -n " SUBMITTING JOB "
                 echo "${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 -pos $pos -n $NOHIT; "
-                ${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 -pos $pos -n  $NOHIT > $data.conv.out &
+                ${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 -pos $pos -n  $NOHIT -cmap "../DAQ_Board_Map.nfo" > $data.conv.out &
                 pids+=($!);
                 (( RUNNINGJOBS++ ));
             else
@@ -256,7 +265,7 @@ if [[ $dodecode -eq 1 ]]; then
                 waitsome $pids 1
                 echo -n " SUBMITTING JOB "
                 echo "${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 -pos $pos -n  $NOHIT; "
-                ${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 -pos $pos -n  $NOHIT > $data.conv.out &
+                ${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 -pos $pos -n  $NOHIT -cmap "../DAQ_Board_Map.nfo" > $data.conv.out &
                 pids+=($!);
                 (( RUNNINGJOBS++ ));
                 RUNNINGJOBS=${#pids[@]}
@@ -286,12 +295,10 @@ fi;
 
 #############################################################################################################
 
-if [[ $docalibrate -eq 1 ]]; then
-
+if [[ $dosegmentation -eq 1 ]]; then
     for k in Left Right; do
         cd $k
         KK=${k:0:1}
-
         BASE=`ls DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
         ls DAQ*${KK}0*root | cut -d _ -f 5 | sort -n | awk -v FBASE=$BASE '{print FBASE"0_"$1}' > filelist
         chain_parsed -f filelist -o ${BASE}.root
@@ -320,7 +327,20 @@ if [[ $docalibrate -eq 1 ]]; then
                 (( RUNNINGJOBS++ ));
             fi;
         done;
+        cd ..
+    done;
+fi
 
+
+
+
+#############################################################################################################
+
+if [[ $docalibrate -eq 1 ]]; then
+    for k in Left Right; do
+        cd $k
+        KK=${k:0:1}
+        BASE=`ls DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
         mkdir CHIPDATA
         mv *peaks.txt ./CHIPDATA
         enecal -f ${BASE}.root
@@ -329,8 +349,8 @@ if [[ $docalibrate -eq 1 ]]; then
         check ${?} "calibrate -f  ${BASE}.root"; 
         cd ..
     done;
-
 fi
+
 
 
 #############################################################################################################
