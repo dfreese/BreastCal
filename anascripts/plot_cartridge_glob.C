@@ -1,7 +1,7 @@
 
 
 
-Int_t plot_cartrigdge(Char_t filebase[50]="PT_DAQ_1309181722",Int_t cartridge=0){
+Int_t plot_cartridge_glob(Char_t filebase[50]="PT_DAQ_1309181722",Int_t cartridge=0){
 
   //gROOT->ProcessLine(".L /home/miil/MODULE_ANA/ANA_V5/ModuleClass/anascripts/plot_glob.C");
 
