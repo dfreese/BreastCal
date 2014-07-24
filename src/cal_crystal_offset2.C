@@ -52,6 +52,7 @@ int main(int argc, Char_t *argv[])
         CoincEvent           *evt =  new CoincEvent();
         CoincEvent           *calevt = new CoincEvent();
 
+	Int_t           logscale = 0; // added by David on 07/10/2014 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
@@ -64,6 +65,15 @@ int main(int argc, Char_t *argv[])
 		if(strncmp(argv[ix], "-v", 2) == 0) {
 			cout << "Verbose Mode " << endl;
 			verbose = 1;
+		}
+
+		/*
+		 * Plot in log scale
+		 */
+
+		if(strncmp(argv[ix], "-log", 4) == 0) {
+			cout << "Output Graph in Log Scale " << endl;
+			logscale = 1;
 		}
 
 
@@ -291,8 +301,8 @@ int main(int argc, Char_t *argv[])
        sprintf(calparfilename,"%s_calpar_1.txt",rootfile);
        writval(mean_crystaloffset[1],calparfilename);
 
-
-    TH1F *tres = new TH1F("tres","Time Resolution After Time walk correction",100,-25,25);
+       // TH1F *tres = new TH1F("tres","Time Resolution After Time walk correction",100,-25,25);
+       TH1F *tres = new TH1F("tres","Time Resolution After Time walk correction",400,-100,100);
 
         strcat(rootfile,".crystaloffcal.root");
 
@@ -336,6 +346,13 @@ int main(int argc, Char_t *argv[])
       sprintf(psfile,"%s.tres.crysoffset.ps",rootfile);
 
       c1->Print(psfile);
+
+      // below section added by David
+      if (logscale == 1) {
+	c1->SetLogy();
+	sprintf(psfile,"%s.tres.crysoffset.log.ps",rootfile);
+	c1->Print(psfile);
+      }
 
 
 	     // crystime[0][MOD1][APD1][0]->Draw(); c1->Print("testje2.ps");
