@@ -64,7 +64,11 @@
 
 
 #define MAXHITS 10000000
-#define MAXCUTS 50
+
+//FIXME David commented out below line and changed it to 150 to accomodate long dataset
+//#define MAXCUTS 50
+#define MAXCUTS 150
+
 #define DEFAULTTHRESHOLD -600;
 #define DEFAULT_NOHIT_THRESHOLD -50;
 #define INFTY 1e99;
