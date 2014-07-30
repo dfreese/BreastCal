@@ -101,7 +101,7 @@ Int_t main(int argc, Char_t *argv[])
     sprintf(treename,"mdata");         
     //         block = (TTree *)  rfile->Get(treename);
     //	 Perf ana code
-    TChain *block;
+    TChain *block(0);
     block = (TChain *) rfile->Get(treename);
     //         blockchain->Merge("mergedchain.root");
     //         TFile *mc = new TFile("mergedchain.root");
@@ -117,6 +117,22 @@ Int_t main(int argc, Char_t *argv[])
         return -10;
     }
     entries=block->GetEntries();
+
+    // Check to see if "PhotoPeaks" exists in the file.  It is created in
+    // chain_parsed, and is used as a check that chain_parsed has been run
+    //
+    // if statement was done to keep photopeak_check out of scope of the rest
+    // of the program and leave room for additional logic later.
+    if (1) {
+        PPeaks * photopeak_check(0);
+        photopeak_check = (PPeaks *) rfile->Get("PhotoPeaks");
+        if (!photopeak_check) {
+            cout << " Problem reading PhotoPeaks from file " << filename << endl;
+            cout << "  note: perhaps chain_parsed was not run first" << endl;
+            cout << " Exiting " << endl;
+            return(-10);
+        }
+    }
 
     /*
        if ( entries < MINENTRIES) {
@@ -274,6 +290,7 @@ Int_t main(int argc, Char_t *argv[])
 
 #else
     /* Loading the shared library */
+    cout << "getfloods - loading libModuleAna.so" << endl;
     exestring.Form("gSystem->Load(\"%s/lib/libModuleAna.so\")",libpath);
     p->Exec(exestring.Data());
 

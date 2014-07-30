@@ -72,7 +72,6 @@ void Sel_GetFloods::SlaveBegin(TTree * /*tree*/)
     fH2F =    new TH2F("fH2F","Dummy", 256, -1,1, 256, -1 ,1 );
     fOutput->Add(fH2F);
 
-
 #ifdef USEPROOF
     fInput->ls();
     //  fInput->Print();
@@ -99,7 +98,6 @@ void Sel_GetFloods::SlaveBegin(TTree * /*tree*/)
        }
      } 
    }
-
 }
 
 Bool_t Sel_GetFloods::Process(Long64_t entry)
