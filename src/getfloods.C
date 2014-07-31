@@ -417,12 +417,13 @@ Double_t  GetPhotopeak_v1(TH1F *hist,Double_t pp_low,Double_t pp_up,Int_t verbos
     kkk=0;
     efound=0;
 
+    Float_t kkkf=0.0;
     /* Initialize peak to lower bound */
     pp_right=pp_low;
 
     while (1){
         // changing this from 10 to 3  080513
-        npeaks = sp->Search( hist,width,"",0.6-(float) kkk/10);
+        npeaks = sp->Search( hist,width,"",0.6-(float) kkkf/10);
         if (verbose ) {  
             cout << npeaks << " peaks found in the Spatial energy spectrum " << endl; }
         // get the peak between E_low and E_up ;
@@ -442,8 +443,9 @@ Double_t  GetPhotopeak_v1(TH1F *hist,Double_t pp_low,Double_t pp_up,Int_t verbos
         } // loop over npeaks;
         //    cout << " i = " << i << endl;
         //   if ((npeaks <3 ) && (j<4)){  j++;}
-        if ((!efound ) && (kkk<5)) {
-            kkk++;
+        if ((!efound ) && (kkkf<5.5)) {
+	  if (kkkf<5) kkkf+=1;
+	  else kkkf=5.5;
         } else {
             break;
         }
