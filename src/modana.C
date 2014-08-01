@@ -1357,7 +1357,7 @@ Double_t *ptv_ana(TH1F *hist, TF1 *posgausfits[64], TCanvas *c1, Int_t nr, Int_t
 
   Double_t av_fwhm, av_mean_dist, av_mean_dist_e, av_fwhm_e;
   Int_t i,index;
-  Char_t tmpstring[60];
+  Char_t tmpstring[80];
   Double_t *ptvalues;
   ptvalues = new Double_t[8];
   av_mean_dist=0;av_mean_dist_e=0;
@@ -1508,15 +1508,17 @@ cout << " NA " << endl;
 
   //  cout << " edge_mean variance :: " << edge_mean_variance << endl;
 
-  if (verbose) {cout << "EDGE FOM left:  " << edge_fom_1 << "+/-" << errorprop_divide(edge_dist_1,edge_dist_e_1,edge_fwhm_1,edge_fwhm_e_1);
-    cout <<  " dist : " << edge_dist_1 << " width : " << edge_fwhm_1 <<endl;
-    cout << "EDGE FOM right: " << edge_fom_2 << "+/-" << errorprop_divide(edge_dist_2,edge_dist_e_2,edge_fwhm_2,edge_fwhm_e_2);
-    cout <<  " dist : " << edge_dist_2 << " width : " << edge_fwhm_2 <<endl; }
+  if (verbose) {
+      cout << "EDGE FOM left:  " << edge_fom_1 << "+/-" << errorprop_divide(edge_dist_1,edge_dist_e_1,edge_fwhm_1,edge_fwhm_e_1);
+      cout <<  " dist : " << edge_dist_1 << " width : " << edge_fwhm_1 <<endl;
+      cout << "EDGE FOM right: " << edge_fom_2 << "+/-" << errorprop_divide(edge_dist_2,edge_dist_e_2,edge_fwhm_2,edge_fwhm_e_2);
+      cout <<  " dist : " << edge_dist_2 << " width : " << edge_fwhm_2 <<endl;
+  }
 
   edge_fwhm*=2.345;edge_fwhm_e*=2.345;
   edge_fwhm_variance*=2.345;
 
-
+  // return 0;
 
   c1->cd(2);
   TPaveText *result = new TPaveText(.16,.16,.85,.69,"NDC");
@@ -1530,6 +1532,8 @@ cout << " NA " << endl;
   result->AddText(tmpstring);
 
   result->Draw();
+
+  //  cout << " LOK AT ME :: p = " << p << endl;
 
  ptvalues[0]=av_mean_dist;
  ptvalues[1]=mean_variance/TMath::Sqrt(8-1-2*p);
@@ -1558,4 +1562,5 @@ cout << " NA " << endl;
  }
  
  
- return ptvalues;}
+ return ptvalues;
+}
