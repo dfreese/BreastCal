@@ -260,3 +260,27 @@ while read line ; do
 
 done  < $module_list
 
+# Save the current directory to switch back to it after doing the work
+prev_dir=`pwd`
+
+# Generate base webpage for the module analysis folder that contains a link to
+# each of the modules
+cd $analysis_output_dir
+if [ -e index.html ]; then
+    rm index.html
+fi
+# Generate the header with title
+echo "<html><title>List of Modules</title><body>" >> index.html
+modules=$(ls -d1 *_*_*)
+# Generate a link for each module
+for module in $modules; do 
+    if [ -e ./${module}/index.html ]; then
+        echo "<p><a href=\"./${module}/index.html\">${module}</a></p>" >> index.html
+    fi
+done
+# close of the webpage
+echo "</body></html>" >> index.html
+
+cd $prev_dir
+# Base webpage is complete
+
