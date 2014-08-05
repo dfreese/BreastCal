@@ -3,7 +3,7 @@
 analysis_output_dir="/data/Module_Analysis"
 data_output_dir="/data/Module_Data"
 
-function usage {
+function usage () {
     echo "mod_ana.sh [Filename Base] [DAQ Board Map (Optional)]"
     echo ""
     echo "The filename base is the module name or group name up through"
@@ -14,6 +14,22 @@ function usage {
     echo "    If it is not found, the script will exit."
     echo ""
 }
+
+# Takes $# as the first argument and a task name as the second arugment.  If
+# the program just prior has faild, it will print a warning and exit.
+function check () {
+    RET=$1;
+    if [ ${RET} != 0 ] ; then  
+        echo " =========================================" 
+        echo " ............ WARNING ...................." 
+        echo " Program failed at $2 ";
+        echo " ========================================="
+        exit -1
+    fi
+
+}
+
+
 
 # Check to see if the user provided the correct number of arguments, and if not
 # the print the usage information for the script
@@ -79,6 +95,7 @@ peddatafiles=$(grep ped_Data filelist)
 for file in $peddatafiles; do
     if [ ! -e $file.root ]; then
         decoder -f $file -p -cmap $daqmap
+        check ${?} "decoder -f $file -p -cmap $daqmap"
     fi
     # copy the file to the data output directory
     cp $file $data_output_dir/
@@ -96,6 +113,7 @@ datafiles=$(grep -v ped_Data filelist)
 for file in $datafiles; do 
     if [ ! -e $file.root ]; then
         decoder -f $file -pedfile $pedfile -uv -cmap $daqmap
+        check ${?} "decoder -f $file -pedfile $pedfile -uv -cmap $daqmap"
 
         # copy the file to the data output directory
         cp $file $data_output_dir/
@@ -125,18 +143,21 @@ for voltage in $voltages; do
     else
         if [ ! -e $chain_filename ]; then
             chain_parsed -f $voltage_filelist -o $chain_filename
+            check ${?} "chain_parsed -f $voltage_filelist -o $chain_filename"
         else
             echo "$chain_filename found, skipping chain_parsed"
         fi
 
         echo "getfloods -f $chain_filename"
         getfloods -f $chain_filename
+        check ${?} "getfloods -f $chain_filename"
 
         # For each of the modules, run the segmentation algorithm, and verify
         # that the segmentation passes for both APDs. A peaks.failed.txt file
         # indicates failure, however, does not guarantee a good segmentation.
         for i in `seq 0 7`; do
             anafloods_psf_v2 -f $chain_filename -c 0 -l 6 -m $i
+            check ${?} "anafloods_psf_v2 -f $chain_filename -c 0 -l 6 -m $i"
 
             peaks_name_0="${chain_filebase}.C0F6.module${i}_apd0_peaks.txt"
             peaks_name_1="${chain_filebase}.C0F6.module${i}_apd1_peaks.txt"
@@ -166,9 +187,11 @@ for voltage in $voltages; do
 
         # Generate energy calibration for each pixel of the module
         enecal -f $chain_filename
+        check ${?} "enecal -f $chain_filename"
 
         # Apply the calibration to the data to generate the cal.root file
         calibrate -f $chain_filename
+        check ${?} "calibrate -f $chain_filename"
     fi
 
     # Analyze the figure of merit for each module from the calibrated data
@@ -176,6 +199,7 @@ for voltage in $voltages; do
     # empty and unused.
     echo "fom_ana -f $cal_filename -c 0"
     fom_ana -f $cal_filename -c 0
+    check ${?} "fom_ana -f $cal_filename -c 0"
 
     while read line ; do 
         # each line int he modulenames.txt file is the module number followed by
@@ -188,8 +212,9 @@ for voltage in $voltages; do
             # If the number makes sense, run modana, which generates the images
             # displayed in generated webpage
             for i in 0 1; do
-                echo "modana -f $chain_filename -C 0 -F 6 -M $module -A $i -t $name;"
-                modana -f $chain_filename -C 0 -F 6 -M $module -A $i -t $name;
+                echo "modana -f $chain_filename -C 0 -F 6 -M $module -A $i -t $name"
+                modana -f $chain_filename -C 0 -F 6 -M $module -A $i -t $name
+                check ${?} "modana -f $chain_filename -C 0 -F 6 -M $module -A $i -t $name"
             done;
         fi
 
@@ -235,6 +260,7 @@ while read line ; do
         # Combine all of the summary images into one vertical image to be
         # placed in the root for the module
         convert -append *.sum.png $voltage_summary_pic
+        check ${?} "convert -append *.sum.png $voltage_summary_pic"
         # move that into the root directory after it is generated in the
         # voltage directory
         mv $voltage_summary_pic $module_dir/
@@ -244,6 +270,7 @@ while read line ; do
     # as the landing pages for each of the voltages.  The landing pages then
     # link to the index.html in the voltage folders (after the link is modified)
     igal2 -r -w 3 -y 250 --bigy 600 -n
+    check ${?} "igal2 -r -w 3 -y 250 --bigy 600 -n"
     # change the title to reflect the module
     sed -i "s/Index of Pictures/Module ${name}/" index.html
 
@@ -266,6 +293,7 @@ while read line ; do
         # A script which generates the appropriate webpage inside of the
         # voltage folder
         MakeHtml.sh ${voltage}
+        check ${?} "MakeHtml.sh ${voltage}"
     done
 
     # Go back to the working directory
