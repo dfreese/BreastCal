@@ -1,6 +1,7 @@
 
 # The folder on the system in which the analysis should be placed
 analysis_output_dir="/data/Module_Analysis"
+data_output_dir="/data/Module_Data"
 
 function usage {
     echo "mod_ana.sh [Filename Base] [DAQ Board Map (Optional)]"
@@ -26,6 +27,13 @@ fi
 # check to see if the analysis director exists, warn the user and exit if not
 if [ ! -d $analysis_output_dir ]; then
     echo "The analysis output directory specified, \"${analysis_output_dir},\" does not exist."
+    echo "Please create the directory or specify a different folder within the script."
+    exit -1
+fi
+
+# check to see if the data director exists, warn the user and exit if not
+if [ ! -d $data_output_dir ]; then
+    echo "The data output directory specified, \"${data_output_dir},\" does not exist."
     echo "Please create the directory or specify a different folder within the script."
     exit -1
 fi
@@ -72,6 +80,8 @@ for file in $peddatafiles; do
     if [ ! -e $file.root ]; then
         decoder -f $file -p -cmap $daqmap
     fi
+    # copy the file to the data output directory
+    cp $file $data_output_dir/
     pedfile=$file.ped
     # Just take the first pedestal file
     if [ ! "$pedfile" == "" ]; then
@@ -86,6 +96,9 @@ datafiles=$(grep -v ped_Data filelist)
 for file in $datafiles; do 
     if [ ! -e $file.root ]; then
         decoder -f $file -pedfile $pedfile -uv -cmap $daqmap
+
+        # copy the file to the data output directory
+        cp $file $data_output_dir/
     fi
 done
 
