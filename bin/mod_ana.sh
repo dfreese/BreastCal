@@ -79,6 +79,8 @@ fi
 # Check to make sure the module names file exists
 if [ -e $FILENAME*modulenames.txt ]; then
     module_list=$(ls $FILENAME*modulenames.txt | head -n 1)
+    # Copy over the list to the data output directory
+    cp $module_list $data_output_dir/
 else
     echo "Module list not found for the file set specified. Exiting"
     exit -1
