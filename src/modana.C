@@ -445,28 +445,70 @@ Int_t main(int argc, Char_t *argv[])
     }
 
 
+    if (verbose) cout << "Reading Global fits from file :: " << endl;
+
     TF1 *glob_spat_fit(0);
     TList * espec_glob_spat_func_list(0);
     espec_glob_spat_func_list = espec_glob_spat->GetListOfFunctions();
-    if (espec_glob_spat_func_list == 0) {
-        cout << "list of functions not found in espec_glob_spat. Exiting" << endl;
-        exit(-1);
-    } else {
-        glob_spat_fit = (TF1 *) espec_glob_spat_func_list->FindObject("fitfunc");
-        if (glob_spat_fit == 0) {
-            cout << "fitfunc not found in espec_glob_spat. Exiting" << endl;
-            exit(-1);
-        }
+    Double_t *glob_spat_fit_par;
+    Double_t *glob_spat_fit_par_err;
+    Bool_t kFailedReadGlobFit=kFALSE;
+    if (espec_glob_spat_func_list != 0) {
+      glob_spat_fit = (TF1 *) espec_glob_spat_func_list->FindObject("fitfunc");
+        if (glob_spat_fit != 0) {
+	  glob_spat_fit->SetName("glob_spat_fit");
+	  glob_spat_fit_par = glob_spat_fit->GetParameters();
+	  glob_spat_fit_par_err = glob_spat_fit->GetParErrors();
+	}
+        else {
+	  kFailedReadGlobFit = kTRUE;
+	}
+    } 
+    else {
+      kFailedReadGlobFit = kTRUE;
     }
-    glob_spat_fit->SetName("glob_spat_fit");
-    Double_t *glob_spat_fit_par = glob_spat_fit->GetParameters();
-    Double_t *glob_spat_fit_par_err = glob_spat_fit->GetParErrors();
+    if (kFailedReadGlobFit){    
+      glob_spat_fit_par = new Double_t[6];
+      glob_spat_fit_par_err = new Double_t[6];
+      for ( Int_t jj=0;jj<6;jj++){
+        glob_spat_fit_par[jj] = 99+jj*0.1;
+        glob_spat_fit_par_err[jj] = 1+jj*0.1;
+      }
+    }
 
 
     TF1 * glob_com_fit(0);
     TList * espec_glob_com_func_list(0);
+    espec_glob_com_func_list = espec_glob_com->GetListOfFunctions();
+    Double_t *glob_com_fit_par;
+    Double_t *glob_com_fit_par_err;
+    Bool_t kFailedReadGlobComFit=kFALSE;
+    if (espec_glob_com_func_list != 0) {
+      glob_com_fit = (TF1 *) espec_glob_spat_func_list->FindObject("fitfunc");
+        if (glob_com_fit != 0) {
+	  glob_com_fit->SetName("glob_com_fit");
+	  glob_com_fit_par = glob_com_fit->GetParameters();
+	  glob_com_fit_par_err = glob_com_fit->GetParErrors();
+	}
+        else {
+	  kFailedReadGlobComFit = kTRUE;
+	}
+    } 
+    else {
+      kFailedReadGlobComFit = kTRUE;
+    }
+   if (kFailedReadGlobComFit){    
+      glob_com_fit_par = new Double_t[6];
+      glob_com_fit_par_err = new Double_t[6];
+      for ( Int_t jj=0;jj<6;jj++){
+        glob_com_fit_par[jj] = 99+jj*0.1;
+        glob_com_fit_par_err[jj] = 1+jj*0.1;
+      }
+    }
+
+    /*
     if (espec_glob_com_func_list == 0) {
-        cout << "list of funcitions not found in espec_glob_com. Exiting" << endl;
+        cout << "list of functions not found in espec_glob_com. Exiting" << endl;
         exit(-1);
     } else {
         glob_com_fit = (TF1 *) espec_glob_com_func_list->FindObject("fitfunc");
@@ -475,9 +517,12 @@ Int_t main(int argc, Char_t *argv[])
             exit(-1);
         }
     }
+    */
+   /*
     glob_com_fit->SetName("glob_com_fit"); 
     Double_t *glob_com_fit_par = glob_com_fit->GetParameters();
     Double_t *glob_com_fit_par_err = glob_com_fit->GetParErrors();
+   */
 
     Int_t score;
     if (verbose) {
@@ -488,7 +533,7 @@ Int_t main(int argc, Char_t *argv[])
     c1->Clear(); 
     c1->Divide(1,2);
     c1->cd(1); 
-    espec_glob_spat->Draw();glob_spat_fit->Draw("same");
+    espec_glob_spat->Draw();if (!kFailedReadGlobFit) glob_spat_fit->Draw("same");
     TPaveText *scorecard_glob_spat = new TPaveText(.65,.45,.85,.55,"NDC");
     scorecard_glob_spat->SetShadowColor(0);
     sprintf(tmpstring,"E_{res} = %.1f #pm %.1f", 100 * 2.35*glob_spat_fit_par[5] / glob_spat_fit_par[4] , 100 * 2.35* errorprop_divide(glob_spat_fit_par[5],glob_spat_fit_par_err[5],glob_spat_fit_par[4],glob_spat_fit_par_err[4]));
@@ -496,7 +541,7 @@ Int_t main(int argc, Char_t *argv[])
     scorecard_glob_spat->AddText(tmpstring);
     scorecard_glob_spat->Draw();
     c1->cd(2);
-    espec_glob_com->Draw();glob_com_fit->Draw("same");
+    espec_glob_com->Draw();if (!kFailedReadGlobComFit) glob_com_fit->Draw("same");
     TPaveText *scorecard_glob_com = new TPaveText(.65,.45,.85,.55,"NDC");
     scorecard_glob_com->SetShadowColor(0);
     sprintf(tmpstring,"E_{res} = %.1f #pm %.1f", 100 * 2.35*glob_com_fit_par[5] / glob_com_fit_par[4] , 100 * 2.35* errorprop_divide(glob_com_fit_par[5],glob_com_fit_par_err[5],glob_com_fit_par[4],glob_com_fit_par_err[4]));
@@ -1074,28 +1119,37 @@ Int_t main(int argc, Char_t *argv[])
 
 
 
-    for (Int_t k=0;k<6;k++){
+    if (!kFailedReadGlobFit){
+      for (Int_t k=0;k<6;k++){
         globfile <<  glob_spat_fit->GetParameter(k) << " ";
-    }
-    if (glob_spat_fit->GetParameter(4)){
+      }
+      if (glob_spat_fit->GetParameter(4)){
         globfile << 100 * 2.35 *glob_spat_fit->GetParameter(5) / glob_spat_fit->GetParameter(4) << "  ";
         globfile << 100 * 2.35 * TMath::Sqrt( TMath::Power((glob_spat_fit->GetParError(5) / glob_spat_fit->GetParameter(4)), 2) + 
                                               TMath::Power((glob_spat_fit->GetParameter(5) * glob_spat_fit->GetParError(4) 
                                               / (glob_spat_fit->GetParameter(4)*glob_spat_fit->GetParameter(4))), 2) ) << "  ";
-    }  else {
+      }  else {
         globfile <<  "0   0" ;
+      }
+    } else {
+      globfile << "0 0 0 0 0 0 0 0" ;
     }
 
-    for (Int_t k=0;k<6;k++){
-        globfile <<  glob_com_fit->GetParameter(k) << " ";
-    }
-    if (glob_com_fit->GetParameter(4)) {
-        globfile << 100 * 2.35 *glob_com_fit->GetParameter(5) / glob_com_fit->GetParameter(4) << "  ";
-        globfile << 100 * 2.35 * TMath::Sqrt( TMath::Power((glob_com_fit->GetParError(5) / glob_com_fit->GetParameter(4)), 2) + 
+
+    if (!kFailedReadGlobComFit){
+      for (Int_t k=0;k<6;k++){
+	globfile <<  glob_com_fit->GetParameter(k) << " ";
+      }
+      if (glob_com_fit->GetParameter(4)) {
+	globfile << 100 * 2.35 *glob_com_fit->GetParameter(5) / glob_com_fit->GetParameter(4) << "  ";
+	globfile << 100 * 2.35 * TMath::Sqrt( TMath::Power((glob_com_fit->GetParError(5) / glob_com_fit->GetParameter(4)), 2) + 
                                               TMath::Power((glob_com_fit->GetParameter(5) * glob_com_fit->GetParError(4)
                                                       / (glob_com_fit->GetParameter(4)*glob_com_fit->GetParameter(4))), 2) ) << "  ";
-    } else {
-        globfile <<  "0   0" ;
+      } else {
+         globfile <<  "0   0" ;
+      }
+    }else {
+	globfile << " 0  0 0  0 0  0  0  0" << endl;
     }
 
 
