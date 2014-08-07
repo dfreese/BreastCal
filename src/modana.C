@@ -353,8 +353,31 @@ Int_t main(int argc, Char_t *argv[])
     sprintf(tmpstring,"C%dF%d/flood_C%dF%dM%dA%d",cc,ff,cc,ff,mm,aa);
     TH2F	*back2 = (TH2F *) f->Get(tmpstring);
 
+    // need to read in the peaklocationfilename to draw the segmentation::
+    Char_t peaklocationfilename[FILENAMELENGTH];
+    sprintf(peaklocationfilename,"./CHIPDATA/%s.C%dF%d.module%d_apd%d_peaks",basestring,cc,ff,mm,aa);
+    strcat(peaklocationfilename,".txt");
+    ifstream infile;
+    infile.open(peaklocationfilename);
+    Int_t lines = 0;
+    Int_t k = 0;
+    Float_t xpeak,ypeak;
+    TGraph *seggraph = new TGraph(64);
+    seggraph->SetName("seggraph");
+    while (1){ 
+      if (!infile.good()) break;
+      infile >> k >>  xpeak >> ypeak;
+      if (k < 64) { seggraph->SetPoint(k,xpeak,ypeak);}
+       //       cout << k << ", " << U_x[i][j][k]<< ", " << U_y[i][j][k] << endl;
+               lines++;      
+                }
+      if (verbose) cout << "Found " << lines-1 << " peaks in  file " << peaklocationfilename << endl;
+      infile.close();
+
+
     TCanvas *c3 = new TCanvas("c3",tmpstring,500,500);
     back2->Draw("colz");
+    seggraph->Draw("PL");
     sprintf(tmpstring,"%s_%s.flood.png",basestring,modulestringcfma);
     c3->Print(tmpstring);
 
@@ -426,7 +449,7 @@ Int_t main(int argc, Char_t *argv[])
     TList * espec_glob_spat_func_list(0);
     espec_glob_spat_func_list = espec_glob_spat->GetListOfFunctions();
     if (espec_glob_spat_func_list == 0) {
-        cout << "list of funcitions not found in espec_glob_spat. Exiting" << endl;
+        cout << "list of functions not found in espec_glob_spat. Exiting" << endl;
         exit(-1);
     } else {
         glob_spat_fit = (TF1 *) espec_glob_spat_func_list->FindObject("fitfunc");
