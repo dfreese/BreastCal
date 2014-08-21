@@ -168,8 +168,9 @@ for voltage in $voltages; do
             peaks_failed_name_1="${chain_filebase}.C0F6.module${i}_apd1_peaks.failed.txt"
 
             if [ -e $peaks_failed_name_0 ] || [ -e $peaks_failed_name_1 ]; then
-                echo "segmentation of Module $i failed.  Exiting."
-                exit -1
+                echo "=============================================================="
+                echo "Segmentation of Module $i failed at ${voltage}V"
+                echo "=============================================================="
             fi
         done
 
