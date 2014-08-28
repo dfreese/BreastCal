@@ -535,12 +535,15 @@ Float_t Sel_GetEhis::GetPeak(TH1F *hist, Float_t xlow, Float_t xhigh, Bool_t for
   TSpectrum *ss = new TSpectrum();
   Float_t yy;
   //  Float_t corpeakpos;
-  if (verbose) { cout << " Funtion GetPeak. Looking for peak between " << xlow << " and " << xhigh << endl;}
+  //  verbose = kTRUE;
+
+  if (verbose) { cout << " Funtion GetPeak. Looking for peak between " << xlow << " and " << xhigh <<  " in histogram " << hist->GetName() << endl;}
   yy=0;
 
-	while((npeaks < 2) && (i < 9)) {
+	while((npeaks < 2) && (i < 10)) {
 	if(verbose) {cout << "loop " << i << " " << npeaks << endl;}
-	npeaks = ss->Search(hist, 3, "", 0.9 - (Float_t) i / 10);
+	if (i < 9 )  { npeaks = ss->Search(hist, 3, "", 0.9 - (Float_t) i / 10);}
+	else npeaks = ss->Search(hist, 3, "", 0.05);
         i++;
 	if(i > 10) {if(verbose) {cout << " Warning " << npeaks << "found !" << endl;}
 				    break;}
@@ -660,7 +663,7 @@ Float_t Sel_GetEhis::GetPeak(TH1F *hist, Float_t xlow, Float_t xhigh, Bool_t for
 			}
 
      /* Lower "SIGMA, threshold" of tspectrum  FIXME -- mind this too  */
- 		npeaks = ss->Search(hist, 3, "", 0.3);
+ 		npeaks = ss->Search(hist, 2, "", 0.2);
 		for(i = 0; i < npeaks; i++) {
 		if(verbose) {cout << "x= " << *(ss->GetPositionX() + i) << " y = " << *(ss->GetPositionY() + i) << endl;}
 				/* take largest peak with x position larger than lower fit limit */

@@ -322,6 +322,7 @@ Int_t main(int argc, Char_t *argv[])
         ComMean->SetPointError(k,0,mean_e);
         ComEres->SetPointError(k,0,eres_e);
 
+        //cout << k << " :: " << mean << " " << eres << endl;
 
         if (mean) ratio->Fill((Float_t) mean_spat/mean); 
 
@@ -484,24 +485,26 @@ Int_t main(int argc, Char_t *argv[])
     Double_t *glob_com_fit_par_err;
     Bool_t kFailedReadGlobComFit=kFALSE;
     if (espec_glob_com_func_list != 0) {
-      glob_com_fit = (TF1 *) espec_glob_spat_func_list->FindObject("fitfunc");
+      glob_com_fit = (TF1 *) espec_glob_com_func_list->FindObject("fitfunc");
         if (glob_com_fit != 0) {
 	  glob_com_fit->SetName("glob_com_fit");
 	  glob_com_fit_par = glob_com_fit->GetParameters();
 	  glob_com_fit_par_err = glob_com_fit->GetParErrors();
 	}
         else {
+	  cout << " Failed 2nd attempt " << endl;
 	  kFailedReadGlobComFit = kTRUE;
 	}
     } 
     else {
+	  cout << " Failed 1st attempt " << endl;
       kFailedReadGlobComFit = kTRUE;
     }
    if (kFailedReadGlobComFit){    
       glob_com_fit_par = new Double_t[6];
       glob_com_fit_par_err = new Double_t[6];
       for ( Int_t jj=0;jj<6;jj++){
-        glob_com_fit_par[jj] = 99+jj*0.1;
+        glob_com_fit_par[jj] = 59+jj*0.1;
         glob_com_fit_par_err[jj] = 1+jj*0.1;
       }
     }
@@ -739,6 +742,7 @@ Int_t main(int argc, Char_t *argv[])
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     up = TMath::Mean(64,ComEres->GetY()) + TMath::RMS(64,ComEres->GetY());
     low = TMath::Mean(64,ComEres->GetY()) - TMath::RMS(64,ComEres->GetY());
+    //    cout << " COM Mean :: " << TMath::Mean(64,ComEres->GetY()) << " RMS :: " << TMath::RMS(64,ComEres->GetY()) << endl;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     TBox	*box_com = new TBox(1.5, up, 63.5, low);
     Int_t	ci; /* for color index setting */
