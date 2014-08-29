@@ -215,8 +215,10 @@ for voltage in $voltages; do
             # If the number makes sense, run modana, which generates the images
             # displayed in generated webpage
             for i in 0 1; do
-                peaks_name="./CHIPDATA/${chain_filebase}.C0F6.module${i}_apd${i}_peaks.txt"
-                if [ -e $peaks_name ]; then
+                peaks_name="./CHIPDATA/${chain_filebase}.C0F6.module${module}_apd${i}_peaks.txt"
+                if [ ! -e $peaks_name ]; then
+                    echo "Warning: segmentation failed for module ${module} apd ${i} in $chain_filename"
+                else
                     echo "modana -f $chain_filename -C 0 -F 6 -M $module -A $i -t $name"
                     modana -f $chain_filename -C 0 -F 6 -M $module -A $i -t $name
                     check ${?} "modana -f $chain_filename -C 0 -F 6 -M $module -A $i -t $name"
