@@ -345,6 +345,10 @@ int main(int argc, Char_t *argv[])
                evt->x2=ER->x;
                evt->y2=ER->y;
 
+	       //HSU edited to add cartridge;
+	       evt->cartridge1=EL->cartridge;
+	       evt->cartridge2=ER->cartridge;
+
                evt->pos = ER->pos;
 
            if (evt->dtf < -TMath::Pi() ) evt->dtf+=2*TMath::Pi();

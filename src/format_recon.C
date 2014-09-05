@@ -256,8 +256,8 @@ int main(int argc, Char_t *argv[])
 			    //                            z1 = ZPITCH/2+(data->fin1-4)*ZPITCH;
 			    //                            z2 = ZPITCH/2+(data->fin2-4)*ZPITCH;
 
-			    z1 = ZPITCH/2+(4-data->fin1)*ZPITCH;
-			    z2 = ZPITCH/2+(4-data->fin2)*ZPITCH;
+			    z1 = ZPITCH/2+(7-data->fin1)*ZPITCH - (data->cartridge1)*ZPITCH*8;
+			    z2 = ZPITCH/2+(7-data->fin2)*ZPITCH - (data->cartridge2)*ZPITCH*8;
 
 
 

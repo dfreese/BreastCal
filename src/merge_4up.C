@@ -359,6 +359,9 @@ int main(int argc, Char_t *argv[])
                     event->fin=unsrt_evt->fin;
 		    event->m=unsrt_evt->m;
 
+		    //HSU ADDED THIS
+		    event->cartridge=unsrt_evt->cartridge;
+
 // This code was here for the USB stuff, where we assigned fin and module number. With ethernet it's already determined.            
 /*
                     event->chip=unsrt_evt->chip+(rb)*8;
