@@ -1,4 +1,5 @@
 #include "format_recon.h"
+#include <string>
 
 #define INCHTOMM 25.4
 #define XCRYSTALPITCH 1
@@ -17,12 +18,12 @@ void usage(void){
     return;
 }
 
-int main(int argc, Char_t *argv[])
+int main(int argc, char ** argv)
 {
     cout << "Welcome " << endl;
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    Char_t filename[FILENAMELENGTH] = "";
+    string filename("");
     Int_t threshold(-1000);
     int verbose(0);
     int ascii(0);
@@ -81,14 +82,7 @@ int main(int argc, Char_t *argv[])
                 ix++;
             } else {
                 /* filename '-f' */
-
-                if(strlen(argv[ix + 1]) < FILENAMELENGTH) {
-                    sprintf(filename, "%s", argv[ix + 1]);
-                } else {
-                    cout << "Filename " << argv[ix + 1] << " too long !" << endl;
-                    cout << "Exiting.." << endl;
-                    return(-99);
-                }
+                filename = string(argv[ix+1]);
             }
 
         }
@@ -97,7 +91,7 @@ int main(int argc, Char_t *argv[])
     rootlogon(verbose);
 
     if (PANELDISTANCE<0) {
-        cout << "please specify paneldistance: -p [DISTANCE].\nExiting." << endl;
+        usage();
         return(-2);
     }
 
@@ -107,13 +101,9 @@ int main(int argc, Char_t *argv[])
         cout << " Fine Time window =  " << FINETIMEWINDOW << "  " << endl;
     }
 
-    Char_t filebase[FILENAMELENGTH],rootfile[FILENAMELENGTH]; 
-    Char_t asciifile[FILENAMELENGTH], outfile[FILENAMELENGTH]; 
-
-    ifstream infile;
 
     cout << " Opening file " << filename << endl;
-    TFile *file = new TFile(filename,"OPEN");
+    TFile *file = new TFile(filename.c_str(),"OPEN");
     TTree *m = (TTree *) file->Get("merged");
     CoincEvent *data = new CoincEvent();
 
@@ -132,23 +122,37 @@ int main(int argc, Char_t *argv[])
     ofstream asciiout,outputfile;
 
     // Open output file - matching required format for ALEX //
-    strncpy(filebase,filename,strlen(filename)-5);
-    filebase[strlen(filename)-5]='\0';
-    sprintf(rootfile,"%s",filebase);
-    strcat(rootfile,".merged.root");
+    size_t root_pos(filename.rfind(".root"));
+    
+    if (root_pos == string::npos) {
+        cout << "Root file does not end in \".root\".  Exiting..." << endl;
+        return(-5);
+    }
+
+    string filebase(filename.substr(0,root_pos));
+
+    cout << "Filebase: " << filebase << endl;
+    
+
+    string rootfile(filebase+string(".merged.root"));
+    string asciifile(filebase+string(".merged.ascii"));
     if (ascii){
-        sprintf(asciifile,"%s.merged.ascii",filebase);
-        asciiout.open(asciifile);
+        asciiout.open(asciifile.c_str());
     }
     cout << " Opening file " << rootfile << " for writing " << endl;
     // OPEN YOUR OUTPUTFILE HERE ! 
 
+
+    char * temp_name = new char[filebase.length() + 100];
     if (RANDOMS) {
-        sprintf(outfile,"%s_p%.2f_random.cuda",filebase,PANELDISTANCE);
+        sprintf(temp_name,"%s_p%.2f_random.cuda",filebase.c_str(),PANELDISTANCE);
     } else {
-        sprintf(outfile,"%s_p%.2f_t%.0f.cuda",filebase,PANELDISTANCE, FINETIMEWINDOW);
+        sprintf(temp_name,"%s_p%.2f_t%.0f.cuda",filebase.c_str(),PANELDISTANCE, FINETIMEWINDOW);
     }
-    outputfile.open(outfile);
+    string outfile(temp_name);
+    delete[] temp_name;
+    cout << "Outfile: " << outfile << endl;
+    outputfile.open(outfile.c_str());
 
     Long64_t entries_m = m->GetEntries();
 
