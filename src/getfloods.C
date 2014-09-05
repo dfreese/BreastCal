@@ -101,7 +101,7 @@ Int_t main(int argc, Char_t *argv[])
     sprintf(treename,"mdata");         
     //         block = (TTree *)  rfile->Get(treename);
     //	 Perf ana code
-    TChain *block;
+    TChain *block(0);
     block = (TChain *) rfile->Get(treename);
     //         blockchain->Merge("mergedchain.root");
     //         TFile *mc = new TFile("mergedchain.root");
@@ -274,6 +274,7 @@ Int_t main(int argc, Char_t *argv[])
 
 #else
     /* Loading the shared library */
+    cout << "getfloods - loading libModuleAna.so" << endl;
     exestring.Form("gSystem->Load(\"%s/lib/libModuleAna.so\")",libpath);
     p->Exec(exestring.Data());
 
