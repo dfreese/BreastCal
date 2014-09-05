@@ -29,7 +29,7 @@ int main(int argc, Char_t *argv[]) {
     cout << "Welcome to Merge_4up. Sorting data from each 4up. " << endl;
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    Char_t		filenamel[FILENAMELENGTH] = "";
+    string filename;
     Int_t verbose(0);
     Int_t ncuts(0);
     Long64_t timeinterval=(0);
@@ -82,7 +82,7 @@ int main(int argc, Char_t *argv[]) {
         /* filename '-f' */
         if(strncmp(argv[ix], "-f", 2) == 0) {
             if(strlen(argv[ix + 1]) < FILENAMELENGTH) {
-                sprintf(filenamel, "%s", argv[ix + 1]);
+                filename = string(argv[ix + 1]);
                 filenamespec = kTRUE;
             }
             else {
@@ -119,38 +119,33 @@ int main(int argc, Char_t *argv[]) {
 
     rootlogon(verbose);
 
-
-    Char_t filebase[FILENAMELENGTH],rootfile[FILENAMELENGTH]; 
-    // Variable used only once uninitialized...
-    Int_t m;
-    strncpy(filebase,filenamel,strlen(filenamel)-9);
-    filebase[strlen(filenamel)-9]='\0';
-
-
-    if (verbose){
-        cout << " filename = " << filenamel << endl;
-        cout << " filebase = " << filebase << endl; 
-        cout << " Opening file " << filenamel << endl;
+    size_t root_pos(filename.rfind(".root"));
+    if (root_pos == string::npos) {
+        cout << "Root file does not end in \".root\".  Exiting..." << endl;
+        return(-5);
     }
-    TFile *file_left = new TFile(filenamel,"OPEN");
+    string filebase(filename.substr(0,root_pos));
+
+    if (verbose) {
+        cout << " filename = " << filename << endl;
+        cout << " filebase = " << filebase << endl; 
+        cout << " Opening file " << filename << endl;
+    }
+    TFile *file_left = new TFile(filename.c_str(),"OPEN");
 
     if (!file_left->IsOpen()) {
-        cout << "problems opening file " << filenamel;
+        cout << "problems opening file " << filename;
         cout << "\n Exiting " << endl; 
         return -11;
     }
 
 
-    if (verbose ) {
+    if (verbose) {
         cout << " File Content : " << endl; 
         file_left->ls();
     }
 
-
-
-
     Char_t treename[40];
-
     sprintf(treename,"CalTree");
     cal = (TTree *) file_left->Get(treename);
     if (!(cal)) {
@@ -159,7 +154,6 @@ int main(int argc, Char_t *argv[]) {
     }
 
     cal->SetBranchAddress("Calibrated Event Data",&unsrt_evt);
-
 
     // Create Tree //
     Long64_t entries(cal->GetEntries());
@@ -171,7 +165,6 @@ int main(int argc, Char_t *argv[]) {
         cout << " Last timestamp = " << lasttime << endl;
     }
 
-    Long64_t l;
     Long64_t curevent(0);
 
 
@@ -225,12 +218,14 @@ int main(int argc, Char_t *argv[]) {
         }
         time_before_filling = clock();
 
-        sprintf(rootfile,"%s_part%d.root",filebase,kk);
+        stringstream ss;
+        ss << filebase << "_part" << kk << ".root";
+        string rootfile(ss.str());
 
         if (verbose) {
             cout << " Opening file " << rootfile << " for writing " << endl;
         }
-        TFile *calfile = new TFile(rootfile,"RECREATE");
+        TFile *calfile = new TFile(rootfile.c_str(),"RECREATE");
         TTree *panel = new TTree("panel","Sorted Panel Data") ;
         Long64_t lasteventtime(0);
         panel->SetDirectory(0); 
@@ -240,7 +235,7 @@ int main(int argc, Char_t *argv[]) {
         // this could be simple: we just split the file according to the timestamp 
         // check whether timestamp[unsrt_evt.chip]  
 
-        l=curevent;
+        Int_t l(curevent);
         curtime=0;
         Int_t stop(0);
         Int_t extra(0);
@@ -353,7 +348,7 @@ int main(int argc, Char_t *argv[]) {
 
         curevent=l;
         if (verbose) {
-            cout << " Curevent[" << m << "] = " << curevent << "; curtime = " << curtime << endl;
+            cout << " Curevent = " << curevent << "; curtime = " << curtime << endl;
         }
 
         partentries[kk]=panel->GetEntries();
@@ -368,9 +363,9 @@ int main(int argc, Char_t *argv[]) {
         Long64_t *table = new Long64_t[N];
         Long64_t *sorted = new Long64_t[N];
 
-        for (l=0; l<N; l++) {
-            panel->GetEntry(l);
-            table[l] = event->ct;
+        for (int ii=0; ii<N; ii++) {
+            panel->GetEntry(ii);
+            table[ii] = event->ct;
         } 
 
         if (verbose) {
@@ -399,15 +394,15 @@ int main(int argc, Char_t *argv[]) {
         panel->LoadBaskets(2328673567232LL);
         thistime=clock();  
 
-        for (l=0;l<N;l++){
-            if ((((l) % 5000000) == 0) && (l > 0) && (verbose)) {
-                cout << l << " entries processed; " ;
+        for (int ii = 0; ii < N; ii++) {
+            if ((((ii) % 5000000) == 0) && (ii > 0) && (verbose)) {
+                cout << ii << " entries processed; " ;
                 cout << " time spent = " <<(double)  (clock()-thistime)/CLOCKS_PER_SEC;
                 cout << "; since start: " <<(double) (clock()-time_after_sorting)/CLOCKS_PER_SEC <<endl; 
                 thistime = clock();
             }
 
-            panel->GetEntry(sorted[l]);
+            panel->GetEntry(sorted[ii]);
             evt=event;
             fourup->Fill();
         }
