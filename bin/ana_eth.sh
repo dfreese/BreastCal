@@ -2,6 +2,12 @@
 
 ##############################################################################################################
 
+NUM_CARTRIDGES_PER_PANEL=2;
+
+##############################################################################################################
+    
+##############################################################################################################
+
 function mkfolder ()
 {
     FOLDER=$1;
@@ -305,27 +311,25 @@ if [[ $dosegmentation -eq 1 ]]; then
         check ${?} "chain_parsed ${BASE}.root"; 
         getfloods -f ${BASE}.root
         check ${?} "getfloods -f  ${BASE}.root"; 
-        #for i in `seq 0 7`; do (anafloods_psf_v2 -f ${BASE}.root -c 0 -l $i &); sleep 1; done;
 
         RUNNINGJOBS=0;
         j=0;
         for i in `seq 0 7`; do 
-            if [ $RUNNINGJOBS -lt $CORES ]; then 
-                (( j++ ));
-                #   echo " SUBMITTING JOB "
-                anafloods_psf_v2 -f ${BASE}.root -c 0 -l $i &
-                pids+=($!);
-                (( RUNNINGJOBS++ ));
-            else
-                #    echo " RUNNINGJOBS : $RUNNINGJOBS"
-                waitsome $pids 1
-                RUNNINGJOBS=${#pids[@]}
-                #    echo " ANAFLOODS LOOP RUNNINGJOBS after waitsome : $RUNNINGJOBS"
-                (( j++ )) ;
-                anafloods_psf_v2 -f ${BASE}.root -c 0 -l $i &
-                pids+=($!);
-                (( RUNNINGJOBS++ ));
-            fi;
+            for ii in `seq 0 $((NUM_CARTRIDGES_PER_PANEL-1))`; do
+                if [ $RUNNINGJOBS -lt $CORES ]; then 
+                    (( j++ ));
+                    anafloods_psf_v2 -f ${BASE}.root -c $ii -l $i &
+                    pids+=($!);
+                    (( RUNNINGJOBS++ ));
+                else
+                    waitsome $pids 1
+                    RUNNINGJOBS=${#pids[@]}
+                    (( j++ )) ;
+                    anafloods_psf_v2 -f ${BASE}.root -c $ii -l $i &
+                    pids+=($!);
+                    (( RUNNINGJOBS++ ));
+                fi;
+            done;
         done;
         cd ..
     done;
