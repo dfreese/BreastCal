@@ -1,5 +1,12 @@
 #include "format_recon.h"
-void usage(void);
+
+#define INCHTOMM 25.4
+#define XCRYSTALPITCH 1
+#define YCRYSTALPITCH 1
+#define XMODULEPITCH 0.405*INCHTOMM
+#define YOFFSET 1.51 // mm
+#define YDISTANCEBETWEENAPDS (0.32+0.079)*INCHTOMM  // 10.1346 mm
+#define ZPITCH 0.0565*INCHTOMM //
 
 void usage(void){
     cout << " format_recon [-r -v -a] -f [filename] -p [panelseparation] -t [finetimewindow] -ft [threshold] -mt [maxtime]]" <<endl;
@@ -7,36 +14,25 @@ void usage(void){
     cout << " -v : verbose " << endl;
     cout << " -a : ascii  " << endl;
     cout << " -mt :: only give the first maxtime minutes " << endl;
-    cout << " -ap : asymmetric panel separation.  Assume p is near wall, ap is room side" << endl;
     return;
 }
-
-
-
 
 int main(int argc, Char_t *argv[])
 {
     cout << "Welcome " << endl;
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    Char_t		filename[FILENAMELENGTH] = "";
-    Int_t		verbose = 0, threshold=-1000;
-    Int_t		ix,ascii;
-    buf buffer; 
-    Float_t PANELDISTANCE=-1; // mm
-    Bool_t RANDOMS=0;
-    Float_t FINETIMEWINDOW=40;
-    Int_t MAXTIME=999999999;
-    bool use_asym_panel_sep(false);
-    float panel_sep_wall(0);
-    float panel_sep_room(0);
-    float panel_sep_avg(0);
-    float panel_sep_delta(0);
+    Char_t filename[FILENAMELENGTH] = "";
+    Int_t threshold(-1000);
+    int verbose(0);
+    int ascii(0);
+    Float_t PANELDISTANCE(-1); // mm
+    Bool_t RANDOMS(0);
+    Float_t FINETIMEWINDOW(40);
+    Int_t MAXTIME(999999999);
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    ascii=0;
-
-    for(ix = 1; ix < argc; ix++) {
+    for(int ix = 1; ix < argc; ix++) {
 
         /*
          * Verbose '-v'
@@ -77,13 +73,6 @@ int main(int argc, Char_t *argv[])
             cout <<"Only events within first " << MAXTIME << " minutes." << endl;
             ix++;
         }
-
-        if(strncmp(argv[ix], "-ap", 3) == 0) {
-            use_asym_panel_sep = true;
-            panel_sep_room = atoi( argv[ix+1]);
-            ix++;
-        }
-
 
         if(strncmp(argv[ix], "-f", 2) == 0) {
             if(strncmp(argv[ix], "-ft", 3) == 0) {
@@ -163,28 +152,7 @@ int main(int argc, Char_t *argv[])
 
     Long64_t entries_m = m->GetEntries();
 
-
     cout << " Processing " <<  entries_m  <<  " Events " << endl;
-
-    Long64_t i;
-
-    Double_t x1,y1,z1,x2,y2,z2;
-
-    buffer.cdt =0;
-    buffer.ri=0;
-    buffer.si=0;
-    buffer.Si=0;
-
-
-#define INCHTOMM 25.4
-
-#define XCRYSTALPITCH 1
-#define YCRYSTALPITCH 1
-#define XMODULEPITCH 0.405*INCHTOMM
-    // #define YOFFSET 0.057*INCHTOMM // 1.4478 mm   -  1.51 -> 0.057 is distance to the hole, distance to module is 0.0595
-#define YOFFSET 1.51 // mm
-#define YDISTANCEBETWEENAPDS (0.32+0.079)*INCHTOMM  // 10.1346 mm
-#define ZPITCH 0.0565*INCHTOMM //
 
     Long64_t lines=0;
     Double_t TOTALPANELDISTANCE=PANELDISTANCE+2*YOFFSET;
@@ -194,22 +162,10 @@ int main(int argc, Char_t *argv[])
     cout << " mm, APD1 @ " << PANELDISTANCE+YOFFSET+YDISTANCEBETWEENAPDS << " mm."<<endl ;
     cout << "Z:: ZPITCH : " << ZPITCH << " mm."<<endl;
 
-    Int_t p2=0;
-    Int_t p1=0;
-
-    if (use_asym_panel_sep) {
-        panel_sep_wall = TOTALPANELDISTANCE;
-        panel_sep_room += 2*YOFFSET;
-        panel_sep_avg = (panel_sep_wall + panel_sep_room) / 2;
-        panel_sep_delta = (panel_sep_room - panel_sep_wall ) / 164.5;
-    }
-
-
     Long64_t firsteventtime=0;
     Long64_t firsteventtimeset=kFALSE;
 
-    for (i=0;i<entries_m;i++) {
-
+    for (Long64_t i=0; i<entries_m; i++) {
         m->GetEntry(i);
 
         // YOUR CODE HERE -- YOU HAVE ACCESS TO THE STRUCT DATA AND ITS MEMBERS TO DO WHATEVER CONSTRAINTS //
@@ -228,47 +184,33 @@ int main(int argc, Char_t *argv[])
                                 cout << "firsteventtime : " << firsteventtime/(60*COARSECLOCKFREQUENCY) << " min" << endl;
                             }
 
+                            Double_t x1 = (XMODULEPITCH-8*XCRYSTALPITCH)/2+(data->m1-8)*XMODULEPITCH;  
+                            Double_t x2 = (XMODULEPITCH-8*XCRYSTALPITCH)/2+(data->m2-8)*XMODULEPITCH;
 
-                            // NOTE:: X was pointing differently before !
+                            x1 +=  ( TMath::Floor(data->crystal1/8)  + 0.5  )*XCRYSTALPITCH;
+                            x2 +=  ( 7-TMath::Floor(data->crystal2/8)  + 0.5  )*XCRYSTALPITCH;
 
-                            x1 = (XMODULEPITCH-8*XCRYSTALPITCH)/2+(data->m1-8)*XMODULEPITCH;  
-                            x2 = (XMODULEPITCH-8*XCRYSTALPITCH)/2+(data->m2-8)*XMODULEPITCH;
+                            Double_t y1 = -TOTALPANELDISTANCE/2;
+                            Double_t y2 = TOTALPANELDISTANCE/2;
+                            y1 -= data->apd1*YDISTANCEBETWEENAPDS;
+                            y2 += data->apd2*YDISTANCEBETWEENAPDS;
+                            y1 -= (( 7-TMath::Floor(data->crystal1%8) * YCRYSTALPITCH ) + 0.5  );
+                            y2 += (( 7-TMath::Floor(data->crystal2%8) * YCRYSTALPITCH ) + 0.5  );                              
 
-			    x1 +=  ( TMath::Floor(data->crystal1/8)  + 0.5  )*XCRYSTALPITCH;
-			    x2 +=  ( 7-TMath::Floor(data->crystal2/8)  + 0.5  )*XCRYSTALPITCH;
-			   
-                            // This "x2" is for ROTATED SETUP:: 
-                            // x2 = (XMODULEPITCH-8*XCRYSTALPITCH)/2+(7-data->m2)*XMODULEPITCH;  
-                           
-                            if (use_asym_panel_sep) {
-                                y1 = (panel_sep_avg + x1 * panel_sep_delta)/2;
-                                y2 = (panel_sep_avg + x2 * panel_sep_delta)/-2;
-                            } else {
-                                y1 = TOTALPANELDISTANCE/2;
-                                y2 = -TOTALPANELDISTANCE/2;
-                            }
-                            y1 +=   data->apd1*YDISTANCEBETWEENAPDS;
-                            y2 -=   data->apd2*YDISTANCEBETWEENAPDS;
-                            y1 +=  (( 7-TMath::Floor(data->crystal1%8) * YCRYSTALPITCH ) + 0.5  );
-                            y2 -=  (( 7-TMath::Floor(data->crystal2%8) * YCRYSTALPITCH ) + 0.5  );                              
+                            Double_t z1 = (((data->cartridge1 - CARTRIDGES_PER_PANEL/2.0) * FINS_PER_CARTRIDGE) + data->fin1 + 0.5) * ZPITCH;
+                            Double_t z2 = (((data->cartridge2 - CARTRIDGES_PER_PANEL/2.0) * FINS_PER_CARTRIDGE) + data->fin2 + 0.5) * ZPITCH;
 
-			    // David commented out the below 2 lines to test something.
-			    //                            z1 = ZPITCH/2+(data->fin1-4)*ZPITCH;
-			    //                            z2 = ZPITCH/2+(data->fin2-4)*ZPITCH;
-
-			    z1 = ZPITCH/2+(7-data->fin1)*ZPITCH - (data->cartridge1)*ZPITCH*8;
-			    z2 = ZPITCH/2+(7-data->fin2)*ZPITCH - (data->cartridge2)*ZPITCH*8;
-
-
-
-                            // this is a good data now ..
-                            // do something+ write to disk
+                            buf buffer; 
                             buffer.x1 = x1;
                             buffer.x2 = x2;
                             buffer.y1 = y1;
                             buffer.y2 = y2;
                             buffer.z1 = z1;
                             buffer.z2 = z2;
+                            buffer.cdt = 0;
+                            buffer.ri = 0;
+                            buffer.si = 0;
+                            buffer.Si = 0;
 
                             lines++;
 
@@ -283,13 +225,11 @@ int main(int argc, Char_t *argv[])
             }
         }
     }
-    cout << " p1 : "<< p1 <<" p2 : " << p2 << endl;
     // loop over entries
     if (ascii) {
         asciiout.close();
     }
     cout << " wrote " << lines << " LORS. " << endl;
-#define COARSEDIFF 100       
     return(0);
 }
 
