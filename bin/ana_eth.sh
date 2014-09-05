@@ -219,24 +219,14 @@ if [[ $dodecode -eq 1 ]]; then
         echo -n " Converting pedfiles @ "
         timing $STARTTIME
         RUNNINGJOBS=0;
-        j=0;
-        for i in `cat pedfiles`; do 
-            if [ $RUNNINGJOBS -lt $CORES ]; then 
-                (( j++ ));
-                #   echo " SUBMITTING JOB "
-                pedconv $i pedconv_$j.out &
-                pids+=($!);
-                (( RUNNINGJOBS++ ));
-            else
-                #    echo " RUNNINGJOBS : $RUNNINGJOBS"
+        for $ped_file in `cat pedfiles`; do 
+            if [ $RUNNINGJOBS -ge $CORES ]; then 
                 waitsome $pids 1
                 RUNNINGJOBS=${#pids[@]}
-                #    echo " PEDCONV LOOP RUNNINGJOBS after waitsome : $RUNNINGJOBS"
-                (( j++ )) ;
-                pedconv $i pedconv_$j.out &
-                pids+=($!);
-                (( RUNNINGJOBS++ ));
-            fi;
+            fi
+            pedconv $ped_file pedconv_$j.out &
+            pids+=($!);
+            (( RUNNINGJOBS++ ));
         done;
 
         # pedestal correction, parsing and fine time calculation
@@ -292,10 +282,10 @@ if [[ $dosegmentation -eq 1 ]]; then
         KK=${k:0:1}
         BASE=`ls DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
         ls DAQ*${KK}0*root | cut -d _ -f 5 | sort -n | awk -v FBASE=$BASE '{print FBASE"0_"$1}' > filelist
-        #chain_parsed -f filelist -o ${BASE}.root
-        #check ${?} "chain_parsed ${BASE}.root"; 
-        #getfloods -f ${BASE}.root
-        #check ${?} "getfloods -f  ${BASE}.root"; 
+        chain_parsed -f filelist -o ${BASE}.root
+        check ${?} "chain_parsed ${BASE}.root"; 
+        getfloods -f ${BASE}.root
+        check ${?} "getfloods -f  ${BASE}.root"; 
 
         RUNNINGJOBS=0;
         for cartridge in `seq 0 $((NUM_CARTRIDGES_PER_PANEL-1))`; do
@@ -373,21 +363,15 @@ if [[ $dosort -eq 1 ]]; then
         # note:: in the future, we may have up to 3 L's : L0 L1 and L3
         while [ $i -le 0 ] ; do
             BASE=`ls ./DAQ*${KK}${i}*root | head -n 1 | cut -d ${KK} -f 1`${KK} 
-            if [ $RUNNINGJOBS -lt $CORES ]; then 
-                merge_4up -f ./${BASE}.cal.root -nc ${SPLITS} -ts ${SPLITTIME} -lt ${TOTIME} > merge_4up.${KK}${i}.out   &
-                check $? "merge_4up panel ${k}${i}"
-                pids+=($!);
-                (( RUNNINGJOBS++ ));
-                (( i++ ));
-            else
-                log " RUNNINGJOBS before waitsome @merging : $RUNNINGJOBS  ( pids :: ${pids[@]} )"
+            if [ $RUNNINGJOBS -ge $CORES ]; then 
                 waitsome $pids 1
                 RUNNINGJOBS=${#pids[@]}
-                merge_4up -f ./${BASE}.cal.root -nc ${SPLITS} -ts ${SPLITTIME} -lt ${TOTIME} > merge_4up.${KK}${i}.out   &
-                check $? "merge_4up panel ${k}${i}"
-                pids+=($!);
-                (( RUNNINGJOBS++ ));
-            fi;
+            fi
+            merge_4up -f ./${BASE}.cal.root -nc ${SPLITS} -ts ${SPLITTIME} -lt ${TOTIME} > merge_4up.${KK}${i}.out   &
+            check $? "merge_4up panel ${k}${i}"
+            pids+=($!);
+            (( RUNNINGJOBS++ ));
+            (( i++ ));
         done;
         cd ..
     done;
@@ -411,29 +395,18 @@ if [[ $domerge -eq 1 ]]; then
 
     BASE=` ls -1 ./Left/DAQ*part*root | head -n 1 | cut -d / -f 3 | cut -d _ -f 1-3` 
 
-    RUNNINGJOBS=0;
-    j=0;
-
     # counting from zero
     (( LEFTSPLITS-- )) ;
 
+    RUNNINGJOBS=0;
     for i in `seq 0 $LEFTSPLITS` ; do 
-        if [ $RUNNINGJOBS -lt $CORES ]; then 
-            (( j++ ));
-            #   echo " SUBMITTING JOB "
-            merge_coinc -fl ./Left/${BASE}_L_part${i}.root -fr ./Right/${BASE}_R_part${i}.root -of  ./${BASE}_part${i}.root &  
-            pids+=($!);
-            (( RUNNINGJOBS++ ));
-        else
-            log " merge_coinc RUNNINGJOBS : $RUNNINGJOBS"
+        if [ $RUNNINGJOBS -ge $CORES ]; then 
             waitsome $pids 1
             RUNNINGJOBS=${#pids[@]}
-            log " merge_coinc LOOP RUNNINGJOBS after waitsome : $RUNNINGJOBS"
-            (( j++ )) ;
-            merge_coinc -fl ./Left/${BASE}_L_part${i}.root -fr ./Right/${BASE}_R_part${i}.root -of  ./${BASE}_part${i}.root & 
-            pids+=($!);
-            (( RUNNINGJOBS++ ));
-        fi;
+        fi
+        merge_coinc -fl ./Left/${BASE}_L_part${i}.root -fr ./Right/${BASE}_R_part${i}.root -of  ./${BASE}_part${i}.root &  
+        pids+=($!);
+        (( RUNNINGJOBS++ ));
     done;
 
     waitall $pids
