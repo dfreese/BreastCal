@@ -34,6 +34,10 @@ class CoincEvent : public TObject {
   Short_t m2;
   Short_t apd2;
   Short_t crystal2;
+  
+  Short_t cartridge1;
+  Short_t cartridge2;
+
   Int_t pos;
  
   CoincEvent();
