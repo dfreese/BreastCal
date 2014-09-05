@@ -247,7 +247,6 @@ if [[ $dodecode -eq 1 ]]; then
         timing $STARTTIME
 
         RUNNINGJOBS=0
-        c=0;
 
         NOHIT=-50;
 
@@ -259,24 +258,15 @@ if [[ $dodecode -eq 1 ]]; then
                 pos=0;
             fi;
 
-            if [ $RUNNINGJOBS -lt $CORES ]; then 
-                (( c++ ));
-                echo -n " SUBMITTING JOB "
-                echo "${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 -pos $pos -n $NOHIT; "
-                ${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 -pos $pos -n  $NOHIT -cmap "../DAQ_Board_Map.nfo" > $data.conv.out &
-                pids+=($!);
-                (( RUNNINGJOBS++ ));
-            else
-                #    echo " RUNNINGJOBS : $RUNNINGJOBS"
+            if [ $RUNNINGJOBS -ge $CORES ]; then 
                 waitsome $pids 1
-                echo -n " SUBMITTING JOB "
-                echo "${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 -pos $pos -n  $NOHIT; "
-                ${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 -pos $pos -n  $NOHIT -cmap "../DAQ_Board_Map.nfo" > $data.conv.out &
-                pids+=($!);
-                (( RUNNINGJOBS++ ));
                 RUNNINGJOBS=${#pids[@]}
-                #    echo " RUNNINGJOBS after waitsome : $RUNNINGJOBS"
-            fi;
+            fi
+            echo -n " SUBMITTING JOB "
+            echo "${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 -pos $pos -n $NOHIT; "
+            ${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 -pos $pos -n  $NOHIT -cmap "../DAQ_Board_Map.nfo" > $data.conv.out &
+            pids+=($!);
+            (( RUNNINGJOBS++ ));
         done < files;
 
         waitall $pids
@@ -285,17 +275,12 @@ if [[ $dodecode -eq 1 ]]; then
         timing $STARTTIME 
         log " PIDS = ${pids[@]} "
 
-
         TIMECHECK=0
         RUNNINGJOBS=0;
-        c=0;
-
         #echo " PIDS before calibration : ${#pids[@]} :: ${pids[@]} "
 
         cd ..
-
     done;
-
 fi;
 
 
@@ -307,35 +292,27 @@ if [[ $dosegmentation -eq 1 ]]; then
         KK=${k:0:1}
         BASE=`ls DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
         ls DAQ*${KK}0*root | cut -d _ -f 5 | sort -n | awk -v FBASE=$BASE '{print FBASE"0_"$1}' > filelist
-        chain_parsed -f filelist -o ${BASE}.root
-        check ${?} "chain_parsed ${BASE}.root"; 
-        getfloods -f ${BASE}.root
-        check ${?} "getfloods -f  ${BASE}.root"; 
+        #chain_parsed -f filelist -o ${BASE}.root
+        #check ${?} "chain_parsed ${BASE}.root"; 
+        #getfloods -f ${BASE}.root
+        #check ${?} "getfloods -f  ${BASE}.root"; 
 
         RUNNINGJOBS=0;
-        j=0;
-        for i in `seq 0 7`; do 
-            for ii in `seq 0 $((NUM_CARTRIDGES_PER_PANEL-1))`; do
-                if [ $RUNNINGJOBS -lt $CORES ]; then 
-                    (( j++ ));
-                    anafloods_psf_v2 -f ${BASE}.root -c $ii -l $i &
-                    pids+=($!);
-                    (( RUNNINGJOBS++ ));
-                else
+        for cartridge in `seq 0 $((NUM_CARTRIDGES_PER_PANEL-1))`; do
+            for fin in `seq 0 7`; do 
+                if [ $RUNNINGJOBS -ge $CORES ]; then 
                     waitsome $pids 1
                     RUNNINGJOBS=${#pids[@]}
-                    (( j++ )) ;
-                    anafloods_psf_v2 -f ${BASE}.root -c $ii -l $i &
-                    pids+=($!);
-                    (( RUNNINGJOBS++ ));
-                fi;
+                fi
+                echo "anafloods_psf_v2 -f ${BASE}.root -c $cartridge -l $fin &"
+                anafloods_psf_v2 -f ${BASE}.root -c $cartridge -l $fin &
+                pids+=($!);
+                (( RUNNINGJOBS++ ));
             done;
         done;
         cd ..
     done;
 fi
-
-
 
 
 #############################################################################################################
