@@ -127,6 +127,9 @@ voltages=$(cat filelist | grep -v _ped_ | sed 's/V.\{7,\}dat//g' | sed 's/.\{11,
 
 # Now run through the calibration chain for each of the voltages
 for voltage in $voltages; do
+    if [ "$voltage" == "0000" ]; then
+        continue;
+    fi
     voltage_files=$(grep $voltage filelist)
     echo "Calibrating dataset for voltage: ${voltage}V"
     voltage_filelist="filelist_${voltage}v"
@@ -209,41 +212,49 @@ for voltage in $voltages; do
         # the module name.  Separate those out
         name=$( echo "$line" | awk '{print $2}' )
         module=$( echo "$line" | awk '{print $1}' )
-        echo "Working on ${name} number: ${module}"
-        # Make sure the module number makes sense 0-7
-        if [ $module -ge 0 ] && [ $module -lt 8 ]; then
-            # If the number makes sense, run modana, which generates the images
-            # displayed in generated webpage
-            for i in 0 1; do
-                peaks_name="./CHIPDATA/${chain_filebase}.C0F6.module${module}_apd${i}_peaks.txt"
-                if [ ! -e $peaks_name ]; then
-                    echo "Warning: segmentation failed for module ${module} apd ${i} in $chain_filename"
-                else
-                    echo "modana -f $chain_filename -C 0 -F 6 -M $module -A $i -t $name"
-                    modana -f $chain_filename -C 0 -F 6 -M $module -A $i -t $name
-                    check ${?} "modana -f $chain_filename -C 0 -F 6 -M $module -A $i -t $name"
-                fi
-            done;
-        fi
+        # Check for modules with blank names, and assume there wasn't a module
+        # there to be tested.
+        if [ -z "$name" ]; then
+            echo "##################################################"
+            echo "Module Name for number $module is blank.  Skipping"
+            echo "##################################################"
+        else
+            echo "Working on ${name} number: ${module}"
+            # Make sure the module number makes sense 0-7
+            if [ $module -ge 0 ] && [ $module -lt 8 ]; then
+                # If the number makes sense, run modana, which generates the images
+                # displayed in generated webpage
+                for i in 0 1; do
+                    peaks_name="./CHIPDATA/${chain_filebase}.C0F6.module${module}_apd${i}_peaks.txt"
+                    if [ ! -e $peaks_name ]; then
+                        echo "Warning: segmentation failed for module ${module} apd ${i} in $chain_filename"
+                    else
+                        echo "modana -f $chain_filename -C 0 -F 6 -M $module -A $i -t $name"
+                        modana -f $chain_filename -C 0 -F 6 -M $module -A $i -t $name
+                        check ${?} "modana -f $chain_filename -C 0 -F 6 -M $module -A $i -t $name"
+                    fi
+                done;
+            fi
 
-        # create a folder for the module in the analysis output directory
-        module_dir="$analysis_output_dir/$name"
-        if [ ! -d $module_dir ]; then
-            echo "mkdir $module_dir"
-            mkdir $module_dir
-        fi
-        
-        # and create a folder for each voltage within the module directory
-        voltage_dir="$module_dir/$voltage"
-        if [ ! -d $voltage_dir ]; then
-            echo "mkdir $voltage_dir"
-            mkdir $voltage_dir
-        fi
+            # create a folder for the module in the analysis output directory
+            module_dir="$analysis_output_dir/$name"
+            if [ ! -d $module_dir ]; then
+                echo "mkdir $module_dir"
+                mkdir $module_dir
+            fi
 
-        # Finally copy over all of the images to be used in the generation of
-        # the webpages to view each of these images
-        echo "cp ${FILENAME}_${voltage}V_C0F6M${module}A[0,1]_* $voltage_dir/"
-        cp ${FILENAME}_${voltage}V_C0F6M${module}A[0,1]_* $voltage_dir/
+            # and create a folder for each voltage within the module directory
+            voltage_dir="$module_dir/$voltage"
+            if [ ! -d $voltage_dir ]; then
+                echo "mkdir $voltage_dir"
+                mkdir $voltage_dir
+            fi
+
+            # Finally copy over all of the images to be used in the generation of
+            # the webpages to view each of these images
+            echo "cp ${FILENAME}_${voltage}V_C0F6M${module}A[0,1]_* $voltage_dir/"
+            cp ${FILENAME}_${voltage}V_C0F6M${module}A[0,1]_* $voltage_dir/
+        fi
     done  < $module_list
 done
 
@@ -252,60 +263,75 @@ while read line ; do
     # the module name.  Separate those out
     name=$( echo "$line" | awk '{print $2}' )
     module=$( echo "$line" | awk '{print $1}' )
-    echo "Working on ${name} number: ${module}"
-    module_dir="$analysis_output_dir/$name"
+    # Check for modules with blank names, and assume there wasn't a module
+    # there to be tested.
+    if [ -z "$name" ]; then
+        echo "##################################################"
+        echo "Module Name for number $module is blank.  Skipping"
+        echo "##################################################"
+    else
+        echo "Working on ${name} number: ${module}"
+        module_dir="$analysis_output_dir/$name"
 
-    # Save the current directory to switch back to it after doing the work
-    prev_dir=`pwd`
-    cd $module_dir
-
-    # generate the summary images within the root director for each module from
-    # summary images for each apd for each voltage
-    for voltage in $voltages; do
-        voltage_dir="$module_dir/$voltage"
-        cd $voltage_dir
-        voltage_summary_pic="${FILENAME}_${voltage}_C0F6M${module}_${name}.sum.png"
-        # Combine all of the summary images into one vertical image to be
-        # placed in the root for the module
-        convert -append *.sum.png $voltage_summary_pic
-        check ${?} "convert -append *.sum.png $voltage_summary_pic"
-        # move that into the root directory after it is generated in the
-        # voltage directory
-        mv $voltage_summary_pic $module_dir/
+        # Save the current directory to switch back to it after doing the work
+        prev_dir=`pwd`
         cd $module_dir
-    done
-    # Generate the main webpage within the root director of the module, as well
-    # as the landing pages for each of the voltages.  The landing pages then
-    # link to the index.html in the voltage folders (after the link is modified)
-    igal2 -r -w 3 -y 250 --bigy 600 -n
-    check ${?} "igal2 -r -w 3 -y 250 --bigy 600 -n"
-    # change the title to reflect the module
-    sed -i "s/Index of Pictures/Module ${name}/" index.html
 
-    # webpages don't exist until after igal2 so now replace hyperlinks to individual voltage folders
-    for voltage in $voltages; do
-        # The landing pages in the root directory of the module contain a
-        # scaled image which by default hyperlinks to the full size image.
-        # We take the html file and replace the link on this image to make it
-        # point to the voltage folder.
-        voltage_summary_page="${FILENAME}_${voltage}_C0F6M${module}_${name}.sum.html"
-        voltage_summary_image="${FILENAME}_${voltage}_C0F6M${module}_${name}.sum.png"
-        # the dashes "-" in the image file name are changed to %2D in html.
-        # We generate the filename as it will appear in the html in order to
-        # find and replace it.
-        voltage_summary_image_html=`echo $voltage_summary_image | sed 's/-/\%2D/g'`
-        # find and replace the link to the full size image with a link to the
-        # index.html of the specific voltage summary folder.
-        sed -i "s/${voltage_summary_image_html}/\.\/${voltage}\/index.html/" ${voltage_summary_page}
+        # generate the summary images within the root director for each module from
+        # summary images for each apd for each voltage
+        for voltage in $voltages; do
+            voltage_dir="$module_dir/$voltage"
+            cd $voltage_dir
+            voltage_summary_pic="${FILENAME}_${voltage}_C0F6M${module}_${name}.sum.png"
+            # check to see if any of the required images exist
+            if ls *.sum.png &> /dev/null; then
+                # Combine all of the summary images into one vertical image to be
+                # placed in the root for the module
+                convert -append *.sum.png $voltage_summary_pic
+                check ${?} "convert -append *.sum.png $voltage_summary_pic"
+                # move that into the root directory after it is generated in the
+                # voltage directory
+                mv $voltage_summary_pic $module_dir/
+            fi
+            cd $module_dir
+        done
+        # Generate the main webpage within the root director of the module, as well
+        # as the landing pages for each of the voltages.  The landing pages then
+        # link to the index.html in the voltage folders (after the link is modified)
+        igal2 -r -w 3 -y 250 --bigy 600 -n
+        check ${?} "igal2 -r -w 3 -y 250 --bigy 600 -n"
+        # change the title to reflect the module
+        if [ -e index.html ]; then
+            sed -i "s/Index of Pictures/Module ${name}/" index.html
+        fi
 
-        # A script which generates the appropriate webpage inside of the
-        # voltage folder
-        MakeHtml.sh ${voltage}
-        check ${?} "MakeHtml.sh ${voltage}"
-    done
+        # webpages don't exist until after igal2 so now replace hyperlinks to individual voltage folders
+        for voltage in $voltages; do
+            # The landing pages in the root directory of the module contain a
+            # scaled image which by default hyperlinks to the full size image.
+            # We take the html file and replace the link on this image to make it
+            # point to the voltage folder.
+            voltage_summary_page="${FILENAME}_${voltage}_C0F6M${module}_${name}.sum.html"
+            voltage_summary_image="${FILENAME}_${voltage}_C0F6M${module}_${name}.sum.png"
+            if [ -e $voltage_summary_image ]; then
+                # the dashes "-" in the image file name are changed to %2D in html.
+                # We generate the filename as it will appear in the html in order to
+                # find and replace it.
+                voltage_summary_image_html=`echo $voltage_summary_image | sed 's/-/\%2D/g'`
+                # find and replace the link to the full size image with a link to the
+                # index.html of the specific voltage summary folder.
+                sed -i "s/${voltage_summary_image_html}/\.\/${voltage}\/index.html/" ${voltage_summary_page}
 
-    # Go back to the working directory
-    cd $prev_dir
+                # A script which generates the appropriate webpage inside of the
+                # voltage folder
+                MakeHtml.sh ${voltage}
+                check ${?} "MakeHtml.sh ${voltage}"
+            fi
+        done
+
+        # Go back to the working directory
+        cd $prev_dir
+    fi
 
 done  < $module_list
 
