@@ -27,7 +27,7 @@ void usage(void);
 
 void usage(void){
   cout << " Program that chains the different coincidence files " << endl;
- cout << " Chain_cal -f [filebase] -n [nrfiles] [-v] -start [firstfilenr]" <<endl;
+ cout << " Chain_cal -f [filebase] -n [nrfiles] [-v] -start [firstfilenr] -of [outputfile]" <<endl;
   return;}
 
 
@@ -36,25 +36,38 @@ int main(int argc, char *argv[]){
   Char_t filebase[MAXFILELENGTH];
   Char_t outfilename[MAXFILELENGTH];
   Char_t curfilename[MAXFILELENGTH];
+  Bool_t outputfilespec=kFALSE;
   int i;
   int nrfiles=0;
   int verbose=0;
   int firstfile=0;
 
+
+
   for (i=0;i<argc;i++) {
     if (strncmp(argv[i],"-f",2)==0) {
       sprintf(filebase,"%s",argv[i+1]);
+      cout << " Using Filebase " << filebase << ". ";
       i++;
     }
+
+
+    if (strncmp(argv[i],"-of",2)==0) {
+      sprintf(outfilename,"%s",argv[i+1]);
+      outputfilespec=kTRUE;
+      i++;
+    }
+
+
       if (strncmp(argv[i],"-n",2)==0) { 
 	nrfiles = atoi(argv[i+1]);
-	cout << nrfiles+1  << " files to merge " << endl;
+	cout << nrfiles  << " files to merge. " ;
       i++;
       }
 
       if (strncmp(argv[i],"-v",2)==0) { 
 	verbose=1;
-      cout << " verbose mode " << endl;        
+      cout << " Verbose mode. ";        
       }
 
       if (strncmp(argv[i],"-start",6)==0) { 
@@ -65,7 +78,7 @@ int main(int argc, char *argv[]){
 
   }  // argc
  
-
+  cout << endl;
 
   if (nrfiles==0){
     usage();
@@ -80,7 +93,9 @@ int main(int argc, char *argv[]){
   TChain *m;
   Char_t chainname[40];
 
+  if (!outputfilespec) {
   sprintf(outfilename,"%s.cal.root",filebase);
+  }
 
   TFile *rfile = new TFile(outfilename,"RECREATE");
 
@@ -89,7 +104,7 @@ int main(int argc, char *argv[]){
   m = new TChain(treename,chainname);
 
 
-for (i=0;i<=nrfiles;i++){
+for (i=0;i<nrfiles;i++){
 
   sprintf(curfilename,"%s_%d.dat.cal.root",filebase,i+firstfile);
    m->Add(curfilename);
