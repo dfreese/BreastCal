@@ -75,6 +75,7 @@ public :
 
 
    Bool_t verbose;
+   Bool_t fQuiet;
    Bool_t fUseProof;
 
    time_t starttime,startloop,endloop;
@@ -110,6 +111,7 @@ public :
    fCalEvent = 0;
    fCalTree = 0;
    verbose = kFALSE;
+   fQuiet = kFALSE;
    for (Int_t cc=0;cc<CARTRIDGES_PER_PANEL;cc++){
      for (Int_t f=0;f<FINS_PER_CARTRIDGE;f++){
        for (Int_t m=0;m<MODULES_PER_FIN;m++){
@@ -138,10 +140,17 @@ public :
     }
 
    //  virtual void   SetFileBase( const Char_t* name ) { fFileBase = name ;}
-   void SetPixelCal(PixelCal *pixcal ){ cout << " Setting fCrysCal ... " ;  fCrysCal = pixcal; cout << " Done. " << endl; } 
+   void SetPixelCal(PixelCal *pixcal ){ 
+     if (!fQuiet){
+      cout << " Setting fCrysCal ... " ;
+     } 
+        fCrysCal = pixcal; 
+	//  cout << " Done. " << endl; 
+     } 
    //   void SetPPeaks(PPeaks *ppeak ){ cout << " Setting fPPeaks ... " ;  fPPeaks = ppeak; cout << " Done. " << endl; } 
    void SetVerbose(Bool_t v) { verbose=v;}
    void SetFileBase(TString f) { fFileBase = f; return;}
+   void SetQuiet(Bool_t v) { fQuiet=v;}
 
    Int_t WriteTree(TFile *rfile);
    Int_t ReadCal(TFile *r) ;

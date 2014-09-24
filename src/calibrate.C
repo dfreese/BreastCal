@@ -16,10 +16,11 @@
 */
 
 void usage(void){
-  cout << "calibrate -f filename [ -v -P -c [calibrationfile] -plots ]" << endl;
+  cout << "calibrate -f filename [ -v -P -c [calibrationfile] -noplots -q ]" << endl;
   cout << "  -P     :: use PROOF ( results in unsorted events ) " << endl;
   cout << "  -c [ ] :: use calibrationfile [] " << endl;
-  cout << "  -plots :: Currently unused " << endl;
+  cout << "  -noplots :: Don't fit the global E-spectra " << endl;
+  cout << "  -q :: Quiet mode" << endl;
 }
 
 int main(int argc, Char_t *argv[])
@@ -32,10 +33,11 @@ int main(int argc, Char_t *argv[])
 	Int_t		ix;
 	//       ModuleDat *event = 0;
 	//        ModuleCal   *calevent =  new ModuleCal();
-        Bool_t genplots=0;
+        Bool_t genplots=kTRUE;
 	Bool_t UseProof=kFALSE;
          TString calparfile;
 	 Bool_t calparspec=kFALSE;
+	 Bool_t quietmode=kFALSE;
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 	//see eg http://root.cern.ch/phpBB3/viewtopic.php?f=14&t=3498
@@ -69,10 +71,17 @@ int main(int argc, Char_t *argv[])
 			verbose = 1;
 		}
 
+		if(strncmp(argv[ix], "-q", 2) == 0) {
+		  gErrorIgnoreLevel=kFatal;
+		  verbose = 0;
+		  quietmode=kTRUE;
+		}
 
-		if(strncmp(argv[ix], "-plots", 6) == 0) {
-			cout << "Generating plots " << endl;
-			genplots=1;
+
+		if(strncmp(argv[ix], "-noplots", 8) == 0) {
+
+		  if (!quietmode) cout << " Not Generating plots. " ;
+ 		genplots=kFALSE;
 
 		}
 
@@ -182,9 +191,10 @@ int main(int argc, Char_t *argv[])
 
          if (verbose) cout << " Number of entries to process :: " << block->GetEntries() << endl;
 
+         if (!quietmode){
          cout << " Read block from file :: " << time(NULL)-starttime << endl;
          cout << " Read block from file :: " << time(NULL)-starttime << endl;
-
+	 }
 
          if (!(calparspec)){calparfile.Form("%s.par.root",filebase);}
          TFile *calfile = new TFile(calparfile);
@@ -201,6 +211,9 @@ int main(int argc, Char_t *argv[])
          cout << " CrysCal->GainSpat[0][0][2][1][0] = " << CrysCal->GainSpat[0][0][2][1][0] << endl;}
 
          Sel_Calibrator *m_cal = new Sel_Calibrator();
+
+	 m_cal->SetQuiet(quietmode);
+
          m_cal->SetFileBase(filebase);
 
 	 if (verbose)  cout << "FYI:: Size of Sel_Calibrator :: " << sizeof(Sel_Calibrator) << endl;
@@ -224,13 +237,17 @@ int main(int argc, Char_t *argv[])
        //       gProof->UploadPackage("/home/miil/MODULE_ANA/ANA_V5/SpeedUp/PAR/ModuleDatDict.par");
        //       gProof->EnablePackage("ModuleDatDict");
 
+		 if (!quietmode){
          cout << " Proof open :: " << time(NULL)-starttime << endl;
+		 }
 
 	 //#define USEPAR
 
              char *libpath = getenv("ANADIR");
+             if (!quietmode){
 	     cout << " Loading Shared Library from " << libpath << endl;
 	     cout << " (note ANADIR = " << getenv("ANADIR") << " )" << endl;
+	     }
 	     TString exestring;
      
 #ifdef USEPAR
@@ -260,12 +277,15 @@ int main(int argc, Char_t *argv[])
        TProofOutputFile outf = TProofOutputFile("mycalout.root");
        p->GetOutputList()->Add(outf);
        */
+       if (!quietmode){
         cout << " Proof ready to process :: " << time(NULL)-starttime << endl;
-
+       }
 
         block->Process(m_cal);
 
+	if (!quietmode){
         cout << " Proof processed :: " << time(NULL)-starttime << endl;
+	}
 
        m_cal->SetPixelCal(CrysCal);
 	   } else {
@@ -274,20 +294,29 @@ int main(int argc, Char_t *argv[])
        m_cal->fUseProof=kFALSE;
        m_cal->ReadUVCenters(rfile);
        m_cal->SetPixelCal(CrysCal);
+       if (!quietmode){
        cout << " Ready to process :: " << endl;
+       }
        block->Process(m_cal);
 
 	   }
 //#endif
 
   
+	   if (genplots){
+
+	     if (!quietmode){
       cout << " Fitting Global spectra @ " <<time(NULL)-starttime << endl;
+	     }
       loctime=time(NULL);
       m_cal->FitAllGlobal();
 
+      if (!quietmode){
       cout << " Fitting time  :: " << time(NULL) -loctime << endl;
       cout << " Writing glob hists to file :: " <<time(NULL)-starttime << endl;
+      }
       m_cal->WriteGlobHist(".glob.root");
+	   }
 
     /*
          PPeaks *thesePPeaks = (PPeaks *) rfile->Get("PhotoPeaks");

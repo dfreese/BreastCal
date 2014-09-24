@@ -78,8 +78,10 @@ fCrysCal = dynamic_cast<PixelCal *>(fInput->FindObject("CrysCalPar"));
 //#endif
 
   endloop = time (NULL);
+  if (!fQuiet){
   cout << " Time to find fCrysCal :: " <<  endloop-startloop  << endl;
-  
+  }
+
 #ifdef DEBUG
   cout << " fCrysCal->ValidPeaksX[0][0][2][1] = " << fCrysCal->validpeaks[0][0][2][1] << endl;
   cout << " fCrysCal->X[0][0][2][1][0] = " << fCrysCal->X[0][0][2][1][0] << endl;
@@ -129,7 +131,7 @@ fCrysCal = dynamic_cast<PixelCal *>(fInput->FindObject("CrysCalPar"));
 
   
  // Open the file
- TDirectory *savedir = gDirectory;
+   TDirectory *savedir = gDirectory;
 
  if (!(fFile = fProofFile->OpenFile("RECREATE"))) {
    Warning("SlaveBegin", "problems opening file: %s/%s",
@@ -173,8 +175,9 @@ if (fUseProof){
    }
    
     
+   if (!fQuiet){
   cout << " ... SlaveBegin Done " << endl;
-
+   }
    }
 
 
@@ -250,7 +253,7 @@ void Sel_Calibrator::SlaveTerminate()
    // have been processed. When running with PROOF SlaveTerminate() is called
    // on each slave server.
 
-  cout << " Welcome to SlaveTerminate ! " << endl;
+  if (!fQuiet) { cout << " Welcome to SlaveTerminate ! " << endl;}
 
 
 
@@ -300,16 +303,19 @@ void Sel_Calibrator::Terminate()
    // The Terminate() function is the last function to be called during
    // a query. It always runs on the client, it can be used to present
    // the results graphically or save the results to file.
+  if (!fQuiet){
   cout << " Welcome to Terminate ! " << endl;
   cout << " time since start :: " << time(NULL)-starttime << endl;
+  }
 
   TString hn;
   //      fOutput->ls();
 
   //  TFile *_f = new TFile("caltest.root","RECREATE");
 
+  if (!fQuiet){
       cout << " \n Getting CalTree \n" << endl;
-
+  }
       //  fCalTree = dynamic_cast<TTree *> (fOutput->FindObject("CalTree"));
 
 
@@ -334,8 +340,11 @@ void Sel_Calibrator::Terminate()
 
  
   
-
-    cout << " Terminate done time since start :: " << endl; // << time(NULL)-starttime << endl;
+    if (!fQuiet){
+    cout << " Terminate done time since start :: " << endl; 
+    }
+   
+// << time(NULL)-starttime << endl;
     //    fCalTree->SetDirectory(_f);
     //  fCalTree->Write();
 
@@ -386,7 +395,9 @@ Int_t Sel_Calibrator::ReadUVCenters(TFile *rfile){
 
 
 Int_t Sel_Calibrator::WriteTree(TFile *rfile){
+  if (!fQuiet){
   cout << " WriteTree to file " << rfile->GetName() << endl;
+  }
   //  cout << " Entries in fCalTree :: " << fCalTree->GetEntries() << endl;
   // rfile->cd();
   TFile *_f = new TFile("caltest.root","RECREATE");
@@ -395,8 +406,9 @@ Int_t Sel_Calibrator::WriteTree(TFile *rfile){
   // fCalTree->Write();
 
   _f->Close();
+  if (!fQuiet){
   cout << " Done. " << endl;
-
+  }
   return 0;
 }
 
@@ -418,9 +430,9 @@ Int_t Sel_Calibrator::FitAllGlobal(){
    TString fDIR="GLOBFITS";
    
  if ( access( fDIR.Data(), 0 ) != 0 ) {
-	cout << "creating dir " << fDIR << endl; 
+   if (!fQuiet) cout << "creating dir " << fDIR << endl; 
         if ( mkdir(fDIR, 0777) != 0 ) { 
-	    cout << " Error making directory " << fDIR << endl;
+	  if (!fQuiet) cout << " Error making directory " << fDIR << endl;
 	    return -2;
 	}
     }
