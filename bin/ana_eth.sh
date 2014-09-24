@@ -113,11 +113,13 @@ function log ()
 
 function usage()
 {
-    echo "ana_eth.sh [ -v -d -c -s -m -t -a -h -C [] ]"
+    echo "ana_eth.sh [ -v -d -cal -c -cc -s -m -t -a -h -C [] ]"
     echo " with: -v: verbose"
     echo "       -d: decode binary data ( Left and Right )"
     echo "       -g: segment data (Left and Right)"
+    echo "       -cal: calculate calibration parameters (Left and Right)"
     echo "       -c: calibrate data ( Left and Right )"
+    echo "       -cc: calibrate data using individual decoded files"
     echo "       -s: time sort Left and Right data"
     echo "       -m: merge Left and Right"
     echo "       -t: time calibrate"
@@ -146,14 +148,16 @@ do
     case "$1" in
 	-v) verbose=1;;
 	-d) dodecode=1;;
-    -g) dosegmentation=1;;
+        -g) dosegmentation=1;;
+        -cal) docalccalibrate=1;;
 	-c) docalibrate=1;;
+        -cc) dodecodedcalibrate=1;;
 	-s) dosort=1;;
 	-m) domerge=1;;
 	-t) dotimecal=1;;
-	-a) dodecode=1;dosegmentation=1;docalibrate=1;dosort=1;domerge=1;dotimecal=1;;
-    -u) dodecode=1;dosegmentation=1;;
-    -l) docalibrate=1;dosort=1;domerge=1;dotimecal=1;;
+	-a) dodecode=1;dosegmentation=1;docalccalibrate=1;docalibrate=1;dosort=1;domerge=1;dotimecal=1;;
+        -u) dodecode=1;dosegmentation=1;;
+        -l) docalibrate=1;dosort=1;domerge=1;dotimecal=1;;
 	-h) usage ; exit; break;;
 	-C) CORES=$2;shift;;
 	*) usage; break;;
@@ -307,7 +311,7 @@ fi
 
 #############################################################################################################
 
-if [[ $docalibrate -eq 1 ]]; then
+if [[ $docalccalibrate -eq 1 ]]; then
     for k in Left Right; do
         cd $k
         KK=${k:0:1}
@@ -316,8 +320,55 @@ if [[ $docalibrate -eq 1 ]]; then
         mv *peaks.txt ./CHIPDATA
         enecal -f ${BASE}.root
         check ${?} "enecal -f  ${BASE}.root"; 
+        cd ..
+    done;
+fi
+
+
+#############################################################################################################
+
+
+if [[ $docalibrate -eq 1 ]]; then
+    for k in Left Right; do
+        cd $k
+        KK=${k:0:1}
+        BASE=`ls DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
         calibrate -f ${BASE}.root
         check ${?} "calibrate -f  ${BASE}.root"; 
+        cd ..
+    done;
+fi
+
+
+#############################################################################################################
+
+if [[ $dodecodedcalibrate -eq 1 ]]; then
+    for k in Left Right; do
+#    for k in Left; do
+        cd $k
+        KK=${k:0:1}
+        BASE=`ls DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
+        ls -tr ./DAQ*${KK}*dat.root > daqfiles
+        RUNNINGJOBS=0;
+        for daq_file in `cat daqfiles`; do 
+            if [ $RUNNINGJOBS -ge $CORES ]; then 
+                waitsome $pids 1
+                RUNNINGJOBS=${#pids[@]}
+            fi
+            calibrate -f ${daq_file} -c ${BASE}.par.root -noplots -q &
+            pids+=($!);
+            (( RUNNINGJOBS++ ));
+	    echo $daq_file
+        done;
+
+        # calibration
+
+        waitall $pids
+
+        RUNNINGJOBS=0
+
+        chain_cal -f ${BASE}0 -n `wc -l daqfiles | awk '{print $1}'` -of ${BASE}.cal.root     
+
         cd ..
     done;
 fi
@@ -404,7 +455,7 @@ if [[ $domerge -eq 1 ]]; then
             waitsome $pids 1
             RUNNINGJOBS=${#pids[@]}
         fi
-        merge_coinc -fl ./Left/${BASE}_L_part${i}.root -fr ./Right/${BASE}_R_part${i}.root -of  ./${BASE}_part${i}.root &  
+        merge_coinc -fl ./Left/${BASE}_L.cal_part${i}.root -fr ./Right/${BASE}_R.cal_part${i}.root -of  ./${BASE}_part${i}.root &  
         pids+=($!);
         (( RUNNINGJOBS++ ));
     done;
