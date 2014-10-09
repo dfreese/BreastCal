@@ -355,7 +355,7 @@ int main(int argc, Char_t *argv[])
       merged->Branch("Event",&calevt);
 
 
-
+      checkevts=0;
       if (verbose) cout << "filling new Tree :: " << endl;
 
         for (i=0;i<entries; i++) {
@@ -366,12 +366,24 @@ int main(int argc, Char_t *argv[])
 	 if ((evt->crystal1<65)&&((evt->apd1==APD1)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
 	 if ((evt->crystal2<65)&&((evt->apd2==APD1)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
 
-           calevt->dtf-= profehistfit[0]->Eval(evt->Ec1);
-           calevt->dtf-= profehistfit[1]->Eval(evt->Ec2);
-             if (evt->E1>400&&evt->E1<600&&evt->E2>400&&evt->E2<600) {
-	       tres->Fill(calevt->dtf); }
+	   if (common)
+	     {
+                 calevt->dtf-= profehistfit[0]->Eval(evt->Ec1);
+	         calevt->dtf -= profehistfit[1]->Eval(evt->Ec2);
+	     }
+	   else
+	     {
+                 calevt->dtf-= profehistfit[0]->Eval(evt->E1);
+		 calevt->dtf -= profehistfit[1]->Eval(evt->E2);
+	     }
+
+          if (evt->E1>400&&evt->E1<600&&evt->E2>400&&evt->E2<600) 
+             {
+	       tres->Fill(calevt->dtf); 
+             }
 	 }
 	 }
+	 checkevts++;
          merged->Fill();
 	}
     
@@ -380,16 +392,21 @@ int main(int argc, Char_t *argv[])
 
       calfile->Close();
 
-
+       if (verbose){
+       cout << " Done looping over entries " << endl;
+       cout << " I made " << checkevts << " calls to Fill() " << endl;
+	 }
       tres->Fit("gaus","","",-10,10);
 
 
       c1->Clear();
       tres->Draw();
       sprintf(psfile,"%s.tres.edepcal.ps",rootfile);
-
       c1->Print(psfile);
 
+      if (verbose) {
+        cout << tres->GetEntries() << " Entries in tres." << endl;
+      }
 
 	     // crystime[0][MOD1][APD1][0]->Draw(); c1->Print("testje2.ps");
 	     // cout << crystime[0][MOD1][APD1][0]->GetEntries() << endl;
