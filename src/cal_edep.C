@@ -135,13 +135,15 @@ int main(int argc, Char_t *argv[])
     rootlogon(verbose);
     gStyle->SetOptStat(kTRUE); 
 
-    TCanvas *c1((TCanvas*)gROOT->GetListOfCanvases()->FindObject("c1"));
+    TCanvas *c1;
+    c1 = (TCanvas*)gROOT->GetListOfCanvases()->FindObject("c1");
     if (!c1) {
         c1 = new TCanvas("c1","c1",10,10,1000,1000);
     }
     c1->SetCanvasSize(700,700);
 
-    Char_t filebase[FILENAMELENGTH],rootfile[FILENAMELENGTH]; 
+    Char_t filebase[FILENAMELENGTH];
+    Char_t rootfile[FILENAMELENGTH]; 
 
     cout << " Opening file " << filenamel << endl;
     TFile *rtfile = new TFile(filenamel,"OPEN");
@@ -178,7 +180,7 @@ int main(int argc, Char_t *argv[])
     cout << " ROOTFILE = " << rootfile << endl;
 
     Long64_t checkevts = 0;
-    for (int ii = 0; ii < entries; ii++) {
+    for (Long64_t ii = 0; ii < entries; ii++) {
         mm->GetEntry(ii);
         if (evt->cartridge1 > CARTRIDGES_PER_PANEL) continue;
         if (evt->fin1 > FINS_PER_CARTRIDGE) continue;
@@ -229,8 +231,7 @@ int main(int argc, Char_t *argv[])
     profehist[0]->Draw();
 
     Char_t psfile[MAXFILELENGTH];
-    sprintf(psfile,"%s_edpe_panel1.ps",rootfile);
-
+    sprintf(psfile,"%s_edep_panel0.ps",rootfile);
     c1->Print(psfile);
 
 
@@ -238,7 +239,7 @@ int main(int argc, Char_t *argv[])
         cout << " Filling crystal spectra on the right. " << endl;
     }
     checkevts = 0;
-    for (int ii = 0; ii < entries; ii++) {
+    for (Long64_t ii = 0; ii < entries; ii++) {
         mm->GetEntry(ii);
         if (evt->cartridge1 > CARTRIDGES_PER_PANEL) continue;
         if (evt->cartridge2 > CARTRIDGES_PER_PANEL) continue;
@@ -288,7 +289,7 @@ int main(int argc, Char_t *argv[])
     profehist[1]->Draw();
 
 
-    sprintf(psfile,"%s_edpe_panel2.ps",rootfile);
+    sprintf(psfile,"%s_edep_panel1.ps",rootfile);
     c1->Print(psfile);
     sprintf(psfile,"%s_fin2.ps",rootfile);
 
@@ -310,7 +311,7 @@ int main(int argc, Char_t *argv[])
         cout << "filling new Tree :: " << endl;
     }
     checkevts = 0;
-    for (int ii = 0; ii < entries; ii++) {
+    for (Long64_t ii = 0; ii < entries; ii++) {
         mm->GetEntry(ii);
         calevt=evt;
         if (evt->cartridge1 > CARTRIDGES_PER_PANEL) continue;
@@ -326,18 +327,16 @@ int main(int argc, Char_t *argv[])
                     (evt->m2 < MODULES_PER_FIN))
             {
                 if (common) {
-                    calevt->dtf-= profehistfit[0]->Eval(evt->Ec1);
+                    calevt->dtf -= profehistfit[0]->Eval(evt->Ec1);
                     calevt->dtf -= profehistfit[1]->Eval(evt->Ec2);
                 } else {
-                    calevt->dtf-= profehistfit[0]->Eval(evt->E1);
+                    calevt->dtf -= profehistfit[0]->Eval(evt->E1);
                     calevt->dtf -= profehistfit[1]->Eval(evt->E2);
                 }
-                if ((evt->E1 > 400) &&
-                       (evt->E1 < 600) &&
-                       (evt->E2 > 400) &&
-                       (evt->E2 < 600))
-                {
-                    tres->Fill(calevt->dtf); 
+                if  ((evt->E2 > 400) && (evt->E2 < 600)) {
+                    if  ((evt->E1 > 400) && (evt->E1 < 600)) {
+                        tres->Fill(calevt->dtf); 
+                    }
                 }
             }
         }
