@@ -14,6 +14,7 @@
 #include "decoder.h"
 #include "CoincEvent.h"
 #include "string.h"
+#include "cal_helper_functions.h"
 
 //#define DEBUG2
 #define UNITS 16
@@ -21,11 +22,7 @@
 #define MINMODENTRIES 200
 
 Int_t drawmod(TH1F *hi[UNITS][MODULES_PER_FIN][APDS_PER_MODULE], TCanvas *ccc, Char_t filename[MAXFILELENGTH]);
-Int_t writ(TH1D *hi[PEAKS], TCanvas *ccc, Char_t filename[MAXFILELENGTH]);
-Int_t writ2d(TH2F *hi[PEAKS], TCanvas *ccc, Char_t filename[MAXFILELENGTH]);
-TH2F *get2dcrystal(Float_t vals[64], Char_t title[40]) ;
-Float_t calfunc(TH1F *hist, TF1 *fitfun,  Bool_t coarsetime, Bool_t gausfit);
-Float_t getmax (TSpectrum *, Int_t);
+Float_t calfunc(TH1F *hist, TF1 *fitfun,  Bool_t coarsetime, Bool_t gausfit, Int_t verbose);
 
 int main(int argc, Char_t *argv[])
 { 
@@ -252,7 +249,8 @@ int main(int argc, Char_t *argv[])
                             apdoffset[panel][cartridge][fin][mod][apd],
                             fit_apdoffset[panel][cartridge][fin][mod][apd],
                             coarsetime,
-                            usegausfit);
+                            usegausfit,
+                            verbose);
                     calpars <<  std::setw(4) << mean_apdoffset[panel][cartridge][fin][mod][apd] << " ";
                 }
             }
@@ -308,7 +306,8 @@ int main(int argc, Char_t *argv[])
                             apdoffset[panel][cartridge][fin][mod][apd],
                             fit_apdoffset[panel][cartridge][fin][mod][apd],
                             coarsetime,
-                            usegausfit);
+                            usegausfit,
+                            verbose);
                     calpars <<  std::setw(4) << mean_apdoffset[panel][cartridge][fin][mod][apd] << " ";
                 }
             }
@@ -376,28 +375,6 @@ int main(int argc, Char_t *argv[])
     return(0);
 }
 
-Float_t getmax(TSpectrum *s,Int_t npeaks){
-    Int_t maxpeakheight=-1000000;
-    Float_t maxpos = 0;
-    if (npeaks > 1) {
-       /*
-       for (Int_t i=0;i<npeaks;i++) { 
-           if (verbose)  cout << " Peak " << i << " :  " << *(s->GetPositionX()+i) << " " << *(s->GetPositionY()+i) << endl;
-       }
-       */
-    }
-
-    for (Int_t i=0;i<npeaks;i++) {
-        if ( (*(s->GetPositionY()+i)) > maxpeakheight ) {
-            maxpos= *(s->GetPositionX()+i);
-            maxpeakheight = *(s->GetPositionY()+i);
-        }
-    }
-    return maxpos;
-}
-
-
-
 Int_t drawmod(TH1F *hi[FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE], TCanvas *ccc, Char_t filename[MAXFILELENGTH])
 {
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -439,108 +416,13 @@ Int_t drawmod(TH1F *hi[FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE], TC
     return 0;
 }
 
-Int_t writ(TH1D *hi[PEAKS], TCanvas *ccc, Char_t filename[MAXFILELENGTH]) {
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    Int_t   k;
-    Char_t  filenameo[MAXFILELENGTH+1], filenamec[MAXFILELENGTH+1];
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-    cout << " Welcome to TH1D writ " << endl;
-
-    strcpy(filenameo, filename);
-    strcpy(filenamec, filename);
-    strcat(filenameo, "(");
-    strcat(filenamec, ")");
-
-    ccc->Clear();
-    ccc->Divide(2, 4);
-
-    for(k = 1; k < PEAKS + 1; k++) {
-        if(k % 8) {
-            ccc->cd(k % 8);
-        } else {
-            ccc->cd(8);
-        }
-
-        hi[k - 1]->Draw("E");
-
-        if(!(k % 8)) {
-
-            if(k == 8) {
-                ccc->Print(filenameo);
-            } else {
-                if(k == PEAKS) {
-                    ccc->Print(filenamec);
-                } else {
-                    ccc->Print(filename);
-                }
-            }
-
-            ccc->Clear();
-            ccc->Divide(2, 4);
-        }
-    }
-
-    return 0;
-}
-
-Int_t writ2d(TH2F *hi[PEAKS], TCanvas *ccc, Char_t filename[MAXFILELENGTH])
+Float_t calfunc(
+        TH1F *hist,
+        TF1 *fitfun,
+        Bool_t coarsetime,
+        Bool_t gausfit,
+        Int_t verbose)
 {
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    Int_t   k;
-    Char_t  filenameo[MAXFILELENGTH+1], filenamec[MAXFILELENGTH+1];
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-    strcpy(filenameo, filename);
-    strcpy(filenamec, filename);
-    strcat(filenameo, "(");
-    strcat(filenamec, ")");
-
-    ccc->Clear();
-    ccc->Divide(2, 4);
-
-    for(k = 1; k < PEAKS + 1; k++) {
-        if(k % 8) {
-            ccc->cd(k % 8);
-        } else {
-            ccc->cd(8);
-        }
-
-        hi[k - 1]->Draw("colz");
-
-        if(!(k % 8)) {
-            if(k == 8) {
-                ccc->Print(filenameo);
-            } else {
-                if(k == PEAKS) {
-                    ccc->Print(filenamec);
-                } else {
-                    ccc->Print(filename);
-                }
-            }
-            ccc->Clear();
-            ccc->Divide(2, 4);
-        }
-    }
-
-    return 0;
-}
-
-TH2F *get2dcrystal(Float_t vals[64], Char_t title[40]="area") {
-    TH2F *thispar = new TH2F("thispar",title,8,0,8,8,0,8);
-    Int_t i,j;
-    for (i=0;i<8;i++){
-        for (j=0;j<8;j++){
-            thispar->SetBinContent(i+1,j+1,vals[i*8+j]);
-        }
-    }
-
-
-    return thispar;
-}
-
-Float_t calfunc(TH1F *hist,  TF1 *fitfun, Bool_t coarsetime, Bool_t gausfit){
-    //   TF1 *fitfun;
     Int_t npeaks;
     TSpectrum *s = new TSpectrum();
     if (gausfit) {
@@ -555,14 +437,14 @@ Float_t calfunc(TH1F *hist,  TF1 *fitfun, Bool_t coarsetime, Bool_t gausfit){
                 return(fitfun->GetParameter(1)); 
             }
             else  {
-                fitfun=fitgaus_peak(hist,1) ;
+                fitfun = fitgaus_peak(hist,1) ;
                 return(fitfun->GetParameter(1));
             }
         }
     } // gausfit 
     npeaks = s->Search(hist,3,"",0.2);
     if (npeaks) {
-        return getmax(s,npeaks);
+        return getmax(s, npeaks, verbose);
     } else {
         return(0);
     }

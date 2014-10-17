@@ -14,19 +14,13 @@
 #include "decoder.h"
 #include "CoincEvent.h"
 #include "string.h"
-
+#include "cal_helper_functions.h"
 
 //#define DEBUG2
 #define UNITS 16
 
 #define MINMODENTRIES 1000
-#define CRYSTALS_PER_APD 64
 
-Int_t drawmod_crys2(TH1F *hi[MODULES_PER_FIN][APDS_PER_MODULE][CRYSTALS_PER_APD], TCanvas *ccc, Char_t filename[MAXFILELENGTH]);
-Int_t writ(TH1D *hi[PEAKS], TCanvas *ccc, Char_t filename[MAXFILELENGTH]);
-Int_t writ2d(TH2F *hi[PEAKS], TCanvas *ccc, Char_t filename[MAXFILELENGTH]);
-TH2F *get2dcrystal(Float_t vals[CRYSTALS_PER_APD], Char_t title[40]) ;
-Float_t getmax (TSpectrum *, Int_t,Int_t);
 Float_t cryscalfunc(TH1F *hist, Bool_t gausfit,Int_t verbose);
 Int_t writval(
         Float_t mean_crystaloffset[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][CRYSTALS_PER_APD],
@@ -353,170 +347,6 @@ int main(int argc, Char_t *argv[])
     }
     return(0);
 }
-
-Float_t getmax(TSpectrum *s,Int_t npeaks, Int_t verbose) {
-    Int_t maxpeakheight=-1000000;
-    Float_t maxpos = 0;
-    if (npeaks > 1) {
-        for (Int_t i = 0; i < npeaks; i++) { 
-            if (verbose) {
-                cout << " Peak " << i << " :  " << *(s->GetPositionX()+i) 
-                     << " " << *(s->GetPositionY()+i) << endl;
-            }
-        }
-    }
-
-    for (Int_t i = 0; i<npeaks; i++) {
-        if ( (*(s->GetPositionY()+i)) > maxpeakheight ) {
-            maxpos= *(s->GetPositionX()+i);
-            maxpeakheight = *(s->GetPositionY()+i);
-        }
-    }
-    return(maxpos);
-}
-
-
-
-Int_t drawmod_crys2(TH1F *hi[MODULES_PER_FIN][APDS_PER_MODULE][CRYSTALS_PER_APD], TCanvas *ccc, Char_t filename[MAXFILELENGTH])
-{
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    Int_t   i,k,kk,j;
-    Char_t  filenameo[MAXFILELENGTH+1], filenamec[MAXFILELENGTH+1];
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-
-    strcpy(filenameo, filename);
-    strcpy(filenamec, filename);
-    strcat(filenameo, "(");
-    strcat(filenamec, ")");
-
-    ccc->Clear();
-    ccc->Divide(4, 4);
-
-    for (kk =0;kk<MODULES_PER_FIN ;kk++){
-        for (k = 0; k < APDS_PER_MODULE ; k++) {
-            for (i = 0 ;i < 4; i++ ) {
-                for (j=0;j<16;j++){
-                    ccc->cd(j+1);
-                    hi[kk][k][i*16+j]->Draw("E");
-                }
-                if ((kk == 0)&&(k==0)&&(i==0)) {
-                    ccc->Print(filenameo);
-                } else {
-                    if((kk == (MODULES_PER_FIN-1))&&(k==1)&&(i==3)) {
-                        ccc->Print(filenamec);
-                    } else {
-                        ccc->Print(filename);
-                    }
-                }
-                ccc->Clear();
-                ccc->Divide(4, 4);
-            }
-        }
-    }
-    return(0);
-}
-
-Int_t writ(
-        TH1D *hi[PEAKS],
-        TCanvas *ccc,
-        Char_t filename[MAXFILELENGTH])
-{
-    Char_t  filenameo[MAXFILELENGTH+1];
-    Char_t  filenamec[MAXFILELENGTH+1];
-
-    cout << " Welcome to TH1D writ " << endl;
-
-    strcpy(filenameo, filename);
-    strcpy(filenamec, filename);
-    strcat(filenameo, "(");
-    strcat(filenamec, ")");
-
-    ccc->Clear();
-    ccc->Divide(2, 4);
-
-    for(Int_t k = 1; k < PEAKS + 1; k++) {
-        if(k % 8) {
-            ccc->cd(k % 8);
-        } else {
-            ccc->cd(8);
-        }
-
-        hi[k - 1]->Draw("E");
-
-        if(!(k % 8)) {
-            if(k == 8) {
-                ccc->Print(filenameo);
-            } else {
-                if(k == PEAKS) {
-                    ccc->Print(filenamec);
-                } else {
-                    ccc->Print(filename);
-                }
-            }
-            ccc->Clear();
-            ccc->Divide(2, 4);
-        }
-    }
-    return(0);
-}
-
-Int_t writ2d(
-        TH2F *hi[PEAKS],
-        TCanvas *ccc,
-        Char_t filename[MAXFILELENGTH])
-{
-    Char_t  filenameo[MAXFILELENGTH+1];
-    Char_t  filenamec[MAXFILELENGTH+1];
-
-    strcpy(filenameo, filename);
-    strcpy(filenamec, filename);
-    strcat(filenameo, "(");
-    strcat(filenamec, ")");
-
-    ccc->Clear();
-    ccc->Divide(2, 4);
-
-    for (Int_t k = 1; k < PEAKS + 1; k++) {
-        if(k % 8) {
-            ccc->cd(k % 8);
-        } else {
-            ccc->cd(8);
-        }
-
-        hi[k - 1]->Draw("colz");
-
-        if(!(k % 8)) {
-            if (k == 8) {
-                ccc->Print(filenameo);
-            } else {
-                if (k == PEAKS) {
-                    ccc->Print(filenamec);
-                } else {
-                    ccc->Print(filename);
-                }
-            }
-            ccc->Clear();
-            ccc->Divide(2, 4);
-        }
-    }
-    return(0);
-}
-
-
-TH2F * get2dcrystal(
-        Float_t vals[CRYSTALS_PER_APD],
-        Char_t title[40]="area")
-{
-    TH2F *thispar = new TH2F("thispar",title,8,0,8,8,0,8);
-    for (int i=0;i<8;i++){
-        for (int j=0;j<8;j++) {
-            thispar->SetBinContent(i+1,j+1,vals[i*8+j]);
-        }
-    }
-    return(thispar);
-}
-
 
 Float_t cryscalfunc(
         TH1F *hist,
