@@ -20,629 +20,562 @@
 #define UNITS 16
 
 #define MINMODENTRIES 1000
+#define CRYSTALS_PER_APD 64
 
-Int_t drawmod_crys2(TH1F *hi[MODULES_PER_FIN][APDS_PER_MODULE][64], TCanvas *ccc, Char_t filename[MAXFILELENGTH]);
+Int_t drawmod_crys2(TH1F *hi[MODULES_PER_FIN][APDS_PER_MODULE][CRYSTALS_PER_APD], TCanvas *ccc, Char_t filename[MAXFILELENGTH]);
 Int_t writ(TH1D *hi[PEAKS], TCanvas *ccc, Char_t filename[MAXFILELENGTH]);
 Int_t writ2d(TH2F *hi[PEAKS], TCanvas *ccc, Char_t filename[MAXFILELENGTH]);
-TH2F *get2dcrystal(Float_t vals[64], Char_t title[40]) ;
+TH2F *get2dcrystal(Float_t vals[CRYSTALS_PER_APD], Char_t title[40]) ;
 Float_t getmax (TSpectrum *, Int_t,Int_t);
 Float_t cryscalfunc(TH1F *hist, Bool_t gausfit,Int_t verbose);
-Int_t writval(Float_t mean_crystaloffset[FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][64] ,Char_t outfile[MAXFILELENGTH]);
+Int_t writval(
+        Float_t mean_crystaloffset[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][CRYSTALS_PER_APD],
+        Char_t outfile[MAXFILELENGTH]);
 
 int main(int argc, Char_t *argv[])
 { 
-  Int_t MOD1=6;
-  Int_t MOD2=1;
-  Int_t APD1=0;
-  Int_t APD2=0;
-  Bool_t usegausfit=0;
-  Int_t coarsetime=1; 
-  Int_t crystalmean=0;
-  Char_t histtitle[40];
+    Int_t MOD1=6;
+    Int_t MOD2=1;
+    Int_t APD1=0;
+    Int_t APD2=0;
+    Bool_t usegausfit=0;
+    Int_t coarsetime=1; 
+    Int_t crystalmean=0;
+    Char_t histtitle[40];
 
- Int_t DTF_low, DTF_hi, FINELIMIT,DTFLIMIT;
+    Int_t DTF_low;
+    Int_t DTF_hi;
+    Int_t FINELIMIT;
+    Int_t DTFLIMIT;
 
- 	cout << " Welcome to cal_crystal_ofset2 " << endl;
+    cout << " Welcome to cal_crystal_ofset2 " << endl;
 
-	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-	Char_t		filenamel[FILENAMELENGTH] = "";
-	Int_t		verbose = 0;
-	Int_t		ix;
-	//module UNIT0,UNIT1,UNIT2,UNIT3;
-        CoincEvent           *evt =  new CoincEvent();
-        CoincEvent           *calevt = new CoincEvent();
-
-	Int_t           logscale = 0; // added by David on 07/10/2014 
-	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-
-
-	for(ix = 1; ix < argc; ix++) {
-
-		/*
-		 * Verbose '-v'
-		 */
-		if(strncmp(argv[ix], "-v", 2) == 0) {
-			cout << "Verbose Mode " << endl;
-			verbose = 1;
-		}
-
-		/*
-		 * Plot in log scale
-		 */
-
-		if(strncmp(argv[ix], "-log", 4) == 0) {
-			cout << "Output Graph in Log Scale " << endl;
-			logscale = 1;
-		}
+    Char_t filenamel[FILENAMELENGTH] = "";
+    Int_t verbose = 0;
+    CoincEvent *evt =  new CoincEvent();
+    // Parameter for determining if the fine time stamp histogram generated
+    // after calibration should be plotted in a log scale or not.  Default
+    // is to not use a log scale
+    Int_t logscale = 0; 
 
 
 
-		if(strncmp(argv[ix], "-apd1", 5) == 0) {
-                  APD1 = atoi( argv[ix+1]);
-		  cout << "APD1 =  " << APD1 <<endl;
-                  ix++;
-		}
+    for(int ix = 1; ix < argc; ix++) {
 
-		if(strncmp(argv[ix], "-apd2", 5) == 0) {
-                  APD2 = atoi( argv[ix+1]);
-		  cout << "APD2 =  " << APD2 <<endl;
-                  ix++;
-		}
+        /*
+         * Verbose '-v'
+         */
+        if(strncmp(argv[ix], "-v", 2) == 0) {
+            cout << "Verbose Mode " << endl;
+            verbose = 1;
+        }
 
-		if(strncmp(argv[ix], "-mod1", 5) == 0) {
-                  MOD1 = atoi( argv[ix+1]);
-		  cout << "MOD1 =  " << MOD1 <<endl;
-                  ix++;
-		}
+        // Plot in log scale
+        if(strncmp(argv[ix], "-log", 4) == 0) {
+            cout << "Output Graph in Log Scale " << endl;
+            logscale = 1;
+        }
 
-		if(strncmp(argv[ix], "-mod2", 5) == 0) {
-                  MOD2 = atoi( argv[ix+1]);
-		  cout << "MOD2 =  " << MOD2 <<endl;
-                  ix++;
-		}
+        if(strncmp(argv[ix], "-apd1", 5) == 0) {
+            APD1 = atoi( argv[ix+1]);
+            cout << "APD1 =  " << APD1 <<endl;
+            ix++;
+        }
+
+        if(strncmp(argv[ix], "-apd2", 5) == 0) {
+            APD2 = atoi( argv[ix+1]);
+            cout << "APD2 =  " << APD2 <<endl;
+            ix++;
+        }
+
+        if(strncmp(argv[ix], "-mod1", 5) == 0) {
+            MOD1 = atoi( argv[ix+1]);
+            cout << "MOD1 =  " << MOD1 <<endl;
+            ix++;
+        }
+
+        if(strncmp(argv[ix], "-mod2", 5) == 0) {
+            MOD2 = atoi( argv[ix+1]);
+            cout << "MOD2 =  " << MOD2 <<endl;
+            ix++;
+        }
+
+        if(strncmp(argv[ix], "-cm", 3) == 0) {
+            crystalmean=1;
+            cout << "Crystal calibration "  <<endl;
+        }
+
+        if(strncmp(argv[ix], "-gf", 3) == 0) {
+            usegausfit=1;
+            cout << " Using Gauss Fit "  <<endl;
+        }
+
+        if(strncmp(argv[ix], "-ft", 3) == 0) {
+            coarsetime=0;
+            ix++;
+            if (ix == argc ) {
+                cout << " Please enter finelimit interval: -ft [finelimit]\nExiting. " << endl;
+                return -20;
+            }
+            FINELIMIT=atoi(argv[ix]);
+            if (FINELIMIT<1) {
+                cout << " Error. FINELIMIT = " << FINELIMIT << " too small. Please specify -ft [finelimit]. " << endl;
+                cout << "Exiting." << endl; return -20;
+            }
+            cout << " Fine time interval = "  << FINELIMIT << endl;
+        }
 
 
-		if(strncmp(argv[ix], "-cm", 3) == 0) {
-                  crystalmean=1;
-		  cout << "Crystal calibration "  <<endl;
-		}
- 
-		if(strncmp(argv[ix], "-gf", 3) == 0) {
-                  usegausfit=1;
-		  cout << " Using Gauss Fit "  <<endl;
-		}
-		
-		if(strncmp(argv[ix], "-ft", 3) == 0) {
-                  coarsetime=0;
-                  ix++;
-                  if (ix == argc ) { cout << " Please enter finelimit interval: -ft [finelimit]\nExiting. " << endl;
-                    return -20;} 
-                  FINELIMIT=atoi(argv[ix]);
-                  if (FINELIMIT<1) { cout << " Error. FINELIMIT = " << FINELIMIT << " too small. Please specify -ft [finelimit]. " << endl;
-		    cout << "Exiting." << endl; return -20;}
-             
-		  cout << " Fine time interval = "  << FINELIMIT << endl;
-		}
-
-		
 
 
-		/* filename '-f' */
-		if(strncmp(argv[ix], "-f", 3) == 0) {
-			if(strlen(argv[ix + 1]) < FILENAMELENGTH) {
-				sprintf(filenamel, "%s", argv[ix + 1]);
-			}
-			else {
-				cout << "Filename " << argv[ix + 1] << " too long !" << endl;
-				cout << "Exiting.." << endl;
-				return -99;
-			}
-		}
+        /* filename '-f' */
+        if(strncmp(argv[ix], "-f", 3) == 0) {
+            if(strlen(argv[ix + 1]) < FILENAMELENGTH) {
+                sprintf(filenamel, "%s", argv[ix + 1]);
+            } else {
+                cout << "Filename " << argv[ix + 1] << " too long !" << endl;
+                cout << "Exiting.." << endl;
+                return -99;
+            }
+        }
+    }
 
-
-	}
-
-  if (!verbose) {
+    if (!verbose) {
         gErrorIgnoreLevel = kError;
-
-                }
-
-        rootlogon(verbose);
-      gStyle->SetOptStat(kTRUE); 
-  //	TStyle::SetOptStat();
-
-   TCanvas *c1;
-   c1 = (TCanvas*)gROOT->GetListOfCanvases()->FindObject("c1");
-  if (!c1) c1 = new TCanvas("c1","c1",10,10,1000,1000);
-   c1->SetCanvasSize(700,700);
-       
-        Char_t filebase[FILENAMELENGTH],rootfile[FILENAMELENGTH]; 
-        Int_t i;
-        ifstream infile;
- 
-        cout << " Opening file " << filenamel << endl;
-        TFile *rtfile = new TFile(filenamel,"OPEN");
-        TTree *mm  = (TTree *) rtfile->Get("merged");
-        mm->SetBranchAddress("Event",&evt);
-
-
-	//#define UNITS 2
-
-        TH1F *crystaloffset[2][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][64];
-        TF1 *fit_crystaloffset[2][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][64];
-
-	//        coarsetime=0;
-
-	Int_t tt,  aa,ii,jj,kk;
-
-	if (coarsetime ) {  DTF_low = -100; DTF_hi = 100; FINELIMIT=100; DTFLIMIT=50; cout << " Using Coarse limits: " << FINELIMIT << endl;}
-        else { DTF_low = -FINELIMIT; DTF_hi = FINELIMIT; DTFLIMIT=5;}
-
-
-   
-	for (ii=0;ii<2;ii++) {
-	  for (jj=0;jj<FINS_PER_CARTRIDGE;jj++) {
- 	  for (kk=0;kk<MODULES_PER_FIN;kk++) {
-          for (aa=0;aa<APDS_PER_MODULE;aa++) {
-            for (tt=0;tt<64;tt++){
-              sprintf(histtitle,"crystaloffset[%d][%d][%d][%d][%d]",ii,jj,kk,aa,tt);
-              crystaloffset[ii][jj][kk][aa][tt]= new TH1F(histtitle,histtitle,50,DTF_low,DTF_hi);
-	    }
-	  }
-	}
-	  }
-	}
-
-       Long64_t entries = mm->GetEntries();
-       cout << " Total  entries: " << entries << endl; 
-
-       
-       if (verbose) cout << " Filling crystal spectra on the left. " << endl;
-
-       Long64_t checkevts=0;
-
-
-        strncpy(filebase,filenamel,strlen(filenamel)-5);
-        filebase[strlen(filenamel)-5]='\0';
-        sprintf(rootfile,"%s",filebase);
-
-        cout << " ROOTFILE = " << rootfile << endl;
-
- 
-       for (i=0;i<entries; i++) {
-	 mm->GetEntry(i);
-         if (evt->fin1>FINS_PER_CARTRIDGE) continue;
-	 if ((evt->crystal1<65)&&((evt->apd1==APD1)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
-	     if ((evt->E1>400)&&(evt->E1<600)) {
-               if (TMath::Abs(evt->dtc ) < 6 ) {
-	       if (TMath::Abs(evt->dtf ) < FINELIMIT ) {
-                 checkevts++;
-		 //	    		 crystime[0][evt->m1][evt->apd1][evt->crystal1]->Fill(evt->dtf);
-		 crystaloffset[0][evt->fin1][evt->m1][evt->apd1][evt->crystal1]->Fill(evt->dtf);
-               }
-	     }
-	   }
-	 }
-       } // loop over entries
-
-       if (verbose){
-       cout << " Done looping over entries " << endl;
-       cout << " I made " << checkevts << " calls to Fill() " << endl;         }
-
-       Float_t mean_crystaloffset[2][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][64]={{{{{0}}}}};
-
-
-       ii=0;
-
-       for (jj=0;jj<FINS_PER_CARTRIDGE;jj++) {
-	 for (kk=0;kk<MODULES_PER_FIN;kk++) { 
-          for (aa=0;aa<APDS_PER_MODULE;aa++) {
-            for (tt=0;tt<64;tt++) {
-	      mean_crystaloffset[ii][jj][kk][aa][tt]=cryscalfunc(crystaloffset[ii][jj][kk][aa][tt], usegausfit,verbose) ;
-            }}}}
-
-	  Char_t psfile[MAXFILELENGTH];
-          for (jj=0;jj<FINS_PER_CARTRIDGE;jj++){
-	    sprintf(psfile,"%s_fin%d.ps",rootfile,jj);
-          drawmod_crys2(crystaloffset[0][jj],c1,psfile);
-	  }
-
-       Char_t calparfilename[MAXFILELENGTH];
-       sprintf(calparfilename,"%s_calpar_0.txt",rootfile);
-       writval(mean_crystaloffset[0],calparfilename);
-
-       if (verbose) cout << " Filling crystal spectra on the right. " << endl;
-	checkevts=0;
-
-
-        for (i=0;i<entries; i++) {
-	 mm->GetEntry(i);
-         if (evt->fin1>FINS_PER_CARTRIDGE) continue;
-         if (evt->fin2>FINS_PER_CARTRIDGE) continue;
-	 if ((evt->crystal1<65)&&((evt->apd1==APD1)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
-	 if ((evt->crystal2<65)&&((evt->apd2==APD1)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
-           if  ((evt->E2>400)&&(evt->E2<600)) {
-           if  ((evt->E1>400)&&(evt->E1<600)) {
-               if (TMath::Abs(evt->dtc ) < 6 ) {
-	       if (TMath::Abs(evt->dtf ) < FINELIMIT ) {
-                 checkevts++;
-		 //	    		 crystime[0][evt->m1][evt->apd1][evt->crystal1]->Fill(evt->dtf);
-		 crystaloffset[1][evt->fin2][evt->m2][evt->apd2][evt->crystal2]->Fill(evt->dtf- mean_crystaloffset[0][evt->fin1][evt->m1][evt->apd1][evt->crystal1]);
-               }
-	     }
-	   }
-	 }
-	 }
-	 }
-       } // loop over entries
-
-	if (verbose){
-       cout << " Done looping over entries " << endl;
-       cout << " I made " << checkevts << " calls to Fill() " << endl;         
-	}
-
-       ii=1;
-
-       for (jj=0;jj<FINS_PER_CARTRIDGE;jj++) {
-	 for (kk=0;kk<MODULES_PER_FIN;kk++) { 
-          for (aa=0;aa<APDS_PER_MODULE;aa++) {
-            for (tt=0;tt<64;tt++) {
-	      mean_crystaloffset[ii][jj][kk][aa][tt]=cryscalfunc(crystaloffset[ii][jj][kk][aa][tt], usegausfit,verbose) ;
-            }}}}
-
-
-
-	  sprintf(psfile,"%s_fin2.ps",rootfile);
-
-
-       drawmod_crys2(crystaloffset[0][1],c1,psfile);
-
-       sprintf(calparfilename,"%s_calpar_1.txt",rootfile);
-       writval(mean_crystaloffset[1],calparfilename);
-
-       // TH1F *tres = new TH1F("tres","Time Resolution After Time walk correction",100,-25,25);
-       TH1F *tres = new TH1F("tres","Time Resolution After Time walk correction",400,-100,100);
-
-        strcat(rootfile,".crystaloffcal.root");
-
-       
-	if (verbose) cout << " Opening file " << rootfile << " for writing " << endl;
-      TFile *calfile = new TFile(rootfile,"RECREATE");
-      TTree *merged = new  TTree("merged","Merged and Calibrated LYSO-PSAPD data ");
-      merged->Branch("Event",&calevt);
-
-
-      if (verbose) cout << "filling new Tree :: " << endl;
-
-        for (i=0;i<entries; i++) {
-	 mm->GetEntry(i);
-	   calevt=evt;
-         if (evt->fin1>FINS_PER_CARTRIDGE) continue;
-         if (evt->fin2>FINS_PER_CARTRIDGE) continue;
-	 if ((evt->crystal1<65)&&((evt->apd1==APD1)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
-	 if ((evt->crystal2<65)&&((evt->apd2==APD1)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
-
-           calevt->dtf-= mean_crystaloffset[0][evt->fin1][evt->m1][evt->apd1][evt->crystal1] ;
-           calevt->dtf-= mean_crystaloffset[1][evt->fin2][evt->m2][evt->apd2][evt->crystal2] ; 
-           if (evt->E1>400&&evt->E1<600&&evt->E2>400&&evt->E2<600) {
-	     tres->Fill(calevt->dtf);}
-	 }
-	 }
-         merged->Fill();
-
-	}
-    
-
-	merged->Write();
-      calfile->Close();
-
-
-      tres->Fit("gaus","","",-10,10);
-
-
-      c1->Clear();
-      tres->Draw();
-      sprintf(psfile,"%s.tres.crysoffset.ps",rootfile);
-
-      c1->Print(psfile);
-
-      // below section added by David
-      if (logscale == 1) {
-	c1->SetLogy();
-	sprintf(psfile,"%s.tres.crysoffset.log.ps",rootfile);
-	c1->Print(psfile);
-      }
-
-
-	     // crystime[0][MOD1][APD1][0]->Draw(); c1->Print("testje2.ps");
-	     // cout << crystime[0][MOD1][APD1][0]->GetEntries() << endl;
- // TFile *ff = new TFile("test.root");
- // crystime[0][0][0][0]->Write();
- // ff->Close();
-
-
-      return 0;}
-
-
-
-Float_t getmax(TSpectrum *s,Int_t npeaks,Int_t verbose){
-  Int_t maxpeakheight=-1000000;
-  Float_t maxpos = 0;
-  if (npeaks>1 ) {
-    for (Int_t i=0;i<npeaks;i++) { 
-      if (verbose)  cout << " Peak " << i << " :  " << *(s->GetPositionX()+i) << " " << *(s->GetPositionY()+i) << endl;
     }
-  }
 
-  for (Int_t i=0;i<npeaks;i++) {
-    if ( (*(s->GetPositionY()+i)) > maxpeakheight ){
-      maxpos= *(s->GetPositionX()+i);
-      maxpeakheight = *(s->GetPositionY()+i);
+    rootlogon(verbose);
+    gStyle->SetOptStat(kTRUE); 
+
+    TCanvas *c1;
+    c1 = (TCanvas*)gROOT->GetListOfCanvases()->FindObject("c1");
+    if (!c1) c1 = new TCanvas("c1","c1",10,10,1000,1000);
+    c1->SetCanvasSize(700,700);
+
+    Char_t filebase[FILENAMELENGTH],rootfile[FILENAMELENGTH]; 
+    ifstream infile;
+
+    cout << " Opening file " << filenamel << endl;
+    TFile *rtfile = new TFile(filenamel,"OPEN");
+    TTree *mm  = (TTree *) rtfile->Get("merged");
+    mm->SetBranchAddress("Event",&evt);
+
+
+    TH1F *crystaloffset[SYSTEM_PANELS][CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][CRYSTALS_PER_APD];
+
+    if (coarsetime) {
+        DTF_low = -100;
+        DTF_hi = 100;
+        FINELIMIT=100;
+        DTFLIMIT=50;
+        cout << " Using Coarse limits: " << FINELIMIT << endl;
+    } else {
+        DTF_low = -FINELIMIT;
+        DTF_hi = FINELIMIT;
+        DTFLIMIT=5;
     }
-  }
-  return maxpos;}
-  
 
 
-Int_t drawmod_crys2(TH1F *hi[MODULES_PER_FIN][APDS_PER_MODULE][64], TCanvas *ccc, Char_t filename[MAXFILELENGTH])
-{
-        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-  Int_t   i,k,kk,j;
-        Char_t  filenameo[MAXFILELENGTH+1], filenamec[MAXFILELENGTH+1];
-        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-         // cout << "filename = " << filename << endl;
-
-        strcpy(filenameo, filename);
-        strcpy(filenamec, filename);
-        strcat(filenameo, "(");
-        strcat(filenamec, ")");
-
-        /*
-          cout << "in : " << filenameo<<endl;
-          * TCanvas *ccc = new TCanvas("ccc","Energy Spectra",10,10,1000,900);
-         */
-        ccc->Clear();
-        ccc->Divide(4, 4);
-
-	for (kk =0;kk<MODULES_PER_FIN ;kk++){
-        for(k = 0; k < APDS_PER_MODULE ; k++) {
-	  for(i = 0 ;i < 4; i++ ) {
-	    for (j=0;j<16;j++){
-	      ccc->cd(j+1);
-             hi[kk][k][i*16+j]->Draw("E");
-	  }
-	    if((kk == 0)&&(k==0)&&(i==0)) {
-              ccc->Print(filenameo);
+    for (int panel = 0; panel < SYSTEM_PANELS; panel++) {
+        for (int cartridge = 0; cartridge < CARTRIDGES_PER_PANEL; cartridge++) {
+            for (int fin = 0; fin < FINS_PER_CARTRIDGE; fin++) {
+                for (int module = 0; module < MODULES_PER_FIN; module++) {
+                    for (int apd = 0; apd < APDS_PER_MODULE; apd++) {
+                        for (int crystal = 0; crystal < CRYSTALS_PER_APD; crystal++) {
+                            sprintf(histtitle,"crystaloffset[%d][%d][%d][%d][%d][%d]",
+                                    panel, cartridge, fin, module, apd, crystal);
+                            crystaloffset[panel][cartridge][fin][module][apd][crystal] = 
+                                new TH1F(histtitle,histtitle,50,DTF_low,DTF_hi);
                         }
-           else {
-	     if((kk == (MODULES_PER_FIN-1))&&(k==1)&&(i==3)) {
-              ccc->Print(filenamec);
-             }
-             else {
-              ccc->Print(filename);
-                  }
-          }
-           ccc->Clear();
-           ccc->Divide(4, 4);
-	  }
-                        /* } */
+                    }
                 }
+            }
+        }
+    }
+
+    Long64_t entries = mm->GetEntries();
+    cout << " Total entries: " << entries << endl; 
+
+
+    if (verbose) {
+        cout << " Filling crystal spectra on the left. " << endl;
+    }
+
+    Long64_t checkevts(0);
+
+
+    strncpy(filebase,filenamel,strlen(filenamel)-5);
+    filebase[strlen(filenamel)-5]='\0';
+    sprintf(rootfile,"%s",filebase);
+    cout << " ROOTFILE = " << rootfile << endl;
+
+
+    for (Long64_t ii = 0; ii<entries; ii++) {
+        mm->GetEntry(ii);
+        if (evt->fin1>FINS_PER_CARTRIDGE) continue;
+        if ((evt->crystal1<65) && 
+                ((evt->apd1==APD1) || (evt->apd1==1)) && 
+                (evt->m1<MODULES_PER_FIN))
+        {
+            if ((evt->E1>400) && (evt->E1<600)) {
+                if (TMath::Abs(evt->dtc ) < 6 ) {
+                    if (TMath::Abs(evt->dtf ) < FINELIMIT ) {
+                        checkevts++;
+                        crystaloffset[0][evt->cartridge1][evt->fin1][evt->m1][evt->apd1][evt->crystal1]->Fill(evt->dtf);
+                    }
+                }
+            }
+        }
+    } // loop over entries
+
+    if (verbose){
+        cout << " Done looping over entries " << endl;
+        cout << " I made " << checkevts << " calls to Fill() " << endl;         }
+
+    Float_t mean_crystaloffset[SYSTEM_PANELS][CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][CRYSTALS_PER_APD]={{{{{{0}}}}}};
+
+    for (int cartridge = 0; cartridge < CARTRIDGES_PER_PANEL; cartridge++) {
+        for (int fin = 0; fin < FINS_PER_CARTRIDGE; fin++) {
+            for (int module = 0; module < MODULES_PER_FIN; module++) {
+                for (int apd = 0; apd < APDS_PER_MODULE; apd++) {
+                    for (int crystal = 0; crystal < CRYSTALS_PER_APD; crystal++) {
+                        mean_crystaloffset[0][cartridge][fin][module][apd][crystal] = 
+                            cryscalfunc(crystaloffset[0][cartridge][fin][module][apd][crystal], usegausfit,verbose);
+                    }
+                }
+            }
+        }
+    }
+
+
+    Char_t psfile[MAXFILELENGTH];
+    for (int fin = 0; fin < FINS_PER_CARTRIDGE; fin++) {
+        sprintf(psfile,"%s_panel0_cartridge0_fin%d.ps",rootfile, fin);
+        drawmod_crys2(crystaloffset[0][0][fin],c1,psfile);
+    }
+
+    Char_t calparfilename[MAXFILELENGTH];
+    sprintf(calparfilename,"%s_calpar_0.txt",rootfile);
+    writval(mean_crystaloffset[0],calparfilename);
+
+    if (verbose) cout << " Filling crystal spectra on the right. " << endl;
+    checkevts=0;
+
+
+    for (Long64_t ii = 0; ii < entries; ii++) {
+        mm->GetEntry(ii);
+        if (evt->fin1>FINS_PER_CARTRIDGE) continue;
+        if (evt->fin2>FINS_PER_CARTRIDGE) continue;
+        if ((evt->crystal1<65)&&((evt->apd1==APD1)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
+            if ((evt->crystal2<65)&&((evt->apd2==APD1)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
+                if  ((evt->E2>400)&&(evt->E2<600)) {
+                    if  ((evt->E1>400)&&(evt->E1<600)) {
+                        if (TMath::Abs(evt->dtc ) < 6 ) {
+                            if (TMath::Abs(evt->dtf ) < FINELIMIT ) {
+                                checkevts++;
+                                crystaloffset[1][evt->cartridge2][evt->fin2][evt->m2][evt->apd2][evt->crystal2]->Fill(
+                                        evt->dtf - mean_crystaloffset[0][evt->cartridge1][evt->fin1][evt->m1][evt->apd1][evt->crystal1]);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (verbose) {
+        cout << " Done looping over entries " << endl;
+        cout << " I made " << checkevts << " calls to Fill() " << endl;         
+    }
+
+    for (int cartridge = 0; cartridge < CARTRIDGES_PER_PANEL; cartridge++) {
+        for (int fin = 0; fin < FINS_PER_CARTRIDGE; fin++) {
+            for (int module = 0; module < MODULES_PER_FIN; module++) {
+                for (int apd = 0; apd < APDS_PER_MODULE; apd++) {
+                    for (int crystal = 0; crystal < CRYSTALS_PER_APD; crystal++) {
+                        mean_crystaloffset[1][cartridge][fin][module][apd][crystal] = 
+                            cryscalfunc(crystaloffset[1][cartridge][fin][module][apd][crystal], usegausfit,verbose);
+                    }
+                }
+            }
+        }
+    }
+
+    sprintf(calparfilename,"%s_calpar_1.txt",rootfile);
+    writval(mean_crystaloffset[1],calparfilename);
+
+    TH1F *tres = new TH1F("tres","Time Resolution After Time walk correction",400,-100,100);
+
+    strcat(rootfile,".crystaloffcal.root");
+
+
+    if (verbose) cout << " Opening file " << rootfile << " for writing " << endl;
+    TFile *calfile = new TFile(rootfile,"RECREATE");
+    TTree *merged = new  TTree("merged","Merged and Calibrated LYSO-PSAPD data ");
+    CoincEvent *calevt = new CoincEvent();
+    merged->Branch("Event",&calevt);
+
+
+    if (verbose) cout << "filling new Tree :: " << endl;
+
+    for (Long64_t ii=0; ii<entries; ii++) {
+        mm->GetEntry(ii);
+        calevt = evt;
+        if (evt->fin1>FINS_PER_CARTRIDGE) continue;
+        if (evt->fin2>FINS_PER_CARTRIDGE) continue;
+        if ((evt->crystal1<65)&&((evt->apd1==APD1)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
+            if ((evt->crystal2<65)&&((evt->apd2==APD1)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
+                calevt->dtf -= mean_crystaloffset[0][evt->cartridge1][evt->fin1][evt->m1][evt->apd1][evt->crystal1];
+                calevt->dtf -= mean_crystaloffset[1][evt->cartridge2][evt->fin2][evt->m2][evt->apd2][evt->crystal2]; 
+                if (evt->E1>400&&evt->E1<600&&evt->E2>400&&evt->E2<600) {
+                    tres->Fill(calevt->dtf);}
+            }
+        }
+        merged->Fill();
+    }
+    merged->Write();
+    calfile->Close();
+
+    // Fit the fine timestamp histogram and print it out with the fit
+    tres->Fit("gaus","","",-10,10);
+    c1->Clear();
+    tres->Draw();
+    sprintf(psfile,"%s.tres.crysoffset.ps",rootfile);
+
+    c1->Print(psfile);
+
+    // below section added by David
+    if (logscale == 1) {
+        c1->SetLogy();
+        sprintf(psfile,"%s.tres.crysoffset.log.ps",rootfile);
+        c1->Print(psfile);
+    }
+    return(0);
+}
+
+Float_t getmax(TSpectrum *s,Int_t npeaks, Int_t verbose) {
+    Int_t maxpeakheight=-1000000;
+    Float_t maxpos = 0;
+    if (npeaks > 1) {
+        for (Int_t i = 0; i < npeaks; i++) { 
+            if (verbose) {
+                cout << " Peak " << i << " :  " << *(s->GetPositionX()+i) 
+                     << " " << *(s->GetPositionY()+i) << endl;
+            }
+        }
+    }
+
+    for (Int_t i = 0; i<npeaks; i++) {
+        if ( (*(s->GetPositionY()+i)) > maxpeakheight ) {
+            maxpos= *(s->GetPositionX()+i);
+            maxpeakheight = *(s->GetPositionY()+i);
+        }
+    }
+    return(maxpos);
+}
+
+
+
+Int_t drawmod_crys2(TH1F *hi[MODULES_PER_FIN][APDS_PER_MODULE][CRYSTALS_PER_APD], TCanvas *ccc, Char_t filename[MAXFILELENGTH])
+{
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    Int_t   i,k,kk,j;
+    Char_t  filenameo[MAXFILELENGTH+1], filenamec[MAXFILELENGTH+1];
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+
+    strcpy(filenameo, filename);
+    strcpy(filenamec, filename);
+    strcat(filenameo, "(");
+    strcat(filenamec, ")");
+
+    ccc->Clear();
+    ccc->Divide(4, 4);
+
+    for (kk =0;kk<MODULES_PER_FIN ;kk++){
+        for (k = 0; k < APDS_PER_MODULE ; k++) {
+            for (i = 0 ;i < 4; i++ ) {
+                for (j=0;j<16;j++){
+                    ccc->cd(j+1);
+                    hi[kk][k][i*16+j]->Draw("E");
+                }
+                if ((kk == 0)&&(k==0)&&(i==0)) {
+                    ccc->Print(filenameo);
+                } else {
+                    if((kk == (MODULES_PER_FIN-1))&&(k==1)&&(i==3)) {
+                        ccc->Print(filenamec);
+                    } else {
+                        ccc->Print(filename);
+                    }
+                }
+                ccc->Clear();
+                ccc->Divide(4, 4);
+            }
+        }
+    }
+    return(0);
+}
+
+Int_t writ(
+        TH1D *hi[PEAKS],
+        TCanvas *ccc,
+        Char_t filename[MAXFILELENGTH])
+{
+    Char_t  filenameo[MAXFILELENGTH+1];
+    Char_t  filenamec[MAXFILELENGTH+1];
+
+    cout << " Welcome to TH1D writ " << endl;
+
+    strcpy(filenameo, filename);
+    strcpy(filenamec, filename);
+    strcat(filenameo, "(");
+    strcat(filenamec, ")");
+
+    ccc->Clear();
+    ccc->Divide(2, 4);
+
+    for(Int_t k = 1; k < PEAKS + 1; k++) {
+        if(k % 8) {
+            ccc->cd(k % 8);
+        } else {
+            ccc->cd(8);
         }
 
-        return 0;
+        hi[k - 1]->Draw("E");
+
+        if(!(k % 8)) {
+            if(k == 8) {
+                ccc->Print(filenameo);
+            } else {
+                if(k == PEAKS) {
+                    ccc->Print(filenamec);
+                } else {
+                    ccc->Print(filename);
+                }
+            }
+            ccc->Clear();
+            ccc->Divide(2, 4);
+        }
+    }
+    return(0);
 }
 
-Int_t writ(TH1D *hi[PEAKS], TCanvas *ccc, Char_t filename[MAXFILELENGTH])
+Int_t writ2d(
+        TH2F *hi[PEAKS],
+        TCanvas *ccc,
+        Char_t filename[MAXFILELENGTH])
 {
-        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-        Int_t   k;
-        Char_t  filenameo[MAXFILELENGTH+1], filenamec[MAXFILELENGTH+1];
-        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    Char_t  filenameo[MAXFILELENGTH+1];
+    Char_t  filenamec[MAXFILELENGTH+1];
 
-	cout << " Welcome to TH1D writ " << endl;
-         // cout << "filename = " << filename << endl;
+    strcpy(filenameo, filename);
+    strcpy(filenamec, filename);
+    strcat(filenameo, "(");
+    strcat(filenamec, ")");
 
-        strcpy(filenameo, filename);
-        strcpy(filenamec, filename);
-        strcat(filenameo, "(");
-        strcat(filenamec, ")");
+    ccc->Clear();
+    ccc->Divide(2, 4);
 
-        /*
-          cout << "in : " << filenameo<<endl;
-          * TCanvas *ccc = new TCanvas("ccc","Energy Spectra",10,10,1000,900);
-         */
-        ccc->Clear();
-        ccc->Divide(2, 4);
-
-        for(k = 1; k < PEAKS + 1; k++) {
-                if(k % 8)
-                        ccc->cd(k % 8);
-                else
-                        ccc->cd(8);
-
-                
-		//      cout << k << " " << k%8 <<endl;
-                 
-                hi[k - 1]->Draw("E");
-
-                /*
-                 * cout << ff[k-1]->GetName() <<endl;
-                 */
-		//                if(drawfunc) ff[k - 1]->Draw("same");
-                if(!(k % 8)) {
-
-                        /*
-                         * cout << k << endl;
-                         */
-                        if(k == 8) {
-                                ccc->Print(filenameo);
-                        }
-                        else {
-                                if(k == PEAKS)
-                                        ccc->Print(filenamec);
-                                else {
-                                        ccc->Print(filename);
-                                }
-                        }
-
-                        /*
-                         * if (k!=PEAKS){ ;
-                         * cout << "Clearing and Dividing " <<endl;
-      */
-                        ccc->Clear();
-                        ccc->Divide(2, 4);
-
-                        /* } */
-                }
+    for (Int_t k = 1; k < PEAKS + 1; k++) {
+        if(k % 8) {
+            ccc->cd(k % 8);
+        } else {
+            ccc->cd(8);
         }
 
-        return 0;
-}
+        hi[k - 1]->Draw("colz");
 
-Int_t writ2d(TH2F *hi[PEAKS], TCanvas *ccc, Char_t filename[MAXFILELENGTH])
-{
-        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-        Int_t   k;
-        Char_t  filenameo[MAXFILELENGTH+1], filenamec[MAXFILELENGTH+1];
-        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-         // cout << "filename = " << filename << endl;
-
-        strcpy(filenameo, filename);
-        strcpy(filenamec, filename);
-        strcat(filenameo, "(");
-        strcat(filenamec, ")");
-
-        /*
-          cout << "in : " << filenameo<<endl;
-          * TCanvas *ccc = new TCanvas("ccc","Energy Spectra",10,10,1000,900);
-         */
-        ccc->Clear();
-        ccc->Divide(2, 4);
-
-        for(k = 1; k < PEAKS + 1; k++) {
-                if(k % 8)
-                        ccc->cd(k % 8);
-                else
-                        ccc->cd(8);
-
-                /*
-                 * cout << k << " " << k%8 <<endl;
-                 */
-                hi[k - 1]->Draw("colz");
-
-                /*
-                 * cout << ff[k-1]->GetName() <<endl;
-                 */
-		//                if(drawfunc) ff[k - 1]->Draw("same");
-                if(!(k % 8)) {
-
-                        /*
-                         * cout << k << endl;
-                         */
-                        if(k == 8) {
-                                ccc->Print(filenameo);
-                        }
-                        else {
-                                if(k == PEAKS)
-                                        ccc->Print(filenamec);
-                                else {
-                                        ccc->Print(filename);
-                                }
-                        }
-
-                        /*
-                         * if (k!=PEAKS){ ;
-                         * cout << "Clearing and Dividing " <<endl;
-      */
-                        ccc->Clear();
-                        ccc->Divide(2, 4);
-
-                        /* } */
+        if(!(k % 8)) {
+            if (k == 8) {
+                ccc->Print(filenameo);
+            } else {
+                if (k == PEAKS) {
+                    ccc->Print(filenamec);
+                } else {
+                    ccc->Print(filename);
                 }
+            }
+            ccc->Clear();
+            ccc->Divide(2, 4);
         }
-
-        return 0;
+    }
+    return(0);
 }
 
 
-TH2F *get2dcrystal(Float_t vals[64], Char_t title[40]="area") {
-  TH2F *thispar = new TH2F("thispar",title,8,0,8,8,0,8);
-  Int_t i,j;
-  for (i=0;i<8;i++){
-     for (j=0;j<8;j++){
-       thispar->SetBinContent(i+1,j+1,vals[i*8+j]);  }
-  }
-  
-
-  return thispar;}
-
-
-Float_t cryscalfunc(TH1F *hist,   Bool_t gausfit,Int_t verbose){
-   TF1 *fitfun;
-   Int_t npeaks;
-   TSpectrum *s = new TSpectrum();
-
-  if (gausfit) {
-     if ( hist->GetEntries() > 70 ) {     
-       fitfun=fitgaus(hist,0) ;
-       return fitfun->GetParameter(1);}
-   else { 
-     if ( hist->GetEntries() > 50 ) {
-       return hist->GetMean();
-     } 
-     else return 0. ;}
-  } // gausfit
-
-  else {    // just peak search 
- 
-      npeaks = s->Search(hist,3,"",0.2);
-      if (npeaks){  return getmax(s,npeaks,verbose); }
-       else return 0.;
-  } // ! gausfit 
-   
-
+TH2F * get2dcrystal(
+        Float_t vals[CRYSTALS_PER_APD],
+        Char_t title[40]="area")
+{
+    TH2F *thispar = new TH2F("thispar",title,8,0,8,8,0,8);
+    for (int i=0;i<8;i++){
+        for (int j=0;j<8;j++) {
+            thispar->SetBinContent(i+1,j+1,vals[i*8+j]);
+        }
+    }
+    return(thispar);
 }
 
 
+Float_t cryscalfunc(
+        TH1F *hist,
+        Bool_t gausfit,
+        Int_t verbose)
+{
+    if (gausfit) {
+        if ( hist->GetEntries() > 70 ) {     
+            TF1 * fitfun = fitgaus(hist,0) ;
+            return(fitfun->GetParameter(1));
+        } else { 
+            if ( hist->GetEntries() > 50 ) {
+                return hist->GetMean();
+            } else {
+                return(0.0);
+            }
+        }
+    } else {    // just peak search 
+        TSpectrum *s = new TSpectrum();
+        Int_t npeaks = s->Search(hist,3,"",0.2);
+        if (npeaks) {
+            return getmax(s,npeaks,verbose);
+        } else {
+            return(0.0);
+        }
+    } // ! gausfit 
+}
 
-Int_t writval(Float_t mean_crystaloffset[FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][64] ,Char_t outfile[MAXFILELENGTH]){
-	   ofstream parfile;
-	   Int_t jj,kk,aa,tt;
-	   parfile.open(outfile);
-       for (jj=0;jj<FINS_PER_CARTRIDGE;jj++){
-       for (kk=0;kk<MODULES_PER_FIN;kk++){
-        for (aa=0;aa<APDS_PER_MODULE;aa++) {
-	  //	  parfile << "F" << jj << "M" << kk <<"A" << aa << "::" << endl;
-          for (tt=0;tt<64;tt++) {
-	    if ((tt%8)==0) parfile << "F" << jj << "M" << kk <<"A" << aa << "R" << TMath::Floor(tt/8) << " " ;
-	    parfile << setw(6) << setprecision(3) << mean_crystaloffset[jj][kk][aa][tt] << " ";
-               if ((tt%8)==7) parfile << endl; }
-	  parfile << endl;}
-       }
-       }
-           parfile << endl;
-
-	   parfile.close();
-	   return 0;
-	 }
-
-
-
-	      //              sprintf(tmpstring,"fit_crystaloffset[%d][%d][%d]",ii,aa,tt);
-	      //	      fit_crystaloffset[ii][aa][tt] = new TF1(tmpstring,"gaus+pol0",DTF_low,-DTF_hi);
-	      //                fit_crystaloffset[ii][aa][tt]->SetParameter(0,200);
-	      // fit_crystaloffset[ii][aa][tt]->SetParameter(1,0);
-	      // fit_crystaloffset[ii][aa][tt]->SetParameter(2,90);
-              //  fit_crystaloffset[ii][aa][tt]->SetParameter(4,100);
-
-	      /*                npeaks = s->Search(crystaloffset[ii][jj][kk][aa][tt],2,"",0.2);
-                if (npeaks) {
-		  mean_crystaloffset[ii][jj][kk][aa][tt] = getmax(s,npeaks) ; }
-		  else*/ 
-
-
-
+Int_t writval(
+        Float_t mean_crystaloffset[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][CRYSTALS_PER_APD],
+        Char_t outfile[MAXFILELENGTH])
+{
+    ofstream parfile;
+    parfile.open(outfile);
+    if (parfile.good()) {
+        for (int cartridge = 0; cartridge < CARTRIDGES_PER_PANEL; cartridge++) {
+            for (int fin = 0; fin < FINS_PER_CARTRIDGE; fin++) {
+                for (int module = 0; module < MODULES_PER_FIN; module++) {
+                    for (int apd = 0; apd < APDS_PER_MODULE; apd++) {
+                        for (int crystal=0; crystal < CRYSTALS_PER_APD; crystal++) {
+                            if ((crystal%8)==0) {
+                                parfile << "C" << cartridge << "F" << fin 
+                                    << "M" << module << "A" << apd
+                                    << "R" << TMath::Floor(crystal/8) << " ";
+                            }
+                            parfile << setw(6) << setprecision(3) 
+                                << mean_crystaloffset[cartridge][fin][module][apd][crystal] << " ";
+                            if ((crystal%8)==7) {
+                                parfile << endl;
+                            }
+                        }
+                        parfile << endl;
+                    }
+                }
+            }
+        }
+        parfile << endl;
+    }
+    parfile.close();
+    return(0);
+}
 
