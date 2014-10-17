@@ -23,7 +23,7 @@
 
 #define MINMODENTRIES 200
 
-Int_t drawmod(TH1F *hi[UNITS][MODULES_PER_FIN][APDS_PER_MODULE], TCanvas *ccc, Char_t filename[MAXFILELENGTH]);
+Int_t drawmod(TH1F *hi[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE], TCanvas *ccc, Char_t filename[MAXFILELENGTH]);
 Int_t writ(TH1D *hi[PEAKS], TCanvas *ccc, Char_t filename[MAXFILELENGTH]);
 Int_t writ2d(TH2F *hi[PEAKS], TCanvas *ccc, Char_t filename[MAXFILELENGTH]);
 TH2F *get2dcrystal(Float_t vals[64], Char_t title[40]) ;
@@ -172,10 +172,10 @@ int main(int argc, Char_t *argv[])
         Int_t i;
         ifstream infile;
  
-        TH1F *apdoffset[2][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
-        TF1 *fit_apdoffset[2][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
+        TH1F *apdoffset[2][CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
+        TF1 *fit_apdoffset[2][CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
 
-	Int_t tt, mod, aa,ii;
+	Int_t tt, mod, aa,ii,cc;
 
 	if (coarsetime ) {  DTF_low = -300; DTF_hi = 300; FINELIMIT=400; DTFLIMIT=200; cout << " Using Coarse limits: " << FINELIMIT << endl;}
         else { DTF_low = -50; DTF_hi = 50;  DTFLIMIT=5;}
@@ -183,15 +183,17 @@ int main(int argc, Char_t *argv[])
 
    
 	for (ii=0;ii<2;ii++) {
-        for (tt=0;tt<FINS_PER_CARTRIDGE;tt++) {
-	  for (mod=0;mod<MODULES_PER_FIN;mod++) {
-            for (aa=0;aa<APDS_PER_MODULE;aa++) {
-              sprintf(histtitle,"apdoffset[%d][%d][%d][%d]",ii,tt,mod,aa);
-              if ((ii==0) || (!(coarsetime)))  apdoffset[ii][tt][mod][aa]= new TH1F(histtitle,histtitle,50,DTF_low,DTF_hi);
-              else  apdoffset[ii][tt][mod][aa]= new TH1F(histtitle,histtitle,50,DTF_low+150,DTF_hi-150);
+	  for (cc=0;cc<CARTRIDGES_PER_PANEL;cc++) {
+	    for (tt=0;tt<FINS_PER_CARTRIDGE;tt++) {
+	      for (mod=0;mod<MODULES_PER_FIN;mod++) {
+		for (aa=0;aa<APDS_PER_MODULE;aa++) {
+		  sprintf(histtitle,"apdoffset[%d][%d][%d][%d][%d]",ii,cc,tt,mod,aa);
+		  if ((ii==0) || (!(coarsetime)))  apdoffset[ii][cc][tt][mod][aa]= new TH1F(histtitle,histtitle,50,DTF_low,DTF_hi);
+              else  apdoffset[ii][cc][tt][mod][aa]= new TH1F(histtitle,histtitle,50,DTF_low+150,DTF_hi-150);
 	    }
 	  }
 	}
+	  }
 	}
 
 
@@ -225,6 +227,7 @@ int main(int argc, Char_t *argv[])
 	for (i=0;i<entries; i++) {
           mm->GetEntry(i);
          if (evt->fin1>FINS_PER_CARTRIDGE) continue;
+	 if (evt->cartridge1>CARTRIDGES_PER_PANEL) continue;
 	 if ((evt->crystal1<65)&&((evt->apd1==0)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
 	     if ((evt->E1>400)&&(evt->E1<600)) {
 	       //	     if ((evt->E2>400)&&(evt->E2<600)) {
@@ -232,7 +235,7 @@ int main(int argc, Char_t *argv[])
 	       if (TMath::Abs(evt->dtf ) < FINELIMIT ) {
                  checkevts++;
 		 //	    		 crystime[0][evt->m1][evt->apd1][evt->crystal1]->Fill(evt->dtf);
-		 apdoffset[0][evt->fin1][evt->m1][evt->apd1]->Fill(evt->dtf);
+		 apdoffset[0][evt->cartridge1][evt->fin1][evt->m1][evt->apd1]->Fill(evt->dtf);
 	       }
                }
 	     }
@@ -244,48 +247,46 @@ int main(int argc, Char_t *argv[])
        cout << " Done looping over entries " << endl;
        cout << " I made " << checkevts << " calls to Fill() " << endl;         }
 
-       Float_t mean_apdoffset[2][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
+       Float_t mean_apdoffset[2][CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
        Int_t npeaks;
        TSpectrum *s = new TSpectrum();
 
        ii=0;
-
+       for (cc=0;cc<CARTRIDGES_PER_PANEL;cc++){
         for (tt=0;tt<FINS_PER_CARTRIDGE;tt++) {
 	  for (mod=0;mod<MODULES_PER_FIN;mod++) {
             for (aa=0;aa<APDS_PER_MODULE;aa++) {
-              mean_apdoffset[ii][tt][mod][aa] =calfunc(apdoffset[ii][tt][mod][aa],fit_apdoffset[ii][tt][mod][aa],coarsetime,usegausfit);
-              sprintf(tmpstring,"fit_apdoffset[%d][%d][%d][%d]",ii,tt,mod,aa);
+              mean_apdoffset[ii][cc][tt][mod][aa] =calfunc(apdoffset[ii][cc][tt][mod][aa],fit_apdoffset[ii][cc][tt][mod][aa],coarsetime,usegausfit);
+              sprintf(tmpstring,"fit_apdoffset[%d][%d][%d][%d][%d]",ii,cc,tt,mod,aa);
 	      //              fit_apdoffset[ii][tt][mod][aa]->SetName(tmpstring);
-            }}}
+            }}}}
 
 	c1->Clear();
-        apdoffset[0][6][2][0]->Draw();
+	//      apdoffset[0][6][2][0]->Draw();
 	//        fit_apdoffset[0][6][2][0]->Draw("same");
-        c1->Print("test.ps");
+	//        c1->Print("test.ps");
 
 	  Char_t psfile[MAXFILELENGTH];
-	  sprintf(psfile,"%s_fin1.ps",rootfile);
+	  sprintf(psfile,"%s_apdoffset_P0.ps",rootfile);
         
-
-       
-
-
-       drawmod(apdoffset[0],c1,psfile);
+	  drawmod(apdoffset[0],c1,psfile);
       
       
       ofstream calpars;
-      sprintf(calparfilename,"%s_calpar_0.txt",rootfile);
+      sprintf(calparfilename,"%s_apdoffset_calpar_P0.txt",rootfile);
 
       calpars.open(calparfilename);
-
-      for (tt=0;tt<FINS_PER_CARTRIDGE;tt++) {
+    
+      for (cc=0;cc<CARTRIDGES_PER_PANEL;cc++){
+	for (tt=0;tt<FINS_PER_CARTRIDGE;tt++) {
+          calpars << "C" << cc << "F" << tt << " ";
 	  for (mod=0;mod<MODULES_PER_FIN;mod++) {
              for (aa=0;aa<APDS_PER_MODULE;aa++) {
-      
-	       calpars <<  std::setw(4) << mean_apdoffset[ii][tt][mod][aa] << " ";}
+      	       calpars <<  std::setw(4) << mean_apdoffset[ii][cc][tt][mod][aa] << " ";}
 	     //  if (mod%2) cout << "| ";
            }
 	  calpars << endl;}
+      }
       calpars.close();
 
       if (verbose)  cout << " Filling crystal spectra on the right. " << endl;
@@ -294,9 +295,11 @@ int main(int argc, Char_t *argv[])
 
         for (i=0;i<entries; i++) {
 	 mm->GetEntry(i);
-         if (evt->fin1>FINS_PER_CARTRIDGE) continue;
+	 if (evt->cartridge1>CARTRIDGES_PER_PANEL) continue;
+         if (evt->cartridge2>CARTRIDGES_PER_PANEL) continue;
+	 if (evt->fin1>FINS_PER_CARTRIDGE) continue;
          if (evt->fin2>FINS_PER_CARTRIDGE) continue;
-	 if ((evt->crystal1<65)&&((evt->apd1==APD1)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
+ 	 if ((evt->crystal1<65)&&((evt->apd1==APD1)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
 	 if ((evt->crystal2<65)&&((evt->apd2==APD1)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
            if  ((evt->E2>400)&&(evt->E2<600)) {
            if  ((evt->E1>400)&&(evt->E1<600)) {
@@ -304,14 +307,14 @@ int main(int argc, Char_t *argv[])
 	       if (TMath::Abs(evt->dtf ) < FINELIMIT ) {
                  checkevts++;
 		 //	    		 crystime[0][evt->m1][evt->apd1][evt->crystal1]->Fill(evt->dtf);
-		 apdoffset[1][evt->fin2][evt->m2][evt->apd2]->Fill(evt->dtf- mean_apdoffset[0][evt->fin1][evt->m1][evt->apd1]);
+		 apdoffset[1][evt->cartridge2][evt->fin2][evt->m2][evt->apd2]->Fill(evt->dtf- mean_apdoffset[0][evt->cartridge1][evt->fin1][evt->m1][evt->apd1]);
                }
 	     }
 	   }
 	 }
 	 }
 	 }
-       } // loop over entries
+	} // loop over entries
 
 	if (verbose){
        cout << " Done looping over entries " << endl;
@@ -320,33 +323,42 @@ int main(int argc, Char_t *argv[])
 ii=1;
 
 
-
+ for (cc=0;cc<CARTRIDGES_PER_PANEL;cc++){
         for (tt=0;tt<FINS_PER_CARTRIDGE;tt++) {
 	  for (mod=0;mod<MODULES_PER_FIN;mod++) {
             for (aa=0;aa<APDS_PER_MODULE;aa++) {
-              sprintf(tmpstring,"fit_apdoffset[%d][%d][%d][%d]",ii,tt,mod,aa);
-              mean_apdoffset[ii][tt][mod][aa] =calfunc(apdoffset[ii][tt][mod][aa],fit_apdoffset[ii][tt][mod][aa],coarsetime,usegausfit);
+              sprintf(tmpstring,"fit_apdoffset[%d][%d][%d][%d][%d]",ii,cc,tt,mod,aa);
+              mean_apdoffset[ii][cc][tt][mod][aa] =calfunc(apdoffset[ii][cc][tt][mod][aa],fit_apdoffset[ii][cc][tt][mod][aa],coarsetime,usegausfit);
 	    }}}
+ }
 
-	  sprintf(psfile,"%s_fin2.ps",rootfile);
+	  sprintf(psfile,"%s_apdoffset_P1.ps",rootfile);
 
 
         drawmod(apdoffset[1],c1,psfile);
 
       
 
-      sprintf(calparfilename,"%s_calpar_1.txt",rootfile);
+      sprintf(calparfilename,"%s_apdoffset_calpar_P1.txt",rootfile);
 
 	calpars.open(calparfilename);
 
-      for (tt=0;tt<FINS_PER_CARTRIDGE;tt++) {
-	  for (mod=0;mod<MODULES_PER_FIN;mod++) {
-             for (aa=0;aa<APDS_PER_MODULE;aa++) {
-
-	       calpars << setw(4) << mean_apdoffset[ii][tt][mod][aa] << " ";}
+	for (cc=0;cc<CARTRIDGES_PER_PANEL;cc++)
+	  {
+	    for (tt=0;tt<FINS_PER_CARTRIDGE;tt++) 
+	      {
+		calpars << "C" << cc << "F" << tt << " ";
+		for (mod=0;mod<MODULES_PER_FIN;mod++) 
+		  {
+		    for (aa=0;aa<APDS_PER_MODULE;aa++) 
+		      {
+			calpars << setw(4) << mean_apdoffset[ii][cc][tt][mod][aa] << " ";
+		      }
 	     // if (mod%2) cout << "| ";
-             }
-	  calpars << endl;}
+		  }
+	  calpars << endl;
+	      }
+	  }
       calpars.close();
 
   
@@ -370,13 +382,15 @@ ii=1;
         for (i=0;i<entries; i++) {
 	 mm->GetEntry(i);
 	 calevt=evt;
+	 if (evt->cartridge1>CARTRIDGES_PER_PANEL) continue;
+	 if (evt->cartridge2>CARTRIDGES_PER_PANEL) continue;
          if (evt->fin1>FINS_PER_CARTRIDGE) continue;
          if (evt->fin2>FINS_PER_CARTRIDGE) continue;
 	 if ((evt->crystal1<65)&&((evt->apd1==APD1)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
 	 if ((evt->crystal2<65)&&((evt->apd2==APD1)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
 
-           calevt->dtf-= mean_apdoffset[0][evt->fin1][evt->m1][evt->apd1] ;
-           calevt->dtf-= mean_apdoffset[1][evt->fin2][evt->m2][evt->apd2] ; 
+           calevt->dtf-= mean_apdoffset[0][evt->cartridge1][evt->fin1][evt->m1][evt->apd1] ;
+           calevt->dtf-= mean_apdoffset[1][evt->cartridge2][evt->fin2][evt->m2][evt->apd2] ; 
            if (evt->E1>400&&evt->E1<600&&evt->E2>400&&evt->E2<600) {
 	     tres->Fill(calevt->dtf);}
 	 }
@@ -407,7 +421,7 @@ ii=1;
 
       c1->Print(psfile);
 
-
+	
 
       return 0;}
 
@@ -433,10 +447,10 @@ Float_t getmax(TSpectrum *s,Int_t npeaks){
   
 
 
-Int_t drawmod(TH1F *hi[FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE], TCanvas *ccc, Char_t filename[MAXFILELENGTH])
+Int_t drawmod(TH1F *hi[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE], TCanvas *ccc, Char_t filename[MAXFILELENGTH])
 {
         /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-  Int_t   i,k;
+        Int_t   i,k,c;
         Char_t  filenameo[MAXFILELENGTH+1], filenamec[MAXFILELENGTH+1];
         /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -454,18 +468,19 @@ Int_t drawmod(TH1F *hi[FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE], TC
         ccc->Clear();
         ccc->Divide(4, 8);
 
+	for (c=0;c<CARTRIDGES_PER_PANEL;c++){
         for(k = 0; k < FINS_PER_CARTRIDGE ; k++) {
 	  for(i = 0 ;i < MODULES_PER_FIN; i++ ) {
              ccc->cd(1+2*(i));
-             hi[k][i][0]->Draw("E");
+             hi[c][k][i][0]->Draw("E");
              ccc->cd(2+2*(i));
-             hi[k][i][1]->Draw("E");
+             hi[c][k][i][1]->Draw("E");
 	  }
-           if(k == 0) {
+	  if( (k==0) && (c == 0)) {
               ccc->Print(filenameo);
                         }
            else {
-	     if(k == (FINS_PER_CARTRIDGE-1)) {
+	     if( (k == (FINS_PER_CARTRIDGE-1)) && ( c == (CARTRIDGES_PER_PANEL-1))) {
               ccc->Print(filenamec);
              }
              else {
@@ -477,7 +492,7 @@ Int_t drawmod(TH1F *hi[FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE], TC
 
                         /* } */
                 }
-  
+	}  
 
         return 0;
 }
