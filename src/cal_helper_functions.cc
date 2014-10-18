@@ -3,6 +3,41 @@
 #include "Riostream.h"
 #include "TMath.h"
 
+Int_t drawmod(TH1F *hi[FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE], TCanvas *ccc, Char_t filename[MAXFILELENGTH])
+{
+    Char_t filenameo[MAXFILELENGTH+1];
+    Char_t filenamec[MAXFILELENGTH+1];
+    strcpy(filenameo, filename);
+    strcpy(filenamec, filename);
+    strcat(filenameo, "(");
+    strcat(filenamec, ")");
+
+    ccc->Clear();
+    ccc->Divide(4, 8);
+
+    for(int kk = 0; kk < FINS_PER_CARTRIDGE; kk++) {
+        for(int ii = 0; ii < MODULES_PER_FIN; ii++) {
+            ccc->cd(1+2*(ii));
+            hi[kk][ii][0]->Draw("E");
+            ccc->cd(2+2*(ii));
+            hi[kk][ii][1]->Draw("E");
+        }
+        if(kk == 0) {
+            // First Page
+            ccc->Print(filenameo);
+        } else if(kk == (FINS_PER_CARTRIDGE - 1)) {
+            // Last Page
+            ccc->Print(filenamec);
+        } else {
+            ccc->Print(filename);
+        }
+        ccc->Clear();
+        ccc->Divide(4, 8);
+    }
+
+    return(0);
+}
+
 Int_t drawmod_crys2(TH1F *hi[MODULES_PER_FIN][APDS_PER_MODULE][CRYSTALS_PER_APD], TCanvas *ccc, Char_t filename[MAXFILELENGTH])
 {
     Char_t  filenameo[MAXFILELENGTH+1];
@@ -121,6 +156,40 @@ Int_t writ2d(
             ccc->Divide(2, 4);
         }
     }
+    return(0);
+}
+
+Int_t writval(
+        Float_t mean_crystaloffset[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][CRYSTALS_PER_APD],
+        Char_t outfile[MAXFILELENGTH])
+{
+    ofstream parfile;
+    parfile.open(outfile);
+    if (parfile.good()) {
+        for (int cartridge = 0; cartridge < CARTRIDGES_PER_PANEL; cartridge++) {
+            for (int fin = 0; fin < FINS_PER_CARTRIDGE; fin++) {
+                for (int module = 0; module < MODULES_PER_FIN; module++) {
+                    for (int apd = 0; apd < APDS_PER_MODULE; apd++) {
+                        for (int crystal=0; crystal < CRYSTALS_PER_APD; crystal++) {
+                            if ((crystal % 8) == 0) {
+                                parfile << "C" << cartridge << "F" << fin 
+                                    << "M" << module << "A" << apd
+                                    << "R" << TMath::Floor(crystal/8) << " ";
+                            }
+                            parfile << setw(6) << setprecision(3) 
+                                << mean_crystaloffset[cartridge][fin][module][apd][crystal] << " ";
+                            if ((crystal % 8) == 7) {
+                                parfile << endl;
+                            }
+                        }
+                        parfile << endl;
+                    }
+                }
+            }
+        }
+        parfile << endl;
+    }
+    parfile.close();
     return(0);
 }
 

@@ -5,24 +5,55 @@
 #include "TFile.h"
 #include "TCanvas.h"
 #include "TSpectrum.h"
-#include "TSpectrum2.h"
-#include "TH2F.h"
-#include "TVector.h"
 #include "TMath.h"
 #include "TSpectrum.h"
 #include "TF1.h"
-#include "decoder.h"
+#include "libInit_avdb.h"
+#include "myrootlib.h"
 #include "CoincEvent.h"
 #include "string.h"
 #include "cal_helper_functions.h"
+#include "Syspardef.h"
 
 //#define DEBUG2
 #define UNITS 16
 
 #define MINMODENTRIES 200
 
-Int_t drawmod(TH1F *hi[UNITS][MODULES_PER_FIN][APDS_PER_MODULE], TCanvas *ccc, Char_t filename[MAXFILELENGTH]);
-Float_t calfunc(TH1F *hist, TF1 *fitfun,  Bool_t coarsetime, Bool_t gausfit, Int_t verbose);
+Float_t calfunc(
+        TH1F *hist,
+        TF1 *fitfun,
+        Bool_t coarsetime,
+        Bool_t gausfit,
+        Int_t verbose)
+{
+    Int_t npeaks;
+    TSpectrum *s = new TSpectrum();
+    if (gausfit) {
+        if ( hist->GetEntries() > MINMODENTRIES ) {
+            if (coarsetime) { 
+                fitfun = new TF1("fitfun", "gaus+pol0",-75,75);
+                fitfun->SetParameter(0,200);
+                fitfun->SetParameter(1,0);
+                fitfun->SetParameter(2,90);
+                fitfun->SetParameter(4,100); 
+                hist->Fit(fitfun,"RQ");
+                return(fitfun->GetParameter(1)); 
+            } else {
+                fitfun = fitgaus_peak(hist,1) ;
+                return(fitfun->GetParameter(1));
+            }
+        }
+    } 
+    npeaks = s->Search(hist,3,"",0.2);
+    if (npeaks) {
+        return getmax(s, npeaks, verbose);
+    } else {
+        return(0);
+    }
+}
+
+
 
 int main(int argc, Char_t *argv[])
 { 
@@ -30,32 +61,26 @@ int main(int argc, Char_t *argv[])
     Int_t MOD2=1;
     Int_t APD1=0;
     Int_t APD2=0;
+    Int_t fin1=99;
+    Int_t fin2=99;
     Bool_t coarsetime=1; 
     Int_t crystalmean=0;
     Int_t usegausfit=0;
     Char_t histtitle[40];
+    Int_t verbose = 0;
 
     Int_t DTF_low;
     Int_t DTF_hi;
     Int_t FINELIMIT(400);
     Int_t DTFLIMIT(5);
 
+    Char_t filenamel[CALFILENAMELENGTH] = "";
+
     cout << " Welcome to cal_apd_offset" << endl;
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    Char_t		filenamel[CALFILENAMELENGTH] = "";
-    Int_t		verbose = 0;
-    //module UNIT0,UNIT1,UNIT2,UNIT3;
-    CoincEvent      *evt = new CoincEvent();
-    Int_t fin1=99;
-    Int_t fin2=99;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     for(int ix = 1; ix < argc; ix++) {
 
-        /*
-         * Verbose '-v'
-         */
         if(strncmp(argv[ix], "-v", 2) == 0) {
             cout << "Verbose Mode " << endl;
             verbose = 1;
@@ -193,6 +218,7 @@ int main(int argc, Char_t *argv[])
         return -10;
     }
 
+    CoincEvent *evt = new CoincEvent();
     mm->SetBranchAddress("Event",&evt);
 
     Long64_t entries = mm->GetEntries();
@@ -375,78 +401,4 @@ int main(int argc, Char_t *argv[])
     return(0);
 }
 
-Int_t drawmod(TH1F *hi[FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE], TCanvas *ccc, Char_t filename[MAXFILELENGTH])
-{
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    Int_t   i,k;
-    Char_t  filenameo[MAXFILELENGTH+1], filenamec[MAXFILELENGTH+1];
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-    // cout << "filename = " << filename << endl;
-
-    strcpy(filenameo, filename);
-    strcpy(filenamec, filename);
-    strcat(filenameo, "(");
-    strcat(filenamec, ")");
-
-    ccc->Clear();
-    ccc->Divide(4, 8);
-
-    for(k = 0; k < FINS_PER_CARTRIDGE ; k++) {
-        for(i = 0 ;i < MODULES_PER_FIN; i++ ) {
-            ccc->cd(1+2*(i));
-            hi[k][i][0]->Draw("E");
-            ccc->cd(2+2*(i));
-            hi[k][i][1]->Draw("E");
-        }
-        if(k == 0) {
-            ccc->Print(filenameo);
-        } else {
-            if(k == (FINS_PER_CARTRIDGE-1)) {
-                ccc->Print(filenamec);
-            } else {
-                ccc->Print(filename);
-            }
-        }
-        ccc->Clear();
-        ccc->Divide(4, 8);
-    }
-
-
-    return 0;
-}
-
-Float_t calfunc(
-        TH1F *hist,
-        TF1 *fitfun,
-        Bool_t coarsetime,
-        Bool_t gausfit,
-        Int_t verbose)
-{
-    Int_t npeaks;
-    TSpectrum *s = new TSpectrum();
-    if (gausfit) {
-        if ( hist->GetEntries() > MINMODENTRIES ) {
-            if (coarsetime) { 
-                fitfun = new TF1("fitfun", "gaus+pol0",-75,75);
-                fitfun->SetParameter(0,200);
-                fitfun->SetParameter(1,0);
-                fitfun->SetParameter(2,90);
-                fitfun->SetParameter(4,100); 
-                hist->Fit(fitfun,"RQ");
-                return(fitfun->GetParameter(1)); 
-            }
-            else  {
-                fitfun = fitgaus_peak(hist,1) ;
-                return(fitfun->GetParameter(1));
-            }
-        }
-    } // gausfit 
-    npeaks = s->Search(hist,3,"",0.2);
-    if (npeaks) {
-        return getmax(s, npeaks, verbose);
-    } else {
-        return(0);
-    }
-}
 

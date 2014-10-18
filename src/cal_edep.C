@@ -20,6 +20,11 @@ int main(int argc, Char_t *argv[])
 { 
     Int_t MOD1 = 6; // Unused
     Int_t MOD2 = 1; // Unused
+    // Seems to be a flag used within the logic for checking for a valid apd or
+    // crystal id value.  If this is zero, aka not specified by the user, then
+    // the logic checks for a 0 or 1 from the apd value.  If it's specified,
+    // then the logic checks for 1 or the user specified value.  I don't know
+    // why this useful. -Freese
     Int_t APD1 = 0;
     Int_t APD2 = 0; // Unused
     Int_t uvcal = 0; // Unused
@@ -32,7 +37,12 @@ int main(int argc, Char_t *argv[])
 
     Int_t DTF_low; // Not really used
     Int_t DTF_hi; // Not really used
+    // The limit that is put on events before they are placed into histograms.
+    // This does not effect what events are passed to the resulting root file.
     Int_t FINELIMIT;
+    // A flag to indicate that the common channel energy spectrum should be
+    // used for the energy dependence calibration.  The default is to use the
+    // spatial energy spectrum
     Bool_t common = 0;
     Int_t fin1 = 99; // Unused
     Int_t fin2 = 99; // Unused
@@ -40,7 +50,6 @@ int main(int argc, Char_t *argv[])
     cout << " Welcome to cal_edep " << endl;
 
     Char_t filenamel[FILENAMELENGTH] = "";
-    CoincEvent * evt = new CoincEvent();     
 
     for(int ix = 1; ix < argc; ix++) {
         if(strncmp(argv[ix], "-v", 2) == 0) {
@@ -148,6 +157,7 @@ int main(int argc, Char_t *argv[])
     cout << " Opening file " << filenamel << endl;
     TFile *rtfile = new TFile(filenamel,"OPEN");
     TTree *mm  = (TTree *) rtfile->Get("merged");
+    CoincEvent * evt = new CoincEvent();     
     mm->SetBranchAddress("Event",&evt);
 
     coarsetime = 0;

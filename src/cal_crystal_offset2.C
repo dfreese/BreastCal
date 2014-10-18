@@ -21,32 +21,67 @@
 
 #define MINMODENTRIES 1000
 
-Float_t cryscalfunc(TH1F *hist, Bool_t gausfit,Int_t verbose);
-Int_t writval(
-        Float_t mean_crystaloffset[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][CRYSTALS_PER_APD],
-        Char_t outfile[MAXFILELENGTH]);
+Float_t cryscalfunc(
+        TH1F *hist,
+        Bool_t gausfit,
+        Int_t verbose)
+{
+    if (gausfit) {
+        if ( hist->GetEntries() > 70 ) {     
+            TF1 * fitfun = fitgaus(hist,0);
+            return(fitfun->GetParameter(1));
+        } else if ( hist->GetEntries() > 50 ) {
+                return hist->GetMean();
+        } else {
+            return(0.0);
+        }
+    } else {
+        // just peak search 
+        TSpectrum *s = new TSpectrum();
+        Int_t npeaks = s->Search(hist,3,"",0.2);
+        if (npeaks) {
+            return getmax(s,npeaks,verbose);
+        } else {
+            return(0.0);
+        }
+    }
+}
 
 int main(int argc, Char_t *argv[])
 { 
-    Int_t MOD1=6;
-    Int_t MOD2=1;
+    Int_t MOD1=6; // Has a flag in the input part, but is not used
+    Int_t MOD2=1; // Has a flag in the input part, but is not used
+    // Seems to be a flag used within the logic for checking for a valid apd or
+    // crystal id value.  If this is zero, aka not specified by the user, then
+    // the logic checks for a 0 or 1 from the apd value.  If it's specified,
+    // then the logic checks for 1 or the user specified value.  I don't know
+    // why this useful. -Freese
     Int_t APD1=0;
-    Int_t APD2=0;
+    Int_t APD2=0; // Has a flag in the input part, but is not used
+    // A flag that is used by the crystal calibration function to determine
+    // wether a fit algorithm or a peak searching algorithm should be used
+    // in determining the calibration parameter for that crystal
     Bool_t usegausfit=0;
+    // A flag for whether course timestamp limits should be used. They are
+    // only used if a fine timestamp limit is not specified
     Int_t coarsetime=1; 
-    Int_t crystalmean=0;
+    Int_t crystalmean=0; // Has a flag in the input part, but is not used
     Char_t histtitle[40];
 
+    // DTF high and low set the upper and lower limits of the histograms for
+    // each of the crystals.
     Int_t DTF_low;
     Int_t DTF_hi;
+    // The fine timestamp limit does not eliminate any events from the root
+    // file that is generated as a result of this program.  This sets the limit
+    // for the fine timestamp difference that can be use
     Int_t FINELIMIT;
-    Int_t DTFLIMIT;
+    Int_t DTFLIMIT; // Unused
 
     cout << " Welcome to cal_crystal_ofset2 " << endl;
 
     Char_t filenamel[FILENAMELENGTH] = "";
     Int_t verbose = 0;
-    CoincEvent *evt =  new CoincEvent();
     // Parameter for determining if the fine time stamp histogram generated
     // after calibration should be plotted in a log scale or not.  Default
     // is to not use a log scale
@@ -107,12 +142,12 @@ int main(int argc, Char_t *argv[])
         if(strncmp(argv[ix], "-ft", 3) == 0) {
             coarsetime=0;
             ix++;
-            if (ix == argc ) {
+            if (ix == argc) {
                 cout << " Please enter finelimit interval: -ft [finelimit]\nExiting. " << endl;
-                return -20;
+                return(-20);
             }
-            FINELIMIT=atoi(argv[ix]);
-            if (FINELIMIT<1) {
+            FINELIMIT = atoi(argv[ix]);
+            if (FINELIMIT < 1) {
                 cout << " Error. FINELIMIT = " << FINELIMIT << " too small. Please specify -ft [finelimit]. " << endl;
                 cout << "Exiting." << endl; return -20;
             }
@@ -152,6 +187,7 @@ int main(int argc, Char_t *argv[])
     cout << " Opening file " << filenamel << endl;
     TFile *rtfile = new TFile(filenamel,"OPEN");
     TTree *mm  = (TTree *) rtfile->Get("merged");
+    CoincEvent *evt =  new CoincEvent();
     mm->SetBranchAddress("Event",&evt);
 
 
@@ -345,67 +381,6 @@ int main(int argc, Char_t *argv[])
         sprintf(psfile,"%s.tres.crysoffset.log.ps",rootfile);
         c1->Print(psfile);
     }
-    return(0);
-}
-
-Float_t cryscalfunc(
-        TH1F *hist,
-        Bool_t gausfit,
-        Int_t verbose)
-{
-    if (gausfit) {
-        if ( hist->GetEntries() > 70 ) {     
-            TF1 * fitfun = fitgaus(hist,0) ;
-            return(fitfun->GetParameter(1));
-        } else { 
-            if ( hist->GetEntries() > 50 ) {
-                return hist->GetMean();
-            } else {
-                return(0.0);
-            }
-        }
-    } else {    // just peak search 
-        TSpectrum *s = new TSpectrum();
-        Int_t npeaks = s->Search(hist,3,"",0.2);
-        if (npeaks) {
-            return getmax(s,npeaks,verbose);
-        } else {
-            return(0.0);
-        }
-    } // ! gausfit 
-}
-
-Int_t writval(
-        Float_t mean_crystaloffset[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][CRYSTALS_PER_APD],
-        Char_t outfile[MAXFILELENGTH])
-{
-    ofstream parfile;
-    parfile.open(outfile);
-    if (parfile.good()) {
-        for (int cartridge = 0; cartridge < CARTRIDGES_PER_PANEL; cartridge++) {
-            for (int fin = 0; fin < FINS_PER_CARTRIDGE; fin++) {
-                for (int module = 0; module < MODULES_PER_FIN; module++) {
-                    for (int apd = 0; apd < APDS_PER_MODULE; apd++) {
-                        for (int crystal=0; crystal < CRYSTALS_PER_APD; crystal++) {
-                            if ((crystal%8)==0) {
-                                parfile << "C" << cartridge << "F" << fin 
-                                    << "M" << module << "A" << apd
-                                    << "R" << TMath::Floor(crystal/8) << " ";
-                            }
-                            parfile << setw(6) << setprecision(3) 
-                                << mean_crystaloffset[cartridge][fin][module][apd][crystal] << " ";
-                            if ((crystal%8)==7) {
-                                parfile << endl;
-                            }
-                        }
-                        parfile << endl;
-                    }
-                }
-            }
-        }
-        parfile << endl;
-    }
-    parfile.close();
     return(0);
 }
 
