@@ -23,12 +23,17 @@ int main(int argc, Char_t *argv[]) {
 
     Char_t filename[FILENAMELENGTH] = "";
     Int_t verbose = 0;
+    bool randoms_flag = false;
     Int_t threshold = -1000;
 
     for(int ix = 1; ix < argc; ix++) {
         if(strncmp(argv[ix], "-v", 2) == 0) {
             cout << "Verbose Mode " << endl;
             verbose = 1;
+        }
+        if(strncmp(argv[ix], "-r", 2) == 0) {
+            cout << "Randoms Mode " << endl;
+            randoms_flag = true;
         }
         if(strncmp(argv[ix], "-t", 2) == 0) {
             threshold = atoi( argv[ix+1]);
@@ -66,7 +71,11 @@ int main(int argc, Char_t *argv[]) {
     strncpy(filebase,filename,strlen(filename)-5);
     filebase[strlen(filename)-5]='\0';
     sprintf(rootfile,"%s",filebase);
-    strcat(rootfile,".ana.root");
+    if (randoms_flag) {
+        strcat(rootfile,".ana.root");
+    } else {
+        strcat(rootfile,".randoms.root");
+    }
 
     cout << " Opening file " << rootfile << " for writing " << endl;
     TFile *orf = new TFile(rootfile,"RECREATE");
@@ -80,7 +89,7 @@ int main(int argc, Char_t *argv[]) {
     Long64_t events_passing_cut = 0;
     for (Long64_t ii = 0; ii<entries_m; ii++) {
         m->GetEntry(ii);
-        if ((data->dtc > DTC_LOW) && (data->dtc < DTC_HI)) {
+        if (((data->dtc > DTC_LOW) && (data->dtc < DTC_HI)) || randoms_flag) {
             if ((data->E1<ENERGY_CUT_HIGH) && (data->E1 > ENERGY_CUT_LOW)) {
                 if ((data->E2 < ENERGY_CUT_HIGH) && (data->E2 > ENERGY_CUT_LOW)) {
                     if ((data->crystal1 > -1) && (data->crystal1 < CRYSTALS_PER_APD)) {
