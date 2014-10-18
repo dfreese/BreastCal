@@ -72,9 +72,9 @@ int main(int argc, Char_t *argv[]) {
     filebase[strlen(filename)-5]='\0';
     sprintf(rootfile,"%s",filebase);
     if (randoms_flag) {
-        strcat(rootfile,".ana.root");
-    } else {
         strcat(rootfile,".randoms.root");
+    } else {
+        strcat(rootfile,".ana.root");
     }
 
     cout << " Opening file " << rootfile << " for writing " << endl;
@@ -87,6 +87,9 @@ int main(int argc, Char_t *argv[]) {
     cout << " Processing " <<  entries_m  <<  " Events " << endl;
 
     Long64_t events_passing_cut = 0;
+    Long64_t events_cut_time_window(0);
+    Long64_t events_cut_energy_window(0);
+    Long64_t events_cut_invalid_index(0);
     for (Long64_t ii = 0; ii<entries_m; ii++) {
         m->GetEntry(ii);
         if (((data->dtc > DTC_LOW) && (data->dtc < DTC_HI)) || randoms_flag) {
@@ -97,10 +100,20 @@ int main(int argc, Char_t *argv[]) {
                             evt = data;
                             mana->Fill();
                             events_passing_cut++;
+                        } else {
+                            events_cut_invalid_index++;
                         }
+                    } else {
+                        events_cut_invalid_index++;
                     }
+                } else {
+                    events_cut_energy_window++;
                 }
+            } else {
+                events_cut_energy_window++;
             }
+        } else {
+            events_cut_time_window++;
         }
     } // loop over entries
     mana->Write();
@@ -108,6 +121,15 @@ int main(int argc, Char_t *argv[]) {
 
     cout << " Wrote file " << filename << " with "
          << events_passing_cut << " events." << endl;
+    cout << " Dropped Events: " 
+         << events_cut_invalid_index + events_cut_energy_window + events_cut_time_window
+         << endl;
+    cout << "    Time Window (+/-" << CT_WINDOW << "ct counts): " 
+         << events_cut_time_window << endl;
+    cout << "    Energy Window (" << ENERGY_CUT_LOW << "-" << ENERGY_CUT_HIGH << "keV): "
+         << events_cut_energy_window << endl;
+    cout << "    Invalid Index Value: "
+         << events_cut_invalid_index << endl;
 
     return(0);
 }
