@@ -175,8 +175,6 @@ int main(int argc, Char_t *argv[])
     if (!c1) c1 = new TCanvas("c1","c1",10,10,1000,1000);
     c1->SetCanvasSize(700,700);
 
-    Char_t calparfilename[CALFILENAMELENGTH];
-    ifstream infile;
 
     TH1F * apdoffset[SYSTEM_PANELS][CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
     TF1 * fit_apdoffset[SYSTEM_PANELS][CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
@@ -238,13 +236,14 @@ int main(int argc, Char_t *argv[])
     Long64_t checkevts=0;
 
 
-    size_t root_file_ext_pos(filename.find_last_of(".root"));
+    size_t root_file_ext_pos(filename.rfind(".root"));
     if (root_file_ext_pos == string::npos) {
         cerr << "Unable to find .root extension in: \"" << filename << "\"" << endl;
         cerr << "...Exiting." << endl;
         return(-1);
     }
-    string filebase(filename,root_file_ext_pos);
+    string filebase(filename, 0, root_file_ext_pos);
+    if (verbose) cout << "filebase: " << filebase << endl;
     string rootfile(filebase + ".apdoffcal.root");
     if (verbose) cout << " ROOTFILE = " << rootfile << endl;
 
@@ -280,8 +279,12 @@ int main(int argc, Char_t *argv[])
 
     // Calculate and print the calibration parameters for the left side
     string calpar_filename_left(filebase + ".calpar_0.txt");
-    ofstream calpars;
-    calpars.open(calpar_filename_left.c_str());
+    if (verbose) {
+        cout << "Writing Calibration Parameters to: "
+             << calpar_filename_left << endl;
+    }
+    ofstream calpars_left;
+    calpars_left.open(calpar_filename_left.c_str());
     for (int cartridge = 0; cartridge < CARTRIDGES_PER_PANEL; cartridge++) {
         for (int fin=0; fin < FINS_PER_CARTRIDGE; fin++) {
             for (int mod=0; mod<MODULES_PER_FIN; mod++) {
@@ -292,13 +295,13 @@ int main(int argc, Char_t *argv[])
                             coarsetime,
                             usegausfit,
                             verbose);
-                    calpars <<  std::setw(4) << mean_apdoffset[panel][cartridge][fin][mod][apd] << " ";
+                    calpars_left <<  std::setw(4) << mean_apdoffset[panel][cartridge][fin][mod][apd] << " ";
                 }
             }
-            calpars << endl;
+            calpars_left << endl;
         }
     }
-    calpars.close();
+    calpars_left.close();
 
     string ps_filename_left_cartridge(filebase + ".panel0_cartridge0.ps");
     drawmod(apdoffset[0][0], c1, ps_filename_left_cartridge.c_str());
@@ -337,7 +340,12 @@ int main(int argc, Char_t *argv[])
     }
 
     string calpar_filename_right(filebase + ".calpar_1.txt");
-    calpars.open(calpar_filename_right.c_str());
+    if (verbose) {
+        cout << "Writing Calibration Parameters to: "
+             << calpar_filename_right << endl;
+    }
+    ofstream calpars_right;
+    calpars_right.open(calpar_filename_right.c_str());
     for (int cartridge = 0; cartridge < CARTRIDGES_PER_PANEL; cartridge++) {
         for (int fin=0; fin < FINS_PER_CARTRIDGE; fin++) {
             for (int mod = 0; mod < MODULES_PER_FIN; mod++) {
@@ -348,13 +356,13 @@ int main(int argc, Char_t *argv[])
                             coarsetime,
                             usegausfit,
                             verbose);
-                    calpars <<  std::setw(4) << mean_apdoffset[panel][cartridge][fin][mod][apd] << " ";
+                    calpars_right <<  std::setw(4) << mean_apdoffset[panel][cartridge][fin][mod][apd] << " ";
                 }
             }
-            calpars << endl;
+            calpars_right << endl;
         }
     }
-    calpars.close();
+    calpars_right.close();
 
     string ps_filename_right_cartridge(filebase + ".panel1_cartridge0.ps");
     drawmod(apdoffset[1][0],c1,ps_filename_right_cartridge.c_str());
