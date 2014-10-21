@@ -37,15 +37,13 @@ Int_t drawmod(
     return(0);
 }
 
-Int_t drawmod_crys2(TH1F *hi[MODULES_PER_FIN][APDS_PER_MODULE][CRYSTALS_PER_APD], TCanvas *ccc, Char_t filename[MAXFILELENGTH])
+Int_t drawmod_crys2(
+        TH1F *hi[MODULES_PER_FIN][APDS_PER_MODULE][CRYSTALS_PER_APD],
+        TCanvas *ccc,
+        const std::string & filename)
 {
-    Char_t  filenameo[MAXFILELENGTH+1];
-    Char_t  filenamec[MAXFILELENGTH+1];
-
-    strcpy(filenameo, filename);
-    strcpy(filenamec, filename);
-    strcat(filenameo, "(");
-    strcat(filenamec, ")");
+    std::string filename_open(filename + "(");
+    std::string filename_close(filename + ")");
 
     ccc->Clear();
     ccc->Divide(4, 4);
@@ -58,12 +56,12 @@ Int_t drawmod_crys2(TH1F *hi[MODULES_PER_FIN][APDS_PER_MODULE][CRYSTALS_PER_APD]
                     hi[module][apd][ii*16+jj]->Draw("E");
                 }
                 if ((module == 0) && (apd == 0) && (ii == 0)) {
-                    ccc->Print(filenameo);
+                    ccc->Print(filename_open.c_str());
                 } else {
                     if((module == (MODULES_PER_FIN-1)) && (apd == 1) && (ii==3)) {
-                        ccc->Print(filenamec);
+                        ccc->Print(filename_close.c_str());
                     } else {
-                        ccc->Print(filename);
+                        ccc->Print(filename.c_str());
                     }
                 }
                 ccc->Clear();
@@ -160,10 +158,10 @@ Int_t writ2d(
 
 Int_t writval(
         Float_t mean_crystaloffset[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][CRYSTALS_PER_APD],
-        Char_t outfile[MAXFILELENGTH])
+        const string & outfile)
 {
     ofstream parfile;
-    parfile.open(outfile);
+    parfile.open(outfile.c_str());
     if (parfile.good()) {
         for (int cartridge = 0; cartridge < CARTRIDGES_PER_PANEL; cartridge++) {
             for (int fin = 0; fin < FINS_PER_CARTRIDGE; fin++) {

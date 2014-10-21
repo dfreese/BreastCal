@@ -80,12 +80,17 @@ int main(int argc, Char_t *argv[])
 
     cout << " Welcome to cal_crystal_ofset2 " << endl;
 
-    Char_t filenamel[FILENAMELENGTH] = "";
+    string filename;
     Int_t verbose = 0;
     // Parameter for determining if the fine time stamp histogram generated
     // after calibration should be plotted in a log scale or not.  Default
     // is to not use a log scale
     Int_t logscale = 0; 
+
+    // A flag that is true unless a -n option is found in which case only the
+    // calibration parameters and the associated plots are generated, but the
+    // calibrated root file is not created.
+    bool write_out_root_file_flag(true);
 
 
 
@@ -97,6 +102,11 @@ int main(int argc, Char_t *argv[])
         if(strncmp(argv[ix], "-v", 2) == 0) {
             cout << "Verbose Mode " << endl;
             verbose = 1;
+        }
+
+        if(strncmp(argv[ix], "-n", 2) == 0) {
+            cout << "Calibrated Root File will not be created." << endl;
+            write_out_root_file_flag = false;
         }
 
         // Plot in log scale
@@ -153,19 +163,9 @@ int main(int argc, Char_t *argv[])
             }
             cout << " Fine time interval = "  << FINELIMIT << endl;
         }
-
-
-
-
         /* filename '-f' */
         if(strncmp(argv[ix], "-f", 3) == 0) {
-            if(strlen(argv[ix + 1]) < FILENAMELENGTH) {
-                sprintf(filenamel, "%s", argv[ix + 1]);
-            } else {
-                cout << "Filename " << argv[ix + 1] << " too long !" << endl;
-                cout << "Exiting.." << endl;
-                return -99;
-            }
+            filename = string(argv[ix + 1]);
         }
     }
 
@@ -181,11 +181,23 @@ int main(int argc, Char_t *argv[])
     if (!c1) c1 = new TCanvas("c1","c1",10,10,1000,1000);
     c1->SetCanvasSize(700,700);
 
-    Char_t filebase[FILENAMELENGTH],rootfile[FILENAMELENGTH]; 
-    ifstream infile;
 
-    cout << " Opening file " << filenamel << endl;
-    TFile *rtfile = new TFile(filenamel,"OPEN");
+    size_t root_file_ext_pos(filename.rfind(".root"));
+    if (root_file_ext_pos == string::npos) {
+        cerr << "Unable to find .root extension in: \"" << filename << "\"" << endl;
+        cerr << "...Exiting." << endl;
+        return(-1);
+    }
+    string filebase(filename, 0, root_file_ext_pos);
+    if (verbose) cout << "filebase: " << filebase << endl;
+    string rootfile(filebase + ".crystaloffcal.root");
+    if (verbose) cout << "ROOTFILE = " << rootfile << endl;
+
+
+
+
+    cout << " Opening file " << filename << endl;
+    TFile *rtfile = new TFile(filename.c_str(),"OPEN");
     TTree *mm  = (TTree *) rtfile->Get("merged");
     CoincEvent *evt =  new CoincEvent();
     mm->SetBranchAddress("Event",&evt);
@@ -235,12 +247,6 @@ int main(int argc, Char_t *argv[])
     Long64_t checkevts(0);
 
 
-    strncpy(filebase,filenamel,strlen(filenamel)-5);
-    filebase[strlen(filenamel)-5]='\0';
-    sprintf(rootfile,"%s",filebase);
-    cout << " ROOTFILE = " << rootfile << endl;
-
-
     for (Long64_t ii = 0; ii<entries; ii++) {
         mm->GetEntry(ii);
         if (evt->fin1>FINS_PER_CARTRIDGE) continue;
@@ -279,15 +285,20 @@ int main(int argc, Char_t *argv[])
     }
 
 
-    Char_t psfile[MAXFILELENGTH];
     for (int fin = 0; fin < FINS_PER_CARTRIDGE; fin++) {
-        sprintf(psfile,"%s_panel0_cartridge0_fin%d.ps",rootfile, fin);
-        drawmod_crys2(crystaloffset[0][0][fin],c1,psfile);
+        stringstream ps_fin_filename;
+        ps_fin_filename << filebase << ".panel0_cartridge0_fin" << fin << ".ps";
+        if (verbose) {
+            cout << "Writing fits to: " << ps_fin_filename.str() << endl;
+        }
+        drawmod_crys2(crystaloffset[0][0][fin],c1,ps_fin_filename.str());
     }
 
-    Char_t calparfilename[MAXFILELENGTH];
-    sprintf(calparfilename,"%s_calpar_0.txt",rootfile);
-    writval(mean_crystaloffset[0],calparfilename);
+    string calpar_left_filename(filebase + ".calpar_0.txt");
+    if (verbose) {
+        cout << "Writing left cal params to: " << calpar_left_filename << endl;
+    }
+    writval(mean_crystaloffset[0],calpar_left_filename.c_str());
 
     if (verbose) cout << " Filling crystal spectra on the right. " << endl;
     checkevts=0;
@@ -332,54 +343,61 @@ int main(int argc, Char_t *argv[])
         }
     }
 
-    sprintf(calparfilename,"%s_calpar_1.txt",rootfile);
-    writval(mean_crystaloffset[1],calparfilename);
-
-    TH1F *tres = new TH1F("tres","Time Resolution After Time walk correction",400,-100,100);
-
-    strcat(rootfile,".crystaloffcal.root");
-
-
-    if (verbose) cout << " Opening file " << rootfile << " for writing " << endl;
-    TFile *calfile = new TFile(rootfile,"RECREATE");
-    TTree *merged = new  TTree("merged","Merged and Calibrated LYSO-PSAPD data ");
-    CoincEvent *calevt = new CoincEvent();
-    merged->Branch("Event",&calevt);
-
-
-    if (verbose) cout << "filling new Tree :: " << endl;
-
-    for (Long64_t ii=0; ii<entries; ii++) {
-        mm->GetEntry(ii);
-        calevt = evt;
-        if (evt->fin1>FINS_PER_CARTRIDGE) continue;
-        if (evt->fin2>FINS_PER_CARTRIDGE) continue;
-        if ((evt->crystal1<65)&&((evt->apd1==APD1)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
-            if ((evt->crystal2<65)&&((evt->apd2==APD1)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
-                calevt->dtf -= mean_crystaloffset[0][evt->cartridge1][evt->fin1][evt->m1][evt->apd1][evt->crystal1];
-                calevt->dtf -= mean_crystaloffset[1][evt->cartridge2][evt->fin2][evt->m2][evt->apd2][evt->crystal2]; 
-                if (evt->E1>400&&evt->E1<600&&evt->E2>400&&evt->E2<600) {
-                    tres->Fill(calevt->dtf);}
-            }
-        }
-        merged->Fill();
+    string calpar_right_filename(filebase + ".calpar_1.txt");
+    if (verbose) {
+        cout << "Writing right cal params to: " << calpar_right_filename << endl;
     }
-    merged->Write();
-    calfile->Close();
+    writval(mean_crystaloffset[1], calpar_right_filename);
 
-    // Fit the fine timestamp histogram and print it out with the fit
-    tres->Fit("gaus","","",-10,10);
-    c1->Clear();
-    tres->Draw();
-    sprintf(psfile,"%s.tres.crysoffset.ps",rootfile);
+    if (write_out_root_file_flag) {
+        TH1F *tres = new TH1F("tres","Time Resolution After Time walk correction",400,-100,100);
 
-    c1->Print(psfile);
+        if (verbose) cout << " Opening file " << rootfile << " for writing " << endl;
+        TFile *calfile = new TFile(rootfile.c_str(),"RECREATE");
+        TTree *merged = new  TTree("merged","Merged and Calibrated LYSO-PSAPD data ");
+        CoincEvent *calevt = new CoincEvent();
+        merged->Branch("Event",&calevt);
 
-    // below section added by David
-    if (logscale == 1) {
-        c1->SetLogy();
-        sprintf(psfile,"%s.tres.crysoffset.log.ps",rootfile);
-        c1->Print(psfile);
+
+        if (verbose) cout << "filling new Tree :: " << endl;
+
+        for (Long64_t ii=0; ii<entries; ii++) {
+            mm->GetEntry(ii);
+            calevt = evt;
+            if (evt->fin1>FINS_PER_CARTRIDGE) continue;
+            if (evt->fin2>FINS_PER_CARTRIDGE) continue;
+            if ((evt->crystal1<65)&&((evt->apd1==APD1)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
+                if ((evt->crystal2<65)&&((evt->apd2==APD1)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
+                    calevt->dtf -= mean_crystaloffset[0][evt->cartridge1][evt->fin1][evt->m1][evt->apd1][evt->crystal1];
+                    calevt->dtf -= mean_crystaloffset[1][evt->cartridge2][evt->fin2][evt->m2][evt->apd2][evt->crystal2]; 
+                    if (evt->E1>400&&evt->E1<600&&evt->E2>400&&evt->E2<600) {
+                        tres->Fill(calevt->dtf);}
+                }
+            }
+            merged->Fill();
+        }
+        merged->Write();
+        calfile->Close();
+
+        // Fit the fine timestamp histogram and print it out with the fit
+        tres->Fit("gaus","","",-10,10);
+        c1->Clear();
+        tres->Draw();
+        string ps_tres_filename(filebase + ".tres.crysoffset.ps");
+        if (verbose) {
+            cout << "Writing tres histogram to: " << ps_tres_filename << endl;
+        }
+        c1->Print(ps_tres_filename.c_str());
+
+        // below section added by David
+        if (logscale == 1) {
+            c1->SetLogy();
+            string ps_tres_log_filename(filebase + ".tres_log.crysoffset.ps");
+            if (verbose) {
+                cout << "Writing log tres histogram to: " << ps_tres_log_filename << endl;
+            }
+            c1->Print(ps_tres_log_filename.c_str());
+        }
     }
     return(0);
 }
