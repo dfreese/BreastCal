@@ -14,6 +14,7 @@
 #include "string.h"
 #include "cal_helper_functions.h"
 #include "Syspardef.h"
+#include <string>
 
 //#define DEBUG2
 #define UNITS 16
@@ -74,7 +75,12 @@ int main(int argc, Char_t *argv[])
     Int_t FINELIMIT(400);
     Int_t DTFLIMIT(5);
 
-    Char_t filenamel[CALFILENAMELENGTH] = "";
+    string filename;
+
+    // A flag that is true unless a -n option is found in which case only the
+    // calibration parameters and the associated plots are generated, but the
+    // calibrated root file is not created.
+    bool write_out_root_file_flag(true);
 
     cout << " Welcome to cal_apd_offset" << endl;
 
@@ -84,6 +90,11 @@ int main(int argc, Char_t *argv[])
         if(strncmp(argv[ix], "-v", 2) == 0) {
             cout << "Verbose Mode " << endl;
             verbose = 1;
+        }
+
+        if(strncmp(argv[ix], "-n", 2) == 0) {
+            cout << "Calibrated Root File will not be created." << endl;
+            write_out_root_file_flag = false;
         }
 
         if(strncmp(argv[ix], "-apd1", 5) == 0) {
@@ -143,7 +154,7 @@ int main(int argc, Char_t *argv[])
                 fin2=atoi ( argv[ix+1]) ; ix++;
                 cout << " Fin 2 :: " << fin2 <<endl;
             } else if(strlen(argv[ix + 1]) < CALFILENAMELENGTH) {
-                sprintf(filenamel, "%s", argv[ix + 1]);
+                filename = string(argv[ix + 1]);
             } else {
                 cout << "Filename " << argv[ix + 1] << " too long !" << endl;
                 cout << "Exiting.." << endl;
@@ -164,7 +175,6 @@ int main(int argc, Char_t *argv[])
     if (!c1) c1 = new TCanvas("c1","c1",10,10,1000,1000);
     c1->SetCanvasSize(700,700);
 
-    Char_t filebase[CALFILENAMELENGTH],rootfile[CALFILENAMELENGTH]; 
     Char_t calparfilename[CALFILENAMELENGTH];
     ifstream infile;
 
@@ -203,17 +213,17 @@ int main(int argc, Char_t *argv[])
     }
 
 
-    cout << " Opening file " << filenamel << endl;
-    TFile *rtfile = new TFile(filenamel,"OPEN");
+    cout << " Opening file " << filename << endl;
+    TFile *rtfile = new TFile(filename.c_str(),"OPEN");
     TTree *mm  = (TTree *) rtfile->Get("merged");
 
     if (!mm) {
-        if (verbose) cout << " Problem reading Tree merged "   << " from file " << filenamel << ". Trying tree mana." << endl;
+        if (verbose) cout << " Problem reading Tree merged "   << " from file " << filename << ". Trying tree mana." << endl;
         mm  = (TTree *) rtfile->Get("mana");
     }
 
     if (!mm) {
-        cout << " Problem reading Tree mana "   << " from file " << filenamel << endl;
+        cout << " Problem reading Tree mana "   << " from file " << filename << endl;
         cout << " Exiting " << endl;
         return -10;
     }
@@ -228,9 +238,14 @@ int main(int argc, Char_t *argv[])
     Long64_t checkevts=0;
 
 
-    strncpy(filebase,filenamel,strlen(filenamel)-5);
-    filebase[strlen(filenamel)-5]='\0';
-    sprintf(rootfile,"%s",filebase);
+    size_t root_file_ext_pos(filename.find_last_of(".root"));
+    if (root_file_ext_pos == string::npos) {
+        cerr << "Unable to find .root extension in: \"" << filename << "\"" << endl;
+        cerr << "...Exiting." << endl;
+        return(-1);
+    }
+    string filebase(filename,root_file_ext_pos);
+    string rootfile(filebase + ".apdoffcal.root");
     if (verbose) cout << " ROOTFILE = " << rootfile << endl;
 
     // Fill histograms for the left panel with their associated events
@@ -264,9 +279,9 @@ int main(int argc, Char_t *argv[])
     Float_t mean_apdoffset[SYSTEM_PANELS][CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
 
     // Calculate and print the calibration parameters for the left side
-    sprintf(calparfilename,"%s_calpar_%d.txt",rootfile, panel);
+    string calpar_filename_left(filebase + ".calpar_0.txt");
     ofstream calpars;
-    calpars.open(calparfilename);
+    calpars.open(calpar_filename_left.c_str());
     for (int cartridge = 0; cartridge < CARTRIDGES_PER_PANEL; cartridge++) {
         for (int fin=0; fin < FINS_PER_CARTRIDGE; fin++) {
             for (int mod=0; mod<MODULES_PER_FIN; mod++) {
@@ -285,9 +300,8 @@ int main(int argc, Char_t *argv[])
     }
     calpars.close();
 
-    Char_t psfile[MAXFILELENGTH];
-    sprintf(psfile,"%s_panel0_cartridge0.ps",rootfile);
-    drawmod(apdoffset[0][0],c1,psfile);
+    string ps_filename_left_cartridge(filebase + ".panel0_cartridge0.ps");
+    drawmod(apdoffset[0][0], c1, ps_filename_left_cartridge.c_str());
 
     if (verbose)  cout << " Filling crystal spectra on the right. " << endl;
     checkevts=0;
@@ -322,8 +336,8 @@ int main(int argc, Char_t *argv[])
         cout << " I made " << checkevts << " calls to Fill() " << endl;         
     }
 
-    sprintf(calparfilename,"%s_calpar_%d.txt",rootfile, panel);
-    calpars.open(calparfilename);
+    string calpar_filename_right(filebase + ".calpar_1.txt");
+    calpars.open(calpar_filename_right.c_str());
     for (int cartridge = 0; cartridge < CARTRIDGES_PER_PANEL; cartridge++) {
         for (int fin=0; fin < FINS_PER_CARTRIDGE; fin++) {
             for (int mod = 0; mod < MODULES_PER_FIN; mod++) {
@@ -342,61 +356,61 @@ int main(int argc, Char_t *argv[])
     }
     calpars.close();
 
-    sprintf(psfile,"%s_panel1_cartridge0.ps",rootfile);
-    drawmod(apdoffset[1][0],c1,psfile);
+    string ps_filename_right_cartridge(filebase + ".panel1_cartridge0.ps");
+    drawmod(apdoffset[1][0],c1,ps_filename_right_cartridge.c_str());
 
 
     // Now using these parameters, generate the [filename].apdoffcal.root file
     // with the fine timestamp calibrated by subtracting the mean_apdoffset for
     // each apd involved in the interaction
-    strcat(rootfile,".apdoffcal.root");
+    if (write_out_root_file_flag) {
+        TH1F *tres = new TH1F("tres","Time Resolution After Time walk correction",100,-25,25);
 
-    TH1F *tres = new TH1F("tres","Time Resolution After Time walk correction",100,-25,25);
+        if (verbose) cout << " Opening file " << rootfile << " for writing " << endl;
+        TFile *calfile = new TFile(rootfile.c_str(),"RECREATE");
+        TTree *merged = new  TTree("merged","Merged and Calibrated LYSO-PSAPD data ");
+        CoincEvent *calevt = new CoincEvent();
+        merged->Branch("Event",&calevt);
 
-    if (verbose) cout << " Opening file " << rootfile << " for writing " << endl;
-    TFile *calfile = new TFile(rootfile,"RECREATE");
-    TTree *merged = new  TTree("merged","Merged and Calibrated LYSO-PSAPD data ");
-    CoincEvent *calevt = new CoincEvent();
-    merged->Branch("Event",&calevt);
+        checkevts=0;
+        if (verbose) cout << "filling new Tree :: " << endl;
 
-    checkevts=0;
-    if (verbose) cout << "filling new Tree :: " << endl;
+        for (Long64_t ii=0; ii<entries; ii++) {
+            mm->GetEntry(ii);
+            calevt=evt;
+            if (evt->fin1>FINS_PER_CARTRIDGE) continue;
+            if (evt->fin2>FINS_PER_CARTRIDGE) continue;
+            if ((evt->crystal1<65)&&((evt->apd1==APD1)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
+                if ((evt->crystal2<65)&&((evt->apd2==APD1)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
 
-    for (Long64_t ii=0; ii<entries; ii++) {
-        mm->GetEntry(ii);
-        calevt=evt;
-        if (evt->fin1>FINS_PER_CARTRIDGE) continue;
-        if (evt->fin2>FINS_PER_CARTRIDGE) continue;
-        if ((evt->crystal1<65)&&((evt->apd1==APD1)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
-            if ((evt->crystal2<65)&&((evt->apd2==APD1)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
-
-                calevt->dtf-= mean_apdoffset[0][evt->cartridge1][evt->fin1][evt->m1][evt->apd1] ;
-                calevt->dtf-= mean_apdoffset[1][evt->cartridge2][evt->fin2][evt->m2][evt->apd2] ; 
-                // Energy gate to put only the photopeaks in the fine time
-                // stamp histogram for the time calibration calculation
-                if (evt->E1>400&&evt->E1<600&&evt->E2>400&&evt->E2<600) {
-                    tres->Fill(calevt->dtf);
+                    calevt->dtf-= mean_apdoffset[0][evt->cartridge1][evt->fin1][evt->m1][evt->apd1] ;
+                    calevt->dtf-= mean_apdoffset[1][evt->cartridge2][evt->fin2][evt->m2][evt->apd2] ; 
+                    // Energy gate to put only the photopeaks in the fine time
+                    // stamp histogram for the time calibration calculation
+                    if (evt->E1>400&&evt->E1<600&&evt->E2>400&&evt->E2<600) {
+                        tres->Fill(calevt->dtf);
+                    }
                 }
             }
+            checkevts++;
+            merged->Fill();
         }
-        checkevts++;
-        merged->Fill();
+
+
+        cout << " New Tree filled with " << checkevts << " events. " << endl;
+
+        merged->Write();
+        calfile->Close();
+
+        // Fit the fine timestamp histogram
+        tres->Fit("gaus","","",-10,10);
+
+        // Then output the histogram with it's fit to a postscript file
+        c1->Clear();
+        tres->Draw();
+        string ps_tres_filename(filebase + ".tres.apdoffset.ps");
+        c1->Print(ps_tres_filename.c_str());
     }
-
-
-    cout << " New Tree filled with " << checkevts << " events. " << endl;
-
-    merged->Write();
-    calfile->Close();
-
-    // Fit the fine timestamp histogram
-    tres->Fit("gaus","","",-10,10);
-
-    // Then output the histogram with it's fit to a postscript file
-    c1->Clear();
-    tres->Draw();
-    sprintf(psfile,"%s.tres.apdoffset.ps",rootfile);
-    c1->Print(psfile);
 
     return(0);
 }

@@ -6,9 +6,10 @@
 #include "TH2F.h"
 #include "TSpectrum.h"
 #include "Syspardef.h"
+#include <string>
 
 
-Int_t drawmod(TH1F *hi[FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE], TCanvas *ccc, Char_t filename[MAXFILELENGTH]);
+Int_t drawmod(TH1F *hi[FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE], TCanvas *ccc, const std::string & filename);
 Int_t drawmod_crys2(TH1F *hi[MODULES_PER_FIN][APDS_PER_MODULE][CRYSTALS_PER_APD], TCanvas *ccc, Char_t filename[MAXFILELENGTH]);
 Int_t writ(TH1D *hi[PEAKS], TCanvas *ccc, Char_t filename[MAXFILELENGTH]);
 Int_t writ2d(TH2F *hi[PEAKS], TCanvas *ccc, Char_t filename[MAXFILELENGTH]);
