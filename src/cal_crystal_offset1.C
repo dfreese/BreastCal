@@ -14,6 +14,19 @@
 #include "string.h"
 #include "cal_helper_functions.h"
 
+/*
+#include <gsl/gsl_math.h>  
+#include <gsl/gsl_test.h>  
+#include <gsl/gsl_fit.h>  
+#include <gsl/gsl_multifit.h>  
+#include <gsl/gsl_multifit_nlin.h>  
+#include <gsl/gsl_blas.h>  
+#include <gsl/gsl_ieee_utils.h>  
+#include <time.h>
+
+#include <armadillo>
+*/
+
 /*!
  * This function generates a postscript file containing all 64 histograms
  * for each crystal position with their fits.
@@ -92,7 +105,7 @@ Int_t write_crystal_cal_val(
     if (parfile.good()) {
         for (int crystal=0; crystal < CRYSTALS_PER_APD; crystal++) {
             parfile << setw(6) << setprecision(3) 
-                    << mean_crystaloffset[crystal] << " ";
+                << mean_crystaloffset[crystal] << " ";
             if ((crystal % 8) == 7) {
                 parfile << endl;
             }
@@ -205,12 +218,89 @@ int main(int argc, Char_t *argv[])
         DTF_hi = FINELIMIT;
     }
 
+    Long64_t entries = mm->GetEntries();
+    /*
+    cout << "Armadillo: Start" << endl;
+    clock_t armadillo_time(clock());
+    int nTerms(64);
+    Long64_t length(entries);
+    cout << "Armadillo: Allocating matrix space" << endl;
+    arma::mat A_arma(length,nTerms);
+    arma::vec y_arma(length);
+
+    cout << "Armadillo: Filling Matrix Entries" << endl;
+    //ofstream outfile("dtf_event_data.dat");
+    for (Long64_t ii = 0; ii<entries; ii++) {
+        mm->GetEntry(ii);
+        A_arma(ii, (int)evt->crystal1) = 1;
+        A_arma(ii, (int)evt->crystal2) = -1;
+        y_arma(ii) = evt->dtf;
+        outfile << evt->cartridge1 << " "
+        << evt->fin1 << " "
+        << evt->m1 << " "
+        << evt->apd1 << " "
+        << evt->crystal1 << " "
+        << evt->cartridge2 << " "
+        << evt->fin2 << " "
+        << evt->m2 << " "
+        << evt->apd2 << " "
+        << evt->crystal2 << " "
+        << evt->dtf << "\n";
+    }
+    //outfile.close();
+    cout << "Armadillo: Calculating Fit" << endl;
+
+    arma::vec x_arma = arma::solve(A_arma,y_arma);
+
+    armadillo_time = clock() - armadillo_time;
+    cout << "Armadillo timing ______________" << endl;
+    cout << "     ticks: " << armadillo_time << endl;
+    cout << "  time (s): " << ((float) armadillo_time) / CLOCKS_PER_SEC << endl;;
+    cout << "Armadillo: Finish" << endl;
+    */
+
+
+
+    /*
+       cout << "GSL: Start" << endl;
+       clock_t gsl_time(clock());
+
+       cout << "GSL: Allocating matrix space" << endl;
+       gsl_matrix * x = gsl_matrix_alloc(length,nTerms);
+       gsl_vector * yx = gsl_vector_alloc(length);
+       gsl_vector *cx = gsl_vector_calloc(nTerms);
+       gsl_matrix *cov = gsl_matrix_calloc(nTerms, nTerms);
+       gsl_multifit_linear_workspace *work = gsl_multifit_linear_alloc(length, nTerms);
+       double chisq(0);
+
+       cout << "GSL: Filling Matrix Entries" << endl;
+       for (Long64_t ii = 0; ii<entries; ii++) {
+       mm->GetEntry(ii);
+       gsl_matrix_set(x, ii, evt->crystal1, 1);
+       gsl_matrix_set(x, ii, evt->crystal2, -1);
+       gsl_vector_set(yx, ii, evt->dtf);
+       }
+
+       cout << "GSL: Calculating Fit" << endl;
+
+       int res = gsl_multifit_linear (x, yx, cx, cov, &chisq, work); 
+
+       gsl_time = clock() - gsl_time;
+       cout << "GSL timing ______________" << endl;
+       cout << "     ticks: " << gsl_time << endl;
+       cout << "  time (s): " << ((float) gsl_time) / CLOCKS_PER_SEC;
+       cout << "GSL: Finish" << endl;
+       */
+
+
+    clock_t fit_time(clock());
+
     for (int crystal = 0; crystal < CRYSTALS_PER_APD; crystal++) {
         sprintf(histtitle,"crystaloffset[%d]", crystal);
         crystaloffset[crystal] = new TH1F(histtitle,histtitle,50,DTF_low,DTF_hi);
     }
 
-    Long64_t entries = mm->GetEntries();
+    //Long64_t entries = mm->GetEntries();
     cout << " Total entries: " << entries << endl; 
 
     if (verbose) {
@@ -246,6 +336,7 @@ int main(int argc, Char_t *argv[])
         }
     } // loop over entries
 
+
     if (verbose) {
         cout << " Done looping over entries " << endl;
         cout << " Calls to Fill(): " << checkevts << endl;
@@ -256,6 +347,11 @@ int main(int argc, Char_t *argv[])
     for (int crystal = 0; crystal < CRYSTALS_PER_APD; crystal++) {
         mean_crystaloffset[crystal] = cryscalfunc(crystaloffset[crystal], usegausfit, verbose);
     }
+
+    fit_time = clock() - fit_time;
+    cout << "FIT timing ______________" << endl;
+    cout << "     ticks: " << fit_time << endl;
+    cout << "  time (s): " << ((float) fit_time) / CLOCKS_PER_SEC << endl;
 
     Char_t calparfilename[MAXFILELENGTH];
     sprintf(calparfilename, "%s_calpar.txt", rootfile);
@@ -268,7 +364,7 @@ int main(int argc, Char_t *argv[])
     if (verbose) {
         cout << " Opening file " << rootfile << " for writing " << endl;
     }
-    
+
     TFile *calfile = new TFile(rootfile,"RECREATE");
     TTree *merged = new  TTree("merged","Merged and Calibrated LYSO-PSAPD data ");
     CoincEvent *calevt = new CoincEvent();
