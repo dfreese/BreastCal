@@ -47,14 +47,24 @@ int main(int argc, Char_t *argv[])
     Int_t fin1 = 99; // Unused
     Int_t fin2 = 99; // Unused
 
+    // A flag that is true unless a -n option is found in which case only the
+    // calibration parameters and the associated plots are generated, but the
+    // calibrated root file is not created.
+    bool write_out_root_file_flag(true);
+
     cout << " Welcome to cal_edep " << endl;
 
-    Char_t filenamel[FILENAMELENGTH] = "";
+    string filename;
 
     for(int ix = 1; ix < argc; ix++) {
         if(strncmp(argv[ix], "-v", 2) == 0) {
             cout << "Verbose Mode " << endl;
             verbose = 1;
+        }
+
+        if(strncmp(argv[ix], "-n", 2) == 0) {
+            cout << "Calibrated Root File will not be created." << endl;
+            write_out_root_file_flag = false;
         }
 
         if((strncmp(argv[ix], "-a", 2) == 0)&& (strncmp(argv[ix], "-apd",4) != 0 )) {
@@ -132,12 +142,8 @@ int main(int argc, Char_t *argv[])
             } else if(strncmp(argv[ix], "-f1", 3) == 0) {
                 fin2=atoi ( argv[ix+1]) ; ix++;
                 cout << " Fin 2 :: " << fin2 <<endl;
-            } else if(strlen(argv[ix + 1]) < FILENAMELENGTH) {
-                sprintf(filenamel, "%s", argv[ix + 1]);
             } else {
-                cout << "Filename " << argv[ix + 1] << " too long !" << endl;
-                cout << "Exiting.." << endl;
-                return(-99);
+                filename = string(argv[ix + 1]);
             }
         }
     }
@@ -151,11 +157,21 @@ int main(int argc, Char_t *argv[])
     }
     c1->SetCanvasSize(700,700);
 
-    Char_t filebase[FILENAMELENGTH];
-    Char_t rootfile[FILENAMELENGTH]; 
 
-    cout << " Opening file " << filenamel << endl;
-    TFile *rtfile = new TFile(filenamel,"OPEN");
+    size_t root_file_ext_pos(filename.rfind(".root"));
+    if (root_file_ext_pos == string::npos) {
+        cerr << "Unable to find .root extension in: \"" << filename << "\"" << endl;
+        cerr << "...Exiting." << endl;
+        return(-1);
+    }
+    string filebase(filename, 0, root_file_ext_pos);
+    if (verbose) cout << "filebase: " << filebase << endl;
+    string rootfile(filebase + ".edepcal.root");
+    if (verbose) cout << "ROOTFILE = " << rootfile << endl;
+
+
+    cout << " Opening file " << filename << endl;
+    TFile *rtfile = new TFile(filename.c_str(),"OPEN");
     TTree *mm  = (TTree *) rtfile->Get("merged");
     CoincEvent * evt = new CoincEvent();     
     mm->SetBranchAddress("Event",&evt);
@@ -182,12 +198,6 @@ int main(int argc, Char_t *argv[])
     if (verbose) {
         cout << " Filling crystal spectra on the left. " << endl;
     }
-
-    strncpy(filebase,filenamel,strlen(filenamel)-5);
-    filebase[strlen(filenamel)-5]='\0';
-    sprintf(rootfile,"%s",filebase);
-
-    cout << " ROOTFILE = " << rootfile << endl;
 
     Long64_t checkevts = 0;
     for (Long64_t ii = 0; ii < entries; ii++) {
@@ -240,9 +250,8 @@ int main(int argc, Char_t *argv[])
     c1->cd(2);
     profehist[0]->Draw();
 
-    Char_t psfile[MAXFILELENGTH];
-    sprintf(psfile,"%s_edep_panel0.ps",rootfile);
-    c1->Print(psfile);
+    string ps_left_filename(filebase + ".edep_panel0.ps");
+    c1->Print(ps_left_filename.c_str());
 
 
     if (verbose) {
@@ -299,77 +308,77 @@ int main(int argc, Char_t *argv[])
     profehist[1]->Draw();
 
 
-    sprintf(psfile,"%s_edep_panel1.ps",rootfile);
-    c1->Print(psfile);
-    sprintf(psfile,"%s_fin2.ps",rootfile);
+    string ps_right_filename(filebase + ".edep_panel1.ps");
+    c1->Print(ps_right_filename.c_str());
 
 
-    strcat(rootfile,".edepcal.root");
+    if (write_out_root_file_flag) {
+        TH1F *tres = new TH1F("tres","Time Resolution After Time walk correction",100,-25,25);
 
-    TH1F *tres = new TH1F("tres","Time Resolution After Time walk correction",100,-25,25);
+        if (verbose) {
+            cout << " Opening file " << rootfile << " for writing " << endl;
+        }
+        TFile *calfile = new TFile(rootfile.c_str(),"RECREATE");
+        TTree *merged = new  TTree("merged","Merged and Calibrated LYSO-PSAPD data ");
 
-    if (verbose) {
-        cout << " Opening file " << rootfile << " for writing " << endl;
-    }
-    TFile *calfile = new TFile(rootfile,"RECREATE");
-    TTree *merged = new  TTree("merged","Merged and Calibrated LYSO-PSAPD data ");
+        CoincEvent * calevt = new CoincEvent();     
+        merged->Branch("Event",&calevt);
 
-    CoincEvent * calevt = new CoincEvent();     
-    merged->Branch("Event",&calevt);
-
-    if (verbose) {
-        cout << "filling new Tree :: " << endl;
-    }
-    checkevts = 0;
-    for (Long64_t ii = 0; ii < entries; ii++) {
-        mm->GetEntry(ii);
-        calevt=evt;
-        if (evt->cartridge1 > CARTRIDGES_PER_PANEL) continue;
-        if (evt->cartridge2 > CARTRIDGES_PER_PANEL) continue;
-        if (evt->fin1 > FINS_PER_CARTRIDGE) continue;
-        if (evt->fin2 > FINS_PER_CARTRIDGE) continue;
-        if ((evt->crystal1<65) && 
-                ((evt->apd1 == APD1) || (evt->apd1 == 1)) && 
-                (evt->m1<MODULES_PER_FIN))
-        {
-            if ((evt->crystal2<65) &&
-                    ((evt->apd2 == APD1) || (evt->apd2 == 1)) &&
-                    (evt->m2 < MODULES_PER_FIN))
+        if (verbose) {
+            cout << "filling new Tree :: " << endl;
+        }
+        checkevts = 0;
+        for (Long64_t ii = 0; ii < entries; ii++) {
+            mm->GetEntry(ii);
+            calevt=evt;
+            if (evt->cartridge1 > CARTRIDGES_PER_PANEL) continue;
+            if (evt->cartridge2 > CARTRIDGES_PER_PANEL) continue;
+            if (evt->fin1 > FINS_PER_CARTRIDGE) continue;
+            if (evt->fin2 > FINS_PER_CARTRIDGE) continue;
+            if ((evt->crystal1<65) && 
+                    ((evt->apd1 == APD1) || (evt->apd1 == 1)) && 
+                    (evt->m1<MODULES_PER_FIN))
             {
-                if (common) {
-                    calevt->dtf -= profehistfit[0]->Eval(evt->Ec1);
-                    calevt->dtf -= profehistfit[1]->Eval(evt->Ec2);
-                } else {
-                    calevt->dtf -= profehistfit[0]->Eval(evt->E1);
-                    calevt->dtf -= profehistfit[1]->Eval(evt->E2);
-                }
-                if  ((evt->E2 > 400) && (evt->E2 < 600)) {
-                    if  ((evt->E1 > 400) && (evt->E1 < 600)) {
-                        tres->Fill(calevt->dtf); 
+                if ((evt->crystal2<65) &&
+                        ((evt->apd2 == APD1) || (evt->apd2 == 1)) &&
+                        (evt->m2 < MODULES_PER_FIN))
+                {
+                    if (common) {
+                        calevt->dtf -= profehistfit[0]->Eval(evt->Ec1);
+                        calevt->dtf -= profehistfit[1]->Eval(evt->Ec2);
+                    } else {
+                        calevt->dtf -= profehistfit[0]->Eval(evt->E1);
+                        calevt->dtf -= profehistfit[1]->Eval(evt->E2);
+                    }
+                    if  ((evt->E2 > 400) && (evt->E2 < 600)) {
+                        if  ((evt->E1 > 400) && (evt->E1 < 600)) {
+                            tres->Fill(calevt->dtf); 
+                        }
                     }
                 }
             }
+            checkevts++;
+            merged->Fill();
         }
-        checkevts++;
-        merged->Fill();
-    }
-    merged->Write();
-    calfile->Close();
+        merged->Write();
+        calfile->Close();
 
-    if (verbose) {
-        cout << " Done looping over entries " << endl;
-        cout << " I made " << checkevts << " calls to Fill() " << endl;
-    }
-    tres->Fit("gaus","","",-10,10);
+        if (verbose) {
+            cout << " Done looping over entries " << endl;
+            cout << " I made " << checkevts << " calls to Fill() " << endl;
+        }
+        tres->Fit("gaus","","",-10,10);
 
-    c1->Clear();
-    tres->Draw();
-    sprintf(psfile,"%s.tres.edepcal.ps",rootfile);
-    c1->Print(psfile);
+        c1->Clear();
+        tres->Draw();
+        string ps_tres_filename(filebase + ".edep_panel1.ps");
+        c1->Print(ps_tres_filename.c_str());
 
-    if (verbose) {
-        cout << tres->GetEntries() << " Entries in tres." << endl;
+        if (verbose) {
+            cout << tres->GetEntries() << " Entries in tres." << endl;
+        }
     }
+
 
     return(0);
 }

@@ -210,6 +210,18 @@ int main(int argc, Char_t *argv[])
         }
     }
 
+    size_t root_file_ext_pos(filename.rfind(".root"));
+    if (root_file_ext_pos == string::npos) {
+        cerr << "Unable to find .root extension in: \"" << filename << "\"" << endl;
+        cerr << "...Exiting." << endl;
+        return(-1);
+    }
+    string filebase(filename, 0, root_file_ext_pos);
+    if (verbose) cout << "filebase: " << filebase << endl;
+    string rootfile(filebase + ".apdoffcal.root");
+    if (verbose) cout << " ROOTFILE = " << rootfile << endl;
+
+
 
     cout << " Opening file " << filename << endl;
     TFile *rtfile = new TFile(filename.c_str(),"OPEN");
@@ -235,17 +247,6 @@ int main(int argc, Char_t *argv[])
     if (verbose) cout << " Filling crystal spectra on the left. " << endl;
     Long64_t checkevts=0;
 
-
-    size_t root_file_ext_pos(filename.rfind(".root"));
-    if (root_file_ext_pos == string::npos) {
-        cerr << "Unable to find .root extension in: \"" << filename << "\"" << endl;
-        cerr << "...Exiting." << endl;
-        return(-1);
-    }
-    string filebase(filename, 0, root_file_ext_pos);
-    if (verbose) cout << "filebase: " << filebase << endl;
-    string rootfile(filebase + ".apdoffcal.root");
-    if (verbose) cout << " ROOTFILE = " << rootfile << endl;
 
     // Fill histograms for the left panel with their associated events
     int panel = 0;
