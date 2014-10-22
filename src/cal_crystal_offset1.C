@@ -105,7 +105,6 @@ Int_t write_crystal_cal_val(
 
 int main(int argc, Char_t *argv[])
 { 
-    Int_t APD1 = 0;
     Bool_t usegausfit = 0;
     Int_t coarsetime = 1; 
     Char_t histtitle[40];
@@ -133,12 +132,6 @@ int main(int argc, Char_t *argv[])
         if(strncmp(argv[ix], "-log", 4) == 0) {
             cout << "Output Graph in Log Scale " << endl;
             logscale = 1;
-        }
-
-        if(strncmp(argv[ix], "-apd1", 5) == 0) {
-            APD1 = atoi( argv[ix+1]);
-            cout << "APD1 =  " << APD1 <<endl;
-            ix++;
         }
 
         if(strncmp(argv[ix], "-gf", 3) == 0) {
@@ -230,7 +223,7 @@ int main(int argc, Char_t *argv[])
         mm->GetEntry(ii);
         if (evt->fin1>FINS_PER_CARTRIDGE) continue;
         if ((evt->crystal1<65) && 
-                ((evt->apd1==APD1) || (evt->apd1==1)) && 
+                ((evt->apd1==0) || (evt->apd1==1)) && 
                 (evt->m1<MODULES_PER_FIN))
         {
             if ((evt->E1>400) && (evt->E1<600)) {
@@ -282,8 +275,8 @@ int main(int argc, Char_t *argv[])
         calevt = evt;
         if (evt->fin1>FINS_PER_CARTRIDGE) continue;
         if (evt->fin2>FINS_PER_CARTRIDGE) continue;
-        if ((evt->crystal1<65)&&((evt->apd1==APD1)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
-            if ((evt->crystal2<65)&&((evt->apd2==APD1)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
+        if ((evt->crystal1<65)&&((evt->apd1==0)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
+            if ((evt->crystal2<65)&&((evt->apd2==0)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
                 calevt->dtf -= mean_crystaloffset[evt->crystal1];
                 calevt->dtf += mean_crystaloffset[evt->crystal2];
                 if (evt->E1>400&&evt->E1<600&&evt->E2>400&&evt->E2<600) {

@@ -20,12 +20,7 @@ int main(int argc, Char_t *argv[])
 { 
     Int_t MOD1 = 6; // Unused
     Int_t MOD2 = 1; // Unused
-    // Seems to be a flag used within the logic for checking for a valid apd or
-    // crystal id value.  If this is zero, aka not specified by the user, then
-    // the logic checks for a 0 or 1 from the apd value.  If it's specified,
-    // then the logic checks for 1 or the user specified value.  I don't know
-    // why this useful. -Freese
-    Int_t APD1 = 0;
+    Int_t APD1 = 0; // Unused
     Int_t APD2 = 0; // Unused
     Int_t uvcal = 0; // Unused
     Int_t energycal = 0; // Unused
@@ -214,7 +209,7 @@ int main(int argc, Char_t *argv[])
         if (evt->cartridge1 > CARTRIDGES_PER_PANEL) continue;
         if (evt->fin1 > FINS_PER_CARTRIDGE) continue;
         if ((evt->crystal1 < 65) &&
-                ((evt->apd1 == APD1) || (evt->apd1 == 1)) &&
+                ((evt->apd1 == 0) || (evt->apd1 == 1)) &&
                 (evt->m1 < MODULES_PER_FIN))
         {
             if ((evt->E1 > 400) && (evt->E1 < 600)) {
@@ -276,11 +271,11 @@ int main(int argc, Char_t *argv[])
         if (evt->fin1 > FINS_PER_CARTRIDGE) continue;
         if (evt->fin2 > FINS_PER_CARTRIDGE) continue;
         if ((evt->crystal1 < 65) &&
-                ((evt->apd1 == APD1) || (evt->apd1 == 1)) &&
+                ((evt->apd1 == 0) || (evt->apd1 == 1)) &&
                 (evt->m1 < MODULES_PER_FIN))
         {
             if ((evt->crystal2 < 65) &&
-                    ((evt->apd2 == APD1) || (evt->apd2 == 1)) &&
+                    ((evt->apd2 == 0) || (evt->apd2 == 1)) &&
                     (evt->m2 < MODULES_PER_FIN))
             {
                 if  ((evt->E2 > 400) && (evt->E2 < 600)) {
@@ -349,11 +344,11 @@ int main(int argc, Char_t *argv[])
             if (evt->fin1 > FINS_PER_CARTRIDGE) continue;
             if (evt->fin2 > FINS_PER_CARTRIDGE) continue;
             if ((evt->crystal1<65) && 
-                    ((evt->apd1 == APD1) || (evt->apd1 == 1)) && 
+                    ((evt->apd1 == 0) || (evt->apd1 == 1)) && 
                     (evt->m1<MODULES_PER_FIN))
             {
                 if ((evt->crystal2<65) &&
-                        ((evt->apd2 == APD1) || (evt->apd2 == 1)) &&
+                        ((evt->apd2 == 0) || (evt->apd2 == 1)) &&
                         (evt->m2 < MODULES_PER_FIN))
                 {
                     if (common) {

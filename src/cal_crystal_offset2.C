@@ -51,12 +51,7 @@ int main(int argc, Char_t *argv[])
 { 
     Int_t MOD1=6; // Has a flag in the input part, but is not used
     Int_t MOD2=1; // Has a flag in the input part, but is not used
-    // Seems to be a flag used within the logic for checking for a valid apd or
-    // crystal id value.  If this is zero, aka not specified by the user, then
-    // the logic checks for a 0 or 1 from the apd value.  If it's specified,
-    // then the logic checks for 1 or the user specified value.  I don't know
-    // why this useful. -Freese
-    Int_t APD1=0;
+    Int_t APD1=0; // Has a flag in the input part, but is not used
     Int_t APD2=0; // Has a flag in the input part, but is not used
     // A flag that is used by the crystal calibration function to determine
     // wether a fit algorithm or a peak searching algorithm should be used
@@ -258,7 +253,7 @@ int main(int argc, Char_t *argv[])
         mm->GetEntry(ii);
         if (evt->fin1>FINS_PER_CARTRIDGE) continue;
         if ((evt->crystal1<65) && 
-                ((evt->apd1==APD1) || (evt->apd1==1)) && 
+                ((evt->apd1==0) || (evt->apd1==1)) && 
                 (evt->m1<MODULES_PER_FIN))
         {
             if ((evt->E1>400) && (evt->E1<600)) {
@@ -317,8 +312,8 @@ int main(int argc, Char_t *argv[])
         mm->GetEntry(ii);
         if (evt->fin1>FINS_PER_CARTRIDGE) continue;
         if (evt->fin2>FINS_PER_CARTRIDGE) continue;
-        if ((evt->crystal1<65)&&((evt->apd1==APD1)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
-            if ((evt->crystal2<65)&&((evt->apd2==APD1)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
+        if ((evt->crystal1<65)&&((evt->apd1==0)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
+            if ((evt->crystal2<65)&&((evt->apd2==0)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
                 if  ((evt->E2>400)&&(evt->E2<600)) {
                     if  ((evt->E1>400)&&(evt->E1<600)) {
                         if (TMath::Abs(evt->dtc ) < 6 ) {
@@ -375,8 +370,8 @@ int main(int argc, Char_t *argv[])
             calevt = evt;
             if (evt->fin1>FINS_PER_CARTRIDGE) continue;
             if (evt->fin2>FINS_PER_CARTRIDGE) continue;
-            if ((evt->crystal1<65)&&((evt->apd1==APD1)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
-                if ((evt->crystal2<65)&&((evt->apd2==APD1)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
+            if ((evt->crystal1<65)&&((evt->apd1==0)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
+                if ((evt->crystal2<65)&&((evt->apd2==0)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
                     calevt->dtf -= mean_crystaloffset[0][evt->cartridge1][evt->fin1][evt->m1][evt->apd1][evt->crystal1];
                     calevt->dtf -= mean_crystaloffset[1][evt->cartridge2][evt->fin2][evt->m2][evt->apd2][evt->crystal2]; 
                     if (evt->E1>400&&evt->E1<600&&evt->E2>400&&evt->E2<600) {

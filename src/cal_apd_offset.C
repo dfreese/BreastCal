@@ -201,7 +201,7 @@ int main(int argc, Char_t *argv[])
 
 
 
-    for (int panel = 0; panel < 2; panel++) {
+    for (int panel = 0; panel < SYSTEM_PANELS; panel++) {
         for (int cartridge = 0; cartridge < CARTRIDGES_PER_PANEL; cartridge++) {
             for (int fin = 0; fin < FINS_PER_CARTRIDGE; fin++) {
                 for (int mod=0; mod<MODULES_PER_FIN; mod++) {
@@ -327,8 +327,8 @@ int main(int argc, Char_t *argv[])
         mm->GetEntry(ii);
         if (evt->fin1>FINS_PER_CARTRIDGE) continue;
         if (evt->fin2>FINS_PER_CARTRIDGE) continue;
-        if ((evt->crystal1<65)&&((evt->apd1==APD1)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
-            if ((evt->crystal2<65)&&((evt->apd2==APD1)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
+        if ((evt->crystal1<65)&&((evt->apd1==0)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
+            if ((evt->crystal2<65)&&((evt->apd2==0)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
                 if  ((evt->E2>400)&&(evt->E2<600)) {
                     if  ((evt->E1>400)&&(evt->E1<600)) {
                         if (TMath::Abs(evt->dtc ) < 6 ) {
@@ -400,8 +400,8 @@ int main(int argc, Char_t *argv[])
             calevt=evt;
             if (evt->fin1>FINS_PER_CARTRIDGE) continue;
             if (evt->fin2>FINS_PER_CARTRIDGE) continue;
-            if ((evt->crystal1<65)&&((evt->apd1==APD1)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
-                if ((evt->crystal2<65)&&((evt->apd2==APD1)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
+            if ((evt->crystal1<65)&&((evt->apd1==0)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
+                if ((evt->crystal2<65)&&((evt->apd2==0)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
 
                     calevt->dtf-= mean_apdoffset[0][evt->cartridge1][evt->fin1][evt->m1][evt->apd1] ;
                     calevt->dtf-= mean_apdoffset[1][evt->cartridge2][evt->fin2][evt->m2][evt->apd2] ; 
