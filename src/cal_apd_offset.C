@@ -49,12 +49,10 @@ int main(int argc, Char_t *argv[])
 	Char_t		filenamel[CALFILENAMELENGTH] = "";
 	Int_t		verbose = 0;
 	Int_t		ix;
-	//module UNIT0,UNIT1,UNIT2,UNIT3;
         CoincEvent      *evt = new CoincEvent();
         CoincEvent      *calevt = new CoincEvent();
         Int_t fin1=99,fin2=99;
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
 
 	for(ix = 1; ix < argc; ix++) {
 
@@ -65,8 +63,6 @@ int main(int argc, Char_t *argv[])
 			cout << "Verbose Mode " << endl;
 			verbose = 1;
 		}
-
-
 
 
 		if(strncmp(argv[ix], "-apd1", 5) == 0) {
@@ -104,8 +100,6 @@ int main(int argc, Char_t *argv[])
                   usegausfit=1;
 		  cout << " Using Gauss Fit "  <<endl;
 		}
-
-
 
 		/* filename '-f' */
 		if(strncmp(argv[ix], "-f", 2) == 0) {
@@ -155,16 +149,15 @@ int main(int argc, Char_t *argv[])
 	}
 
         rootlogon(verbose);
-      gStyle->SetOptStat(kTRUE); 
-  //	TStyle::SetOptStat();
-      if (!(verbose)) { gErrorIgnoreLevel=kError;}
+	gStyle->SetOptStat(kTRUE); 
+        if (!(verbose)) { gErrorIgnoreLevel=kError;}
 
 
 
-   TCanvas *c1;
-   c1 = (TCanvas*)gROOT->GetListOfCanvases()->FindObject("c1");
-  if (!c1) c1 = new TCanvas("c1","c1",10,10,1000,1000);
-   c1->SetCanvasSize(700,700);
+	TCanvas *c1;
+	c1 = (TCanvas*)gROOT->GetListOfCanvases()->FindObject("c1");
+	if (!c1) c1 = new TCanvas("c1","c1",10,10,1000,1000);
+	c1->SetCanvasSize(700,700);
        
         Char_t filebase[CALFILENAMELENGTH],rootfile[CALFILENAMELENGTH]; 
         Char_t calparfilename[CALFILENAMELENGTH];
@@ -189,10 +182,10 @@ int main(int argc, Char_t *argv[])
 		for (aa=0;aa<APDS_PER_MODULE;aa++) {
 		  sprintf(histtitle,"apdoffset[%d][%d][%d][%d][%d]",ii,cc,tt,mod,aa);
 		  if ((ii==0) || (!(coarsetime)))  apdoffset[ii][cc][tt][mod][aa]= new TH1F(histtitle,histtitle,50,DTF_low,DTF_hi);
-              else  apdoffset[ii][cc][tt][mod][aa]= new TH1F(histtitle,histtitle,50,DTF_low+150,DTF_hi-150);
+		  else  apdoffset[ii][cc][tt][mod][aa]= new TH1F(histtitle,histtitle,50,DTF_low+150,DTF_hi-150);
+		}
+	      }
 	    }
-	  }
-	}
 	  }
 	}
 
@@ -203,12 +196,14 @@ int main(int argc, Char_t *argv[])
 
         if (!mm) {
 	  if (verbose) cout << " Problem reading Tree merged "   << " from file " << filenamel << ". Trying tree mana." << endl;
-          mm  = (TTree *) rtfile->Get("mana"); }
+          mm  = (TTree *) rtfile->Get("mana"); 
+	}
       
         if (!mm) {
         cout << " Problem reading Tree mana "   << " from file " << filenamel << endl;
         cout << " Exiting " << endl;
-        return -10;}
+        return -10;
+	}
    
         mm->SetBranchAddress("Event",&evt);
 
@@ -244,8 +239,9 @@ int main(int argc, Char_t *argv[])
           // loop over entries
 
 	if (verbose){
-       cout << " Done looping over entries " << endl;
-       cout << " I made " << checkevts << " calls to Fill() " << endl;         }
+	  cout << " Done looping over entries " << endl;
+	  cout << " I made " << checkevts << " calls to Fill() " << endl;         
+	}
 
        Float_t mean_apdoffset[2][CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
        Int_t npeaks;
@@ -269,79 +265,83 @@ int main(int argc, Char_t *argv[])
 	  Char_t psfile[MAXFILELENGTH];
 	  sprintf(psfile,"%s_apdoffset_P0.ps",rootfile);
         
+	  if (verbose) {
 	  drawmod(apdoffset[0],c1,psfile);
+	  }
       
-      
-      ofstream calpars;
-      sprintf(calparfilename,"%s_apdoffset_calpar_P0.txt",rootfile);
+	  ofstream calpars;
+	  sprintf(calparfilename,"%s_apdoffset_calpar_P0.txt",rootfile);
 
-      calpars.open(calparfilename);
+	  calpars.open(calparfilename);
     
-      for (cc=0;cc<CARTRIDGES_PER_PANEL;cc++){
-	for (tt=0;tt<FINS_PER_CARTRIDGE;tt++) {
-          calpars << "C" << cc << "F" << tt << " ";
-	  for (mod=0;mod<MODULES_PER_FIN;mod++) {
-             for (aa=0;aa<APDS_PER_MODULE;aa++) {
-      	       calpars <<  std::setw(4) << mean_apdoffset[ii][cc][tt][mod][aa] << " ";}
-	     //  if (mod%2) cout << "| ";
-           }
-	  calpars << endl;}
-      }
-      calpars.close();
+	  for (cc=0;cc<CARTRIDGES_PER_PANEL;cc++){
+	    for (tt=0;tt<FINS_PER_CARTRIDGE;tt++) {
+	      calpars << "C" << cc << "F" << tt << " ";
+	      for (mod=0;mod<MODULES_PER_FIN;mod++) {
+		for (aa=0;aa<APDS_PER_MODULE;aa++) {
+		  calpars <<  std::setw(4) << mean_apdoffset[ii][cc][tt][mod][aa] << " ";}
+		//  if (mod%2) cout << "| ";
+	      }
+	      calpars << endl;}
+	  }
+	  calpars.close();
 
-      if (verbose)  cout << " Filling crystal spectra on the right. " << endl;
-	checkevts=0;
+	  if (verbose)  cout << " Filling crystal spectra on the right. " << endl;
+	  checkevts=0;
 
 
-        for (i=0;i<entries; i++) {
-	 mm->GetEntry(i);
-	 if (evt->cartridge1>CARTRIDGES_PER_PANEL) continue;
-         if (evt->cartridge2>CARTRIDGES_PER_PANEL) continue;
-	 if (evt->fin1>FINS_PER_CARTRIDGE) continue;
-         if (evt->fin2>FINS_PER_CARTRIDGE) continue;
- 	 if ((evt->crystal1<65)&&((evt->apd1==APD1)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
-	 if ((evt->crystal2<65)&&((evt->apd2==APD1)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
-           if  ((evt->E2>400)&&(evt->E2<600)) {
-           if  ((evt->E1>400)&&(evt->E1<600)) {
-               if (TMath::Abs(evt->dtc ) < 6 ) {
-	       if (TMath::Abs(evt->dtf ) < FINELIMIT ) {
-                 checkevts++;
+	  for (i=0;i<entries; i++) {
+	    mm->GetEntry(i);
+	    if (evt->cartridge1>CARTRIDGES_PER_PANEL) continue;
+	    if (evt->cartridge2>CARTRIDGES_PER_PANEL) continue;
+	    if (evt->fin1>FINS_PER_CARTRIDGE) continue;
+	    if (evt->fin2>FINS_PER_CARTRIDGE) continue;
+	    if ((evt->crystal1<65)&&((evt->apd1==APD1)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
+	      if ((evt->crystal2<65)&&((evt->apd2==APD1)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
+		if  ((evt->E2>400)&&(evt->E2<600)) {
+		  if  ((evt->E1>400)&&(evt->E1<600)) {
+		    if (TMath::Abs(evt->dtc ) < 6 ) {
+		      if (TMath::Abs(evt->dtf ) < FINELIMIT ) {
+			checkevts++;
 		 //	    		 crystime[0][evt->m1][evt->apd1][evt->crystal1]->Fill(evt->dtf);
-		 apdoffset[1][evt->cartridge2][evt->fin2][evt->m2][evt->apd2]->Fill(evt->dtf- mean_apdoffset[0][evt->cartridge1][evt->fin1][evt->m1][evt->apd1]);
-               }
-	     }
-	   }
-	 }
-	 }
-	 }
-	} // loop over entries
+			apdoffset[1][evt->cartridge2][evt->fin2][evt->m2][evt->apd2]->Fill(evt->dtf- mean_apdoffset[0][evt->cartridge1][evt->fin1][evt->m1][evt->apd1]);
+		      }
+		    }
+		  }
+		}
+	      }
+	    }
+	  } // loop over entries
 
 	if (verbose){
-       cout << " Done looping over entries " << endl;
-       cout << " I made " << checkevts << " calls to Fill() " << endl;         
+	  cout << " Done looping over entries " << endl;
+	  cout << " I made " << checkevts << " calls to Fill() " << endl;         
 	}
-ii=1;
 
 
- for (cc=0;cc<CARTRIDGES_PER_PANEL;cc++){
-        for (tt=0;tt<FINS_PER_CARTRIDGE;tt++) {
-	  for (mod=0;mod<MODULES_PER_FIN;mod++) {
-            for (aa=0;aa<APDS_PER_MODULE;aa++) {
-              sprintf(tmpstring,"fit_apdoffset[%d][%d][%d][%d][%d]",ii,cc,tt,mod,aa);
-              mean_apdoffset[ii][cc][tt][mod][aa] =calfunc(apdoffset[ii][cc][tt][mod][aa],fit_apdoffset[ii][cc][tt][mod][aa],coarsetime,usegausfit);
-	    }}}
- }
+	ii=1;
+
+
+	for (cc=0;cc<CARTRIDGES_PER_PANEL;cc++){
+	  for (tt=0;tt<FINS_PER_CARTRIDGE;tt++) {
+	    for (mod=0;mod<MODULES_PER_FIN;mod++) {
+	      for (aa=0;aa<APDS_PER_MODULE;aa++) {
+		sprintf(tmpstring,"fit_apdoffset[%d][%d][%d][%d][%d]",ii,cc,tt,mod,aa);
+		mean_apdoffset[ii][cc][tt][mod][aa] =calfunc(apdoffset[ii][cc][tt][mod][aa],fit_apdoffset[ii][cc][tt][mod][aa],coarsetime,usegausfit);
+	      }}}
+	}
 
 	  sprintf(psfile,"%s_apdoffset_P1.ps",rootfile);
 
 
-        drawmod(apdoffset[1],c1,psfile);
-
+	  if (verbose) {
+          drawmod(apdoffset[1],c1,psfile);
+	  }
       
 
-      sprintf(calparfilename,"%s_apdoffset_calpar_P1.txt",rootfile);
+	  sprintf(calparfilename,"%s_apdoffset_calpar_P1.txt",rootfile);
 
-	calpars.open(calparfilename);
+	  calpars.open(calparfilename);
 
 	for (cc=0;cc<CARTRIDGES_PER_PANEL;cc++)
 	  {
@@ -365,45 +365,45 @@ ii=1;
 
         strcat(rootfile,".apdoffcal.root");
 
-    TH1F *tres = new TH1F("tres","Time Resolution After Time walk correction",100,-25,25);
+	TH1F *tres = new TH1F("tres","Time Resolution After Time walk correction",100,-25,25);
        
-    if (verbose) cout << " Opening file " << rootfile << " for writing " << endl;
-      TFile *calfile = new TFile(rootfile,"RECREATE");
-      TTree *merged = new  TTree("merged","Merged and Calibrated LYSO-PSAPD data ");
-      //   merged->SetDirectory(0);
-      merged->Branch("Event",&calevt);
+	if (verbose) cout << " Opening file " << rootfile << " for writing " << endl;
+	TFile *calfile = new TFile(rootfile,"RECREATE");
+	TTree *merged = new  TTree("merged","Merged and Calibrated LYSO-PSAPD data ");
+	//   merged->SetDirectory(0);
+	merged->Branch("Event",&calevt);
 
 
       //      merged->Branch("event",&calevt->dtc,"dtc/L:dtf/D:E1/D:Ec1/D:Ech1/D:ft1/D:E2/D:Ec2/D:Ech2/D:ft2/D:x1/D:y1/D:x2/D:y2/D:chip1/I:fin1/I:m1/I:apd1/I:crystal1/I:chip2/I:fin2/I:m2/I:apd2/I:crystal2/I:pos/I");
 
-     checkevts=0;
-     if (verbose) cout << "filling new Tree :: " << endl;
+	checkevts=0;
+	if (verbose) cout << "filling new Tree :: " << endl;
 
         for (i=0;i<entries; i++) {
-	 mm->GetEntry(i);
-	 calevt=evt;
-	 if (evt->cartridge1>CARTRIDGES_PER_PANEL) continue;
-	 if (evt->cartridge2>CARTRIDGES_PER_PANEL) continue;
-         if (evt->fin1>FINS_PER_CARTRIDGE) continue;
-         if (evt->fin2>FINS_PER_CARTRIDGE) continue;
-	 if ((evt->crystal1<65)&&((evt->apd1==APD1)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
-	 if ((evt->crystal2<65)&&((evt->apd2==APD1)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
+	  mm->GetEntry(i);
+	  calevt=evt;
+	  if (evt->cartridge1>CARTRIDGES_PER_PANEL) continue;
+	  if (evt->cartridge2>CARTRIDGES_PER_PANEL) continue;
+	  if (evt->fin1>FINS_PER_CARTRIDGE) continue;
+	  if (evt->fin2>FINS_PER_CARTRIDGE) continue;
+	  if ((evt->crystal1<65)&&((evt->apd1==APD1)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
+	    if ((evt->crystal2<65)&&((evt->apd2==APD1)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
 
-           calevt->dtf-= mean_apdoffset[0][evt->cartridge1][evt->fin1][evt->m1][evt->apd1] ;
-           calevt->dtf-= mean_apdoffset[1][evt->cartridge2][evt->fin2][evt->m2][evt->apd2] ; 
-           if (evt->E1>400&&evt->E1<600&&evt->E2>400&&evt->E2<600) {
-	     tres->Fill(calevt->dtf);}
-	 }
-	 }
-         checkevts++;
-         merged->Fill();
+	      calevt->dtf-= mean_apdoffset[0][evt->cartridge1][evt->fin1][evt->m1][evt->apd1] ;
+	      calevt->dtf-= mean_apdoffset[1][evt->cartridge2][evt->fin2][evt->m2][evt->apd2] ; 
+	      if (evt->E1>400&&evt->E1<600&&evt->E2>400&&evt->E2<600) {
+		tres->Fill(calevt->dtf);}
+	    }
+	  }
+	  checkevts++;
+	  merged->Fill();
 	}
     
 
 	cout << " New Tree filled with " << checkevts << " events. " << endl;
 
 	merged->Write();
-      calfile->Close();
+	calfile->Close();
 
  // crystime[0][MOD1][APD1][0]->Draw(); c1->Print("testje2.ps");
  // cout << crystime[0][MOD1][APD1][0]->GetEntries() << endl;
@@ -412,18 +412,18 @@ ii=1;
  // ff->Close();
 
 
-      tres->Fit("gaus","","",-10,10);
+	tres->Fit("gaus","","",-10,10);
 
 
-      c1->Clear();
-      tres->Draw();
-      sprintf(psfile,"%s.tres.apdoffset.ps",rootfile);
+	c1->Clear();
+	tres->Draw();
+	sprintf(psfile,"%s.tres.apdoffset.ps",rootfile);
 
-      c1->Print(psfile);
+	c1->Print(psfile);
 
 	
 
-      return 0;}
+	return 0;}
 
 
 
@@ -442,7 +442,7 @@ Float_t getmax(TSpectrum *s,Int_t npeaks){
       maxpos= *(s->GetPositionX()+i);
       maxpeakheight = *(s->GetPositionY()+i);
     }
-  }
+  }  
   return maxpos;}
   
 
