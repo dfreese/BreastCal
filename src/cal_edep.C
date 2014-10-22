@@ -51,6 +51,10 @@ int main(int argc, Char_t *argv[])
     // calibration parameters and the associated plots are generated, but the
     // calibrated root file is not created.
     bool write_out_root_file_flag(true);
+    // A flag that disables print outs of postscript files.  Default is on.
+    // Flag is disabled by -dp.
+    bool write_out_postscript_flag(true);
+
 
     cout << " Welcome to cal_edep " << endl;
 
@@ -65,6 +69,11 @@ int main(int argc, Char_t *argv[])
         if(strncmp(argv[ix], "-n", 2) == 0) {
             cout << "Calibrated Root File will not be created." << endl;
             write_out_root_file_flag = false;
+        }
+
+        if(strncmp(argv[ix], "-dp", 3) == 0) {
+            cout << "Postscript Files will not be created." << endl;
+            write_out_postscript_flag = false;
         }
 
         if((strncmp(argv[ix], "-a", 2) == 0)&& (strncmp(argv[ix], "-apd",4) != 0 )) {
@@ -243,15 +252,17 @@ int main(int argc, Char_t *argv[])
         profehist[0]->Fit("profehistfit[0]","Q");
     }
 
-    c1->Clear();
-    c1->Divide(1,2);
-    c1->cd(1);
-    energydependence[0]->Draw("colz");
-    c1->cd(2);
-    profehist[0]->Draw();
+    if (write_out_postscript_flag) {
+        c1->Clear();
+        c1->Divide(1,2);
+        c1->cd(1);
+        energydependence[0]->Draw("colz");
+        c1->cd(2);
+        profehist[0]->Draw();
 
-    string ps_left_filename(filebase + ".edep_panel0.ps");
-    c1->Print(ps_left_filename.c_str());
+        string ps_left_filename(filebase + ".edep_panel0.ps");
+        c1->Print(ps_left_filename.c_str());
+    }
 
 
     if (verbose) {
@@ -300,16 +311,18 @@ int main(int argc, Char_t *argv[])
         profehist[1]->Fit("profehistfit[1]","Q");
     }
 
-    c1->Clear();
-    c1->Divide(1,2);
-    c1->cd(1);
-    energydependence[1]->Draw("colz");
-    c1->cd(2);
-    profehist[1]->Draw();
+    if (write_out_postscript_flag) {
+        c1->Clear();
+        c1->Divide(1,2);
+        c1->cd(1);
+        energydependence[1]->Draw("colz");
+        c1->cd(2);
+        profehist[1]->Draw();
 
 
-    string ps_right_filename(filebase + ".edep_panel1.ps");
-    c1->Print(ps_right_filename.c_str());
+        string ps_right_filename(filebase + ".edep_panel1.ps");
+        c1->Print(ps_right_filename.c_str());
+    }
 
 
     if (write_out_root_file_flag) {
@@ -369,16 +382,17 @@ int main(int argc, Char_t *argv[])
         }
         tres->Fit("gaus","","",-10,10);
 
-        c1->Clear();
-        tres->Draw();
-        string ps_tres_filename(filebase + ".edep_panel1.ps");
-        c1->Print(ps_tres_filename.c_str());
+        if (write_out_postscript_flag) {
+            c1->Clear();
+            tres->Draw();
+            string ps_tres_filename(filebase + ".edep_panel1.ps");
+            c1->Print(ps_tres_filename.c_str());
 
-        if (verbose) {
-            cout << tres->GetEntries() << " Entries in tres." << endl;
+            if (verbose) {
+                cout << tres->GetEntries() << " Entries in tres." << endl;
+            }
         }
     }
-
 
     return(0);
 }

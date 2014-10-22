@@ -91,7 +91,9 @@ int main(int argc, Char_t *argv[])
     // calibration parameters and the associated plots are generated, but the
     // calibrated root file is not created.
     bool write_out_root_file_flag(true);
-
+    // A flag that disables print outs of postscript files.  Default is on.
+    // Flag is disabled by -dp.
+    bool write_out_postscript_flag(true);
 
 
     for(int ix = 1; ix < argc; ix++) {
@@ -107,6 +109,11 @@ int main(int argc, Char_t *argv[])
         if(strncmp(argv[ix], "-n", 2) == 0) {
             cout << "Calibrated Root File will not be created." << endl;
             write_out_root_file_flag = false;
+        }
+
+        if(strncmp(argv[ix], "-dp", 3) == 0) {
+            cout << "Postscript Files will not be created." << endl;
+            write_out_postscript_flag = false;
         }
 
         // Plot in log scale
@@ -285,13 +292,15 @@ int main(int argc, Char_t *argv[])
     }
 
 
-    for (int fin = 0; fin < FINS_PER_CARTRIDGE; fin++) {
-        stringstream ps_fin_filename;
-        ps_fin_filename << filebase << ".panel0_cartridge0_fin" << fin << ".ps";
-        if (verbose) {
-            cout << "Writing fits to: " << ps_fin_filename.str() << endl;
+    if (write_out_postscript_flag) {
+        for (int fin = 0; fin < FINS_PER_CARTRIDGE; fin++) {
+            stringstream ps_fin_filename;
+            ps_fin_filename << filebase << ".panel0_cartridge0_fin" << fin << ".ps";
+            if (verbose) {
+                cout << "Writing fits to: " << ps_fin_filename.str() << endl;
+            }
+            drawmod_crys2(crystaloffset[0][0][fin],c1,ps_fin_filename.str());
         }
-        drawmod_crys2(crystaloffset[0][0][fin],c1,ps_fin_filename.str());
     }
 
     string calpar_left_filename(filebase + ".calpar_0.txt");
@@ -379,24 +388,26 @@ int main(int argc, Char_t *argv[])
         merged->Write();
         calfile->Close();
 
-        // Fit the fine timestamp histogram and print it out with the fit
-        tres->Fit("gaus","","",-10,10);
-        c1->Clear();
-        tres->Draw();
-        string ps_tres_filename(filebase + ".tres.crysoffset.ps");
-        if (verbose) {
-            cout << "Writing tres histogram to: " << ps_tres_filename << endl;
-        }
-        c1->Print(ps_tres_filename.c_str());
-
-        // below section added by David
-        if (logscale == 1) {
-            c1->SetLogy();
-            string ps_tres_log_filename(filebase + ".tres_log.crysoffset.ps");
+        if (write_out_postscript_flag) {
+            // Fit the fine timestamp histogram and print it out with the fit
+            tres->Fit("gaus","","",-10,10);
+            c1->Clear();
+            tres->Draw();
+            string ps_tres_filename(filebase + ".tres.crysoffset.ps");
             if (verbose) {
-                cout << "Writing log tres histogram to: " << ps_tres_log_filename << endl;
+                cout << "Writing tres histogram to: " << ps_tres_filename << endl;
             }
-            c1->Print(ps_tres_log_filename.c_str());
+            c1->Print(ps_tres_filename.c_str());
+
+            // below section added by David
+            if (logscale == 1) {
+                c1->SetLogy();
+                string ps_tres_log_filename(filebase + ".tres_log.crysoffset.ps");
+                if (verbose) {
+                    cout << "Writing log tres histogram to: " << ps_tres_log_filename << endl;
+                }
+                c1->Print(ps_tres_log_filename.c_str());
+            }
         }
     }
     return(0);

@@ -81,6 +81,9 @@ int main(int argc, Char_t *argv[])
     // calibration parameters and the associated plots are generated, but the
     // calibrated root file is not created.
     bool write_out_root_file_flag(true);
+    // A flag that disables print outs of postscript files.  Default is on.
+    // Flag is disabled by -dp.
+    bool write_out_postscript_flag(true);
 
     cout << " Welcome to cal_apd_offset" << endl;
 
@@ -95,6 +98,11 @@ int main(int argc, Char_t *argv[])
         if(strncmp(argv[ix], "-n", 2) == 0) {
             cout << "Calibrated Root File will not be created." << endl;
             write_out_root_file_flag = false;
+        }
+
+        if(strncmp(argv[ix], "-dp", 3) == 0) {
+            cout << "Postscript Files will not be created." << endl;
+            write_out_postscript_flag = false;
         }
 
         if(strncmp(argv[ix], "-apd1", 5) == 0) {
@@ -303,9 +311,10 @@ int main(int argc, Char_t *argv[])
         }
     }
     calpars_left.close();
-
-    string ps_filename_left_cartridge(filebase + ".panel0_cartridge0.ps");
-    drawmod(apdoffset[0][0], c1, ps_filename_left_cartridge.c_str());
+    if (write_out_postscript_flag) {
+        string ps_filename_left_cartridge(filebase + ".panel0_cartridge0.ps");
+        drawmod(apdoffset[0][0], c1, ps_filename_left_cartridge.c_str());
+    }
 
     if (verbose)  cout << " Filling crystal spectra on the right. " << endl;
     checkevts=0;
@@ -365,8 +374,10 @@ int main(int argc, Char_t *argv[])
     }
     calpars_right.close();
 
-    string ps_filename_right_cartridge(filebase + ".panel1_cartridge0.ps");
-    drawmod(apdoffset[1][0],c1,ps_filename_right_cartridge.c_str());
+    if (write_out_postscript_flag) {
+        string ps_filename_right_cartridge(filebase + ".panel1_cartridge0.ps");
+        drawmod(apdoffset[1][0],c1,ps_filename_right_cartridge.c_str());
+    }
 
 
     // Now using these parameters, generate the [filename].apdoffcal.root file
@@ -411,14 +422,16 @@ int main(int argc, Char_t *argv[])
         merged->Write();
         calfile->Close();
 
+        if (write_out_postscript_flag) {
         // Fit the fine timestamp histogram
-        tres->Fit("gaus","","",-10,10);
+            tres->Fit("gaus","","",-10,10);
 
-        // Then output the histogram with it's fit to a postscript file
-        c1->Clear();
-        tres->Draw();
-        string ps_tres_filename(filebase + ".tres.apdoffset.ps");
-        c1->Print(ps_tres_filename.c_str());
+            // Then output the histogram with it's fit to a postscript file
+            c1->Clear();
+            tres->Draw();
+            string ps_tres_filename(filebase + ".tres.apdoffset.ps");
+            c1->Print(ps_tres_filename.c_str());
+        }
     }
 
     return(0);
