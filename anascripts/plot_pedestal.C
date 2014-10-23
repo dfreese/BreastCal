@@ -210,10 +210,10 @@ Int_t plot_pedestal(
 
     TString outputfilename;
 
-    outputfilename.Form("spatial_pedestals_C%d.png",cartridge);
+    outputfilename.Form("spatial_pedestals_P%dC%d.png", panel, cartridge);
     c1->Print(outputfilename.Data());
 
-    outputfilename.Form("common_pedestals_C%d.png",cartridge);
+    outputfilename.Form("common_pedestals_P%dC%d.png", panel, cartridge);
     c2->Print(outputfilename.Data());
 
     delete spatAhisto;
