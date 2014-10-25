@@ -878,10 +878,12 @@ int main(int argc, char *argv[]) {
             //	  cout << " Packet Processed " << endl;
         } // loop over i
 
-        cout << " File Processed. Dropped: " << droppedPckCnt << " out of " << totalPckCnt << " (=" << setprecision(2) << 100*droppedPckCnt/totalPckCnt <<" %)." << endl;
-        cout << setprecision(1) << fixed;
+        if (totalPckCnt) {
+            cout << " File Processed. Dropped: " << droppedPckCnt << " out of " << totalPckCnt << " (=" << setprecision(2) << 100*droppedPckCnt/totalPckCnt <<" %)." << endl;
+        }
 
         if (droppedPckCnt) {
+            cout << setprecision(1) << fixed;
             cout << "                 StartCode: " << (Float_t )100*droppedFirstLast/droppedPckCnt << " %" ;
             cout << " Out of Range: " << (Float_t) 100*droppedOutOfRange/droppedPckCnt << " %"; 
             cout << " Tigger Code: " << (Float_t) 100*droppedTrigCode/droppedPckCnt << " %" ;
@@ -1031,11 +1033,13 @@ int main(int argc, char *argv[]) {
             cout << " Total events :: " << rawdata->GetEntries() <<  endl;
             cout << " Total accepted :: " << totalacceptedtriggers ;
             cout << setprecision(1) << fixed;
-            cout << " (= " << 100* (float) totalacceptedtriggers/rawdata->GetEntries() << " %) " ;
-            cout << " Total double triggers :: " << totaldoubletriggers ;
-            cout << " (= " << 100* (float) totaldoubletriggers/rawdata->GetEntries() << " %) " ;
-            cout << " Total below threshold :: " << totalbelowthreshold;
-            cout << " (= " << 100* (float) totalbelowthreshold/rawdata->GetEntries() << " %) " <<endl;
+            if (rawdata->GetEntries()) {
+                cout << " (= " << 100* (float) totalacceptedtriggers/rawdata->GetEntries() << " %) " ;
+                cout << " Total double triggers :: " << totaldoubletriggers ;
+                cout << " (= " << 100* (float) totaldoubletriggers/rawdata->GetEntries() << " %) " ;
+                cout << " Total below threshold :: " << totalbelowthreshold;
+                cout << " (= " << 100* (float) totalbelowthreshold/rawdata->GetEntries() << " %) " <<endl;
+            }
 
             hfile->cd();
             mdata->Write();
