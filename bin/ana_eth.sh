@@ -29,7 +29,7 @@ function timing ()
 
 function pedconv ()
 {  
-    decoder -p -f $1 -cmap "../DAQ_Board_Map.nfo" >> $2 ;  
+    decoder -p -f $1 -cmap "../DAQ_Board_Map.nfo" > $2 ; 
     check ${?} "converting pedfile ${1}"; 
     #    sleep 10
 }
@@ -179,40 +179,34 @@ if [[ $dodecode -eq 1 ]]; then
         cd $k
         # get 'L' or 'R' from k
         KK=${k:0:1}
-        files_found=(../PED*${KK}*dat)
-        if [ ${#files_found[@]} -ge 1 ]; then 
-            mv ../PED*${KK}*dat . ;
-        fi
-        ls -tr ./PED*${KK}*dat > pedfiles
-        # ls -tr ./PED*dat > pedfiles
+if [ -e ../PED*${KK}*dat ]; then mv ../PED*${KK}*dat . ; fi
+ls -tr ./PED*dat > pedfiles
         #FIXME WILL BE PT***** FOR PT SOURCE DATA
-        files_found=(../DAQ*${KK}*dat)
-        if [ ${#files_found[@]} -ge 1 ]; then 
-            mv ../DAQ*${KK}*dat . ;
-        fi
-        ls -tr ./DAQ*${KK}*dat > daqfiles
+if [ -e ../DAQ*${KK}*dat ]; then mv ../DAQ*${KK}*dat . ; fi
+ls -tr ./DAQ*dat > daqfiles
 
         if [ `wc -l ./pedfiles | awk '{print $1}'` -eq `wc -l ./daqfiles | awk '{print $1}'` ]; then 
             # equal number of pedfiles as datafiles
             paste daqfiles pedfiles  > files
         else 
             # echo "different"; 
-            pedcount=1; 
-            #pedcount=0; 
-            if [ -e files ] ; then 
-                rm files;
-            fi;
-            while read data; do 
-                echo -n $data" " >> files; 
-                # This logic seems to fail if there is more than 9 files
-                #if  [ `basename $data .dat | rev | cut -f1 -d'_'` -eq 0   ]; then 
-                #    (( pedcount++ ))  ; 
-                #fi;  
-                PEDFILE=`sed -n "${pedcount}p" ./pedfiles`; 
-                echo $PEDFILE  >> files;
-            done < ./daqfiles
+	     pedcount=0; 
+	     maxped=`wc -l pedfiles | awk '{print $1}'`
+	     if [ -e files ] ; then 
+		 rm files; 
+	     fi;
+              while read data; do 
+                  echo -n $data" " >> files; 
+#potential failure if #files > 9 ??
+		  if  [ `basename $data .dat | rev | cut -f1 -d'_'` -eq 0   ]; then (( pedcount++ ))  ; fi;  
+		  if [ $pedcount -gt $maxped ]; then
+		      pedcount=$maxped
+		  fi;
+                  PEDFILE=`sed -n "${pedcount}p" ./pedfiles`; 
+                  echo $PEDFILE  >> files;
+              done < ./daqfiles
         fi;
-
+        
         # converting binary output to ROOT file format
         for c in `seq 1 100`; do 
             if [ -e pedconv_$c.out ] ; then 
@@ -223,14 +217,24 @@ if [[ $dodecode -eq 1 ]]; then
         echo -n " Converting pedfiles @ "
         timing $STARTTIME
         RUNNINGJOBS=0;
-        for $ped_file in `cat pedfiles`; do 
-            if [ $RUNNINGJOBS -ge $CORES ]; then 
+	j=0;
+	for i in `cat pedfiles`; do 
+	    if [ $RUNNINGJOBS -lt $CORES ]; then 
+		(( j++ ));
+ #   echo " SUBMITTING JOB "
+		pedconv $i pedconv_$j.out &
+		pids+=($!);
+		(( RUNNINGJOBS++ ));
+	    else 
+#    echo " RUNNINGJOBS : $RUNNINGJOBS"
                 waitsome $pids 1
                 RUNNINGJOBS=${#pids[@]}
-            fi
-            pedconv $ped_file pedconv_$j.out &
-            pids+=($!);
-            (( RUNNINGJOBS++ ));
+#    echo " PEDCONV LOOP RUNNINGJOBS after waitsome : $RUNNINGJOBS"
+		(( j++ )) ;
+		pedconv $i pedconv_$j.out &
+		pids+=($!);
+		(( RUNNINGJOBS++ ));
+	    fi;
         done;
 
         # pedestal correction, parsing and fine time calculation
@@ -238,6 +242,8 @@ if [[ $dodecode -eq 1 ]]; then
         waitall $pids
 
         echo -n " pedestal decoding done @ "
+
+
         timing $STARTTIME
 
         RUNNINGJOBS=0
