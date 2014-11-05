@@ -878,7 +878,14 @@ int main(int argc, char *argv[]) {
             //	  cout << " Packet Processed " << endl;
         } // loop over i
 
+        if (totalPckCnt)
+	  {
         cout << " File Processed. Dropped: " << droppedPckCnt << " out of " << totalPckCnt << " (=" << setprecision(2) << 100*droppedPckCnt/totalPckCnt <<" %)." << endl;
+	  }
+	else
+	  {
+	    cout << " File Processed. No packets found." << endl;
+	  }
         cout << setprecision(1) << fixed;
 
         if (droppedPckCnt) {
