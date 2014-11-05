@@ -42,6 +42,7 @@ int main(int argc, char *argv[]){
   int i;
   int nrfiles=0;
   int verbose=0;
+  int firstfile=0;
 
       Bool_t random=0;
       Int_t delay=0;
@@ -67,6 +68,12 @@ int main(int argc, char *argv[]){
       cout << " RANDOMS " << endl;        
       }
 
+      if (strncmp(argv[i],"-s",2)==0) { 
+	firstfile=atoi(argv[i+1]);
+	i++;
+        cout << " starting at " <<  filebase << "_part " << firstfile << endl;
+      }
+
 
       if (strncmp(argv[i],"-d",2)==0) { 
         i++;
@@ -77,6 +84,7 @@ int main(int argc, char *argv[]){
 
   } // argc
  
+  if (verbose)  cout << " Filebase :: " << filebase << endl;
 
   if (random && (delay==0)) { cout << " Please specify delay for randoms.-r -d XX \n Exiting.\n"; return -2; }
 
@@ -98,7 +106,7 @@ int main(int argc, char *argv[]){
   m = new TChain(treename,chainname);
 
 
-for (i=0;i<=nrfiles;i++){
+  for (i=firstfile;i<=(firstfile+nrfiles);i++){
   if (random)  sprintf(curfilename,"%s_part%d.delaywindow%d.merged.root",filebase,i,delay);
   else  sprintf(curfilename,"%s_part%d.root",filebase,i);
    m->Add(curfilename);
