@@ -168,7 +168,7 @@ int main(int argc, char *argv[]){
                    }
 		  else { 
 		    ETMP[c][f][m][j]= (TH1F *) decodedfile->Get(tmpstring); 
-	            E[c][f][m][j]->Add(ETMP[c][f][m][j],1);
+	            if (ETMP[c][f][m][j]) E[c][f][m][j]->Add(ETMP[c][f][m][j],1);
 		    delete ETMP[c][f][m][j]; //}
 		  }
 		  sprintf(tmpstring,"C%dF%d/E_com[%d][%d][%d][%d]",c,f,c,f,m,j);
@@ -178,7 +178,7 @@ int main(int argc, char *argv[]){
 		    E_com[c][f][m][j]->SetDirectory(0); }
 		  else { 
 		    ETMP_com[c][f][m][j]= (TH1F *) decodedfile->Get(tmpstring);  
-		    E_com[c][f][m][j]->Add(ETMP_com[c][f][m][j]);
+		    if (ETMP_com[c][f][m][j]) E_com[c][f][m][j]->Add(ETMP_com[c][f][m][j]);
 		    delete ETMP_com[c][f][m][j];
 		  }
 		} //j
