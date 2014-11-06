@@ -1,5 +1,4 @@
 #!/bin/bash
-#!extglob
 
 ##############################################################################################################
 
@@ -116,7 +115,6 @@ function usage()
 {
     echo "ana_eth.sh [ -v -d -cal -c -cc -s -m -t -a -h -C [] ]"
     echo " with: -v: verbose"
-    echo "       -p: point measurement mode"
     echo "       -d: decode binary data ( Left and Right )"
     echo "       -g: segment data (Left and Right)"
     echo "       -cal: calculate calibration parameters (Left and Right)"
@@ -143,14 +141,12 @@ docalibrate=0
 dosort=0
 domerge=0
 dotimecal=0
-pt_mode=""
 
 
 while [ $# -gt 0 ];
 do
     case "$1" in
 	-v) verbose=1;;
-    -p) pt_mode="PT_";;
 	-d) dodecode=1;;
         -g) dosegmentation=1;;
         -cal) docalccalibrate=1;;
@@ -183,19 +179,18 @@ if [[ $dodecode -eq 1 ]]; then
         cd $k
         # get 'L' or 'R' from k
         KK=${k:0:1}
-        files_found=(../${pt_mode}PED*${KK}*dat)
-        echo $files_found
+        files_found=(../PED*${KK}*dat)
         if [ ${#files_found[@]} -ge 1 ]; then 
-            mv ../${pt_mode}PED*${KK}*dat . ;
+            mv ../PED*${KK}*dat . ;
         fi
-        ls -tr ./${pt_mode}PED*${KK}*dat > pedfiles
-
+        ls -tr ./PED*${KK}*dat > pedfiles
+        # ls -tr ./PED*dat > pedfiles
         #FIXME WILL BE PT***** FOR PT SOURCE DATA
-        files_found=(../${pt_mode}DAQ*${KK}*dat)
+        files_found=(../DAQ*${KK}*dat)
         if [ ${#files_found[@]} -ge 1 ]; then 
-            mv ../${pt_mode}DAQ*${KK}*dat . ;
+            mv ../DAQ*${KK}*dat . ;
         fi
-        ls -tr ./${pt_mode}DAQ*${KK}*dat > daqfiles
+        ls -tr ./DAQ*${KK}*dat > daqfiles
 
         if [ `wc -l ./pedfiles | awk '{print $1}'` -eq `wc -l ./daqfiles | awk '{print $1}'` ]; then 
             # equal number of pedfiles as datafiles
@@ -228,7 +223,7 @@ if [[ $dodecode -eq 1 ]]; then
         echo -n " Converting pedfiles @ "
         timing $STARTTIME
         RUNNINGJOBS=0;
-        for ped_file in `cat pedfiles`; do 
+        for $ped_file in `cat pedfiles`; do 
             if [ $RUNNINGJOBS -ge $CORES ]; then 
                 waitsome $pids 1
                 RUNNINGJOBS=${#pids[@]}
@@ -289,8 +284,8 @@ if [[ $dosegmentation -eq 1 ]]; then
     for k in Left Right; do
         cd $k
         KK=${k:0:1}
-        BASE=`ls ${pt_mode}DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
-        ls ${pt_mode}DAQ*${KK}0*root | cut -d _ -f 5 | sort -n | awk -v FBASE=$BASE '{print FBASE"0_"$1}' > filelist
+        BASE=`ls DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
+        ls DAQ*${KK}0*root | cut -d _ -f 5 | sort -n | awk -v FBASE=$BASE '{print FBASE"0_"$1}' > filelist
         chain_parsed -f filelist -o ${BASE}.root
         check ${?} "chain_parsed ${BASE}.root"; 
         getfloods -f ${BASE}.root
@@ -320,7 +315,7 @@ if [[ $docalccalibrate -eq 1 ]]; then
     for k in Left Right; do
         cd $k
         KK=${k:0:1}
-        BASE=`ls ${pt_mode}DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
+        BASE=`ls DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
         mkdir CHIPDATA
         mv *peaks.txt ./CHIPDATA
         enecal -f ${BASE}.root
@@ -337,7 +332,7 @@ if [[ $docalibrate -eq 1 ]]; then
     for k in Left Right; do
         cd $k
         KK=${k:0:1}
-        BASE=`ls ${pt_mode}DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
+        BASE=`ls DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
         calibrate -f ${BASE}.root
         check ${?} "calibrate -f  ${BASE}.root"; 
         cd ..
@@ -352,9 +347,8 @@ if [[ $dodecodedcalibrate -eq 1 ]]; then
 #    for k in Left; do
         cd $k
         KK=${k:0:1}
-        BASE=`ls ${pt_mode}DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
-        # FIXME :: Breaks with PT measurements
-        ls -tr ./${pt_mode}DAQ*${KK}*dat.root > daqfiles
+        BASE=`ls DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
+        ls -tr ./DAQ*${KK}*dat.root > daqfiles
         RUNNINGJOBS=0;
         for daq_file in `cat daqfiles`; do 
             if [ $RUNNINGJOBS -ge $CORES ]; then 
@@ -389,7 +383,7 @@ if [[ $dosort -eq 1 ]]; then
         cd $k
         KK=${k:0:1}
 
-        BASE=`ls ${pt_mode}DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
+        BASE=`ls DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
         log "Estimating split level ${1}"
         VAR=$1;
         LR=`echo "${VAR:0:1}"`;
@@ -419,8 +413,7 @@ if [[ $dosort -eq 1 ]]; then
         i=0;
         # note:: in the future, we may have up to 3 L's : L0 L1 and L3
         while [ $i -le 0 ] ; do
-            # FIXME :: Breaks with PT measurement
-            BASE=`ls ./${pt_mode}DAQ*${KK}${i}*root | head -n 1 | cut -d ${KK} -f 1`${KK} 
+            BASE=`ls ./DAQ*${KK}${i}*root | head -n 1 | cut -d ${KK} -f 1`${KK} 
             if [ $RUNNINGJOBS -ge $CORES ]; then 
                 waitsome $pids 1
                 RUNNINGJOBS=${#pids[@]}
@@ -451,8 +444,7 @@ if [[ $domerge -eq 1 ]]; then
         exit -99;
     fi;
 
-    # FIXME :: Breaks with PT measurement
-    BASE=` ls -1 ./Left/${pt_mode}DAQ*part*root | head -n 1 | cut -d / -f 3 | cut -d _ -f 1-3` 
+    BASE=` ls -1 ./Left/DAQ*part*root | head -n 1 | cut -d / -f 3 | cut -d _ -f 1-3` 
 
     # counting from zero
     (( LEFTSPLITS-- )) ;
