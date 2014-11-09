@@ -126,6 +126,11 @@ function usage()
     echo "       -a: do all of the above"
     echo "       -u: do decode and segment"
     echo "       -l: do -c -s -m -t"
+    echo "       -ci: individually calibrate all decoded files"
+    echo "       -si: individually sort and energy gate calibrated files"
+    echo "       -mi: individually merge and coincidence sort egated files"
+    echo "       -chi: chain together individually merged files"
+    echo "       -i: do -ci -si -mi -chi"
     echo "       -h: display this help"
     echo "       -C [] : number of cores"
 }
@@ -141,6 +146,11 @@ docalibrate=0
 dosort=0
 domerge=0
 dotimecal=0
+doindividualcal=0
+doindividualsort=0
+doindividualmerge=0 
+doindividualegate=0
+doindividualchain=0
 
 
 while [ $# -gt 0 ];
@@ -148,16 +158,22 @@ do
     case "$1" in
 	-v) verbose=1;;
 	-d) dodecode=1;;
-        -g) dosegmentation=1;;
-        -cal) docalccalibrate=1;;
+    -g) dosegmentation=1;;
+    -cal) docalccalibrate=1;;
 	-c) docalibrate=1;;
-        -cc) dodecodedcalibrate=1;;
+    -cc) dodecodedcalibrate=1;;
+    -ci) doindividualcal=1;;
 	-s) dosort=1;;
+    -si) doindividualsort=1;;
+    -ei) doindividualegate=1;;
 	-m) domerge=1;;
+    -mi) doindividualmerge=1;;
+    -chi) doindividualchain=1;;
+    -i) doindividualcal=1; doindividualsort=1; doindividualmerge=1; doindividualchain=1;;
 	-t) dotimecal=1;;
 	-a) dodecode=1;dosegmentation=1;docalccalibrate=1;docalibrate=1;dosort=1;domerge=1;dotimecal=1;;
-        -u) dodecode=1;dosegmentation=1;;
-        -l) docalibrate=1;dosort=1;domerge=1;dotimecal=1;;
+    -u) dodecode=1;dosegmentation=1;;
+    -l) docalibrate=1;dosort=1;domerge=1;dotimecal=1;;
 	-h) usage ; exit; break;;
 	-C) CORES=$2;shift;;
 	*) usage; break;;
@@ -373,7 +389,137 @@ if [[ $dodecodedcalibrate -eq 1 ]]; then
     done;
 fi
 
+#############################################################################################################
 
+if [[ $doindividualcal -eq 1 ]]; then
+    for k in Left Right; do
+        cd $k
+        KK=${k:0:1}
+        BASE=`ls DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
+        ls -tr ./DAQ*${KK}*dat.root > daqfiles
+        RUNNINGJOBS=0;
+        for daq_file in `cat daqfiles`; do 
+            if [ $RUNNINGJOBS -ge $CORES ]; then 
+                waitsome $pids 1
+                RUNNINGJOBS=${#pids[@]}
+            fi
+            calibrate -f ${daq_file} -c ${BASE}.par.root -noplots -q &
+            pids+=($!);
+            (( RUNNINGJOBS++ ));
+            echo $daq_file
+        done;
+        waitall $pids
+        RUNNINGJOBS=0
+
+        waitall $pids
+        RUNNINGJOBS=0
+        cd ..
+    done;
+fi
+
+
+
+
+#############################################################################################################
+
+if [[ $doindividualsort -eq 1 ]]; then
+    for k in Left Right; do
+        cd $k
+        KK=${k:0:1}
+        BASE=`ls DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
+        ls -tr ./DAQ*${KK}*dat.root > daqfiles
+        RUNNINGJOBS=0;
+
+        ls -tr ./DAQ*${KK}*dat.cal.root > calfiles
+        for daq_file in `cat calfiles`; do 
+            if [ $RUNNINGJOBS -ge $CORES ]; then 
+                waitsome $pids 1
+                RUNNINGJOBS=${#pids[@]}
+            fi
+            sort_file -f ${daq_file} -eg -v &
+            pids+=($!);
+            (( RUNNINGJOBS++ ));
+            echo $daq_file
+        done;
+
+        waitall $pids
+        RUNNINGJOBS=0
+        cd ..
+    done;
+fi
+
+
+#############################################################################################################
+
+# Useful as a secondary step if you use sort_file to generate a time sorted
+# list of singles events that are not energy gated.  This will energy gate them
+# and produce the necessary .cal.sort.egate file that can then be merged
+if [[ $doindividualegate -eq 1 ]]; then
+    for k in Left Right; do
+        cd $k
+        KK=${k:0:1}
+        RUNNINGJOBS=0;
+
+        ls -tr ./DAQ*${KK}*dat.cal.sort.root > sortedfiles
+        for daq_file in `cat sortedfiles`; do 
+            if [ $RUNNINGJOBS -ge $CORES ]; then 
+                waitsome $pids 1
+                RUNNINGJOBS=${#pids[@]}
+            fi
+            echo $daq_file
+            egate_file -f ${daq_file} -el 400 -eh 700 -v &
+            pids+=($!);
+            (( RUNNINGJOBS++ ));
+        done;
+
+        waitall $pids
+        RUNNINGJOBS=0
+        cd ..
+    done;
+fi
+
+
+#############################################################################################################
+
+if [[ $doindividualmerge -eq 1 ]]; then
+    for k in Left; do
+        cd Left
+        KK=${k:0:1}
+        BASE=`ls DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
+        RUNNINGJOBS=0;
+        ls -tr DAQ*${KK}*dat.cal.sort.egate.root > ../calfiles
+        cd ..
+
+        for daq_file in `cat calfiles`; do 
+            if [ $RUNNINGJOBS -ge $CORES ]; then 
+                waitsome $pids 1
+                RUNNINGJOBS=${#pids[@]}
+            fi
+            right_file=./Right/`echo $daq_file | sed 's/L0/R0/g'`
+            if [ -e $right_file ]; then
+                output_file=`echo $daq_file | sed 's/_L0//g'`
+                echo "Left File: $daq_file   Right File: $right_file   Output File: $output_file"
+                merge_coinc -fl ./Left/$daq_file -fr $right_file -of $output_file &  
+                pids+=($!);
+                (( RUNNINGJOBS++ ));
+            fi
+        done
+    done
+fi
+
+
+
+#############################################################################################################
+
+if [[ $doindividualchain -eq 1 ]]; then
+    cd Left
+    BASE=`ls DAQ*L0*root | head -n 1 | cut -d L -f 1`
+    cd ../
+    ls -tr DAQ_Data_*.dat.cal.sort.egate.root > mergedfiles
+
+    log "chain_list -f mergedfiles -of ${BASE}_all.merged.root -c merged"
+    chain_list -f mergedfiles -of ${BASE}_all.merged.root -c merged
+fi
 
 #############################################################################################################
 
@@ -479,13 +625,13 @@ if [[ $dotimecal -eq 1 ]]; then
     cal_apd_offset -f ${BASE}_all.merged.ana.root 
     echo -n "CAL_APD_OFFSET: "
     timing ${T_CAL_STARTTIME}
-    cal_crystal_offset2 -f ${BASE}_all.merged.ana.apdoffcal.root -ft 60
+    cal_crystal_offset2 -f ${BASE}_all.merged.ana.apdoffcal.root -ft 60 -dp
     echo -n "CAL_CRYSTAL_OFFSET: "
     timing ${T_CAL_STARTTIME}
     cal_edep -f ${BASE}_all.merged.ana.apdoffcal.crystaloffcal.root  -ft 40
     echo -n "CAL_EDEP: "
     timing ${T_CAL_STARTTIME}
-    cal_crystal_offset2  -f ${BASE}_all.merged.ana.apdoffcal.crystaloffcal.edepcal.root  -ft 30
+    cal_crystal_offset2  -f ${BASE}_all.merged.ana.apdoffcal.crystaloffcal.edepcal.root  -ft 30 -dp
     echo -n "CAL_CRYSTAL_OFFSET: "
     timing ${T_CAL_STARTTIME}
 fi
