@@ -151,6 +151,7 @@ doindividualsort=0
 doindividualmerge=0 
 doindividualegate=0
 doindividualchain=0
+doindividualprocess=0
 
 
 while [ $# -gt 0 ];
@@ -162,6 +163,7 @@ do
     -cal) docalccalibrate=1;;
 	-c) docalibrate=1;;
     -cc) dodecodedcalibrate=1;;
+    -pi) doindividualprocess=1;;
     -ci) doindividualcal=1;;
 	-s) dosort=1;;
     -si) doindividualsort=1;;
@@ -169,7 +171,7 @@ do
 	-m) domerge=1;;
     -mi) doindividualmerge=1;;
     -chi) doindividualchain=1;;
-    -i) doindividualcal=1; doindividualsort=1; doindividualmerge=1; doindividualchain=1;;
+    -i) doindividualprocess=1; doindividualmerge=1; doindividualchain=1;;
 	-t) dotimecal=1;;
 	-a) dodecode=1;dosegmentation=1;docalccalibrate=1;docalibrate=1;dosort=1;domerge=1;dotimecal=1;;
     -u) dodecode=1;dosegmentation=1;;
@@ -389,6 +391,42 @@ if [[ $dodecodedcalibrate -eq 1 ]]; then
     done;
 fi
 
+
+
+#############################################################################################################
+
+# This processes each of the decoded files by calibrating, sorting, and energy
+# gating each of the files. Takes files with extension of .dat.root and outputs
+# a .dat.cal.sort.egate.root file.  This does everything that doindividualcal,
+# doindividualsort, and do individualegate does.  This produces just one output
+# file as opposed one for each step.
+if [[ $doindividualprocess -eq 1 ]]; then
+    for k in Left Right; do
+        cd $k
+        KK=${k:0:1}
+        BASE=`ls DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
+        ls -tr ./DAQ*${KK}*dat.root > daqfiles
+        RUNNINGJOBS=0;
+        for daq_file in `cat daqfiles`; do 
+            if [ $RUNNINGJOBS -ge $CORES ]; then 
+                waitsome $pids 1
+                RUNNINGJOBS=${#pids[@]}
+            fi
+            log "process_file -f ${daq_file} -calf ${BASE}.par.root -s -eg -el 450 -eh 650 &"
+            process_file -f ${daq_file} -calf ${BASE}.par.root -s -eg -el 450 -eh 650 &
+            pids+=($!);
+            (( RUNNINGJOBS++ ));
+        done;
+        waitall $pids
+        RUNNINGJOBS=0
+
+        waitall $pids
+        RUNNINGJOBS=0
+        cd ..
+    done;
+fi
+
+
 #############################################################################################################
 
 if [[ $doindividualcal -eq 1 ]]; then
@@ -436,6 +474,7 @@ if [[ $doindividualsort -eq 1 ]]; then
                 waitsome $pids 1
                 RUNNINGJOBS=${#pids[@]}
             fi
+            log "sort_file -f ${daq_file} -eg -v &"
             sort_file -f ${daq_file} -eg -v &
             pids+=($!);
             (( RUNNINGJOBS++ ));
@@ -467,6 +506,7 @@ if [[ $doindividualegate -eq 1 ]]; then
                 RUNNINGJOBS=${#pids[@]}
             fi
             echo $daq_file
+            log "egate_file -f ${daq_file} -el 400 -eh 700 -v &"
             egate_file -f ${daq_file} -el 400 -eh 700 -v &
             pids+=($!);
             (( RUNNINGJOBS++ ));
@@ -498,7 +538,7 @@ if [[ $doindividualmerge -eq 1 ]]; then
             right_file=./Right/`echo $daq_file | sed 's/L0/R0/g'`
             if [ -e $right_file ]; then
                 output_file=`echo $daq_file | sed 's/_L0//g'`
-                echo "Left File: $daq_file   Right File: $right_file   Output File: $output_file"
+                log "merge_coinc -fl ./Left/$daq_file -fr $right_file -of $output_file &"
                 merge_coinc -fl ./Left/$daq_file -fr $right_file -of $output_file &  
                 pids+=($!);
                 (( RUNNINGJOBS++ ));

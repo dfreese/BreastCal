@@ -112,7 +112,6 @@ int main(int argc, Char_t *argv[])
             verbose = 1;
         }
         if(strncmp(argv[ix], "-s", 2) == 0) {
-            cout << "Sorting Enabled" << endl;
             sort_output = true;
         }
         if(strncmp(argv[ix], "-f", 2) == 0) {
@@ -210,6 +209,9 @@ int main(int argc, Char_t *argv[])
         if (energy_gate_output) {
             cout << "Energy Window: " << energy_gate_low 
                  << " to " << energy_gate_high << endl;
+        }
+        if (sort_output) {
+            cout << "Sorting Enabled" << endl;
         }
     }
 
@@ -386,11 +388,11 @@ int main(int argc, Char_t *argv[])
             cout << "Processed events: " << entries << endl;
             cout << "Dropped events:\n"
                 << "    No Valid Peaks: " << dropped_no_valid_peaks
-                << "  (" << float(dropped_no_valid_peaks) / float(entries) << " %)\n"
+                << "  (" << 100 * float(dropped_no_valid_peaks) / float(entries) << " %)\n"
                 << "    Bad Crystal Id: " << dropped_get_crystal_id
-                << "  (" << float(dropped_get_crystal_id) / float(entries) << " %)\n"
+                << "  (" << 100 * float(dropped_get_crystal_id) / float(entries) << " %)\n"
                 << "    Energy Gated:   " << dropped_energy_gate
-                << "  (" << float(dropped_energy_gate) / float(entries) << " %)\n";
+                << "  (" << 100 * float(dropped_energy_gate) / float(entries) << " %)\n";
         }
     }
 
@@ -400,7 +402,7 @@ int main(int argc, Char_t *argv[])
     if (verbose) {
         clock_t end_time(clock());
         cout << "Ticks Required: " << end_time - start_time << endl;
-        cout << "Time Required:  " << (end_time - start_time) / CLOCKS_PER_SEC << endl;  
+        cout << "Time Required:  " << float(end_time - start_time) / float(CLOCKS_PER_SEC) << endl;  
     }
     return(0);
 }
