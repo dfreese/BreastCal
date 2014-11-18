@@ -16,17 +16,39 @@ usage ()
 
 
 if [ $# -ne 3 ]; then
-    usage
-    exit 1
+    if [ $# -ne 1 ]; then
+        usage
+        exit 1
+    else
+        if [ $1 == "-a" ]; then
+            doall=1
+        fi
+    fi
 fi
 
-filename=$1
-panel=$2
-cart=$3
 
+if [ $doall -eq 1 ]; then
+    left_pedfiles=$(ls PED*_L0_0.dat)
+    for file in $left_pedfiles; do
+        echo $file
+        decoder -p -f $file -cmap ./DAQ_Board_Map.nfo
+        root -l -q "${ANADIR}/anascripts/plot_pedestal.C(\"$file.ped\",0,0)"
+        root -l -q "${ANADIR}/anascripts/plot_pedestal.C(\"$file.ped\",1,0)"
+    done
 
-if [ -ne $filename.ped ]; then
-    decoder -p -f $filename -cmap ./DAQ_Board_Map.nfo
+    right_pedfiles=$(ls PED*R0_0.dat)
+    for file in $right_pedfiles; do
+        echo $file
+        decoder -p -f $file -cmap ./DAQ_Board_Map.nfo
+        root -l -q "${ANADIR}/anascripts/plot_pedestal.C(\"$file.ped\",0,1)"
+        root -l -q "${ANADIR}/anascripts/plot_pedestal.C(\"$file.ped\",1,1)"
+    done
+else 
+    filename=$1
+    panel=$2
+    cart=$3
+    if [ ! -e $filename.ped ]; then
+        decoder -p -f $filename -cmap ./DAQ_Board_Map.nfo
+    fi
+    root -l -q "${ANADIR}/anascripts/plot_pedestal.C(\"$filename.ped\",$cart)"
 fi
-
-root -l -q "/products/BreastCal/dev/anascripts/plot_pedestal.C(\"$filename.ped\",$cart)"

@@ -31,6 +31,8 @@ int main(int argc, char ** argv)
     Bool_t RANDOMS(0);
     Float_t FINETIMEWINDOW(40);
     Int_t MAXTIME(999999999);
+    float energy_gate_high(700);
+    float energy_gate_low(400);
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     for(int ix = 1; ix < argc; ix++) {
@@ -169,6 +171,10 @@ int main(int argc, char ** argv)
     Long64_t firsteventtime=0;
     Long64_t firsteventtimeset=kFALSE;
 
+    Long64_t events_dropped_fine_time_window(0);
+    Long64_t events_dropped_energy_gating(0);
+    Long64_t events_dropped_invalid_index(0);
+
     for (Long64_t i=0; i<entries_m; i++) {
         m->GetEntry(i);
 
@@ -176,12 +182,11 @@ int main(int argc, char ** argv)
 
         // The different constraint here compared to merged_ana, is that we assume that merged_ana already did a valid random selection on dtc,
         // the selection is only converted to CUDA readable format. 
-        if ((RANDOMS) || ( TMath::Abs(data->dtf)<FINETIMEWINDOW)) {  
-            if ( ( data->E1<700 ) && (data->E1> 400 ) ) {
-                if ( ( data->E2<700 ) && (data->E2> 400 ) ) {
-                    if ( (data->crystal1>=0 ) && (data->crystal1<64 )) {
-                        if ( (data->crystal2>=0 ) && (data->crystal2<64 )) {
-
+        if ((RANDOMS) || ( TMath::Abs(data->dtf)<FINETIMEWINDOW)) {
+            if ((data->E1 < energy_gate_high) && (data->E1 > energy_gate_low)) {
+                if ((data->E2 < energy_gate_high) && (data->E2 > energy_gate_low)) {
+                    if ((data->crystal1 >= 0) && (data->crystal1 < CRYSTALS_PER_APD)) {
+                        if ((data->crystal2 >= 0) && (data->crystal2 < CRYSTALS_PER_APD)) {
                             if (!firsteventtimeset){ 
                                 firsteventtime=data->ct;
                                 firsteventtimeset=kTRUE;
@@ -223,17 +228,37 @@ int main(int argc, char ** argv)
                             }
 
                             outputfile.write( (char *) &buffer, sizeof(buffer));
+                        } else {
+                            events_dropped_invalid_index++;
                         }
+                    } else {
+                        events_dropped_invalid_index++;
                     }
+                } else {
+                    events_dropped_energy_gating++;
                 }
+            } else {
+                events_dropped_energy_gating++;
             }
+        } else {
+            events_dropped_fine_time_window++;
         }
     }
     // loop over entries
     if (ascii) {
         asciiout.close();
     }
-    cout << " wrote " << lines << " LORS. " << endl;
+
+    cout << " Processed Events: " <<  entries_m << endl;
+    cout << " LORS Written: " << lines << endl;
+    cout << " Dropped Events:   " << events_dropped_fine_time_window + 
+                                     events_dropped_energy_gating + 
+                                     events_dropped_invalid_index
+                                  << endl;
+    cout << "      Time Window: "  << events_dropped_fine_time_window << endl;
+    cout << "    Energy Window: " << events_dropped_energy_gating << endl;
+    cout << "    Invalid Index: " << events_dropped_invalid_index << endl;
+
     return(0);
 }
 
