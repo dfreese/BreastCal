@@ -14,18 +14,18 @@ void usage(void)
 {
     cout << " Usage:  " << endl;
     cout << " ./sort_file [-v,-eg] -f [Filename]" << endl;
-    cout << " -eg: Energy Gate output. Default output file extension"
-         << "      becomes \".sort.egate.root\""
-         << " -of: Specifies output filename. Default replaces .cal.root"
-         << "      extension with .cal.sort.root"
-         << " -t:  Optionally sets the expected input tree name."
-         << "      Default is CalTree"
-         << " -ot: Optionally sets the output tree name."
-         << "      Default is SCalTree"
-         << " -eh: Set Upper Energy Window - enables energy gating"
-         << "      Default is 700keV"
-         << " -el: Set Lower Energy Window - enables energy gating"
-         << "      Default is 400keV";
+    cout << " -eg: Energy Gate output. Default output file extension\n"
+         << "      becomes \".sort.egate.root\"\n"
+         << " -of: Specifies output filename. Default replaces .cal.root\n"
+         << "      extension with .cal.sort.root\n"
+         << " -t:  Optionally sets the expected input tree name.\n"
+         << "      Default is CalTree\n"
+         << " -ot: Optionally sets the output tree name.\n"
+         << "      Default is SCalTree\n"
+         << " -eh: Set Upper Energy Window - enables energy gating\n"
+         << "      Default is 700keV\n"
+         << " -el: Set Lower Energy Window - enables energy gating\n"
+         << "      Default is 400keV\n";
     return;
 }
 
