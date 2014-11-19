@@ -9,19 +9,20 @@
 #include <vector>
 #include <sstream>
 #include <armadillo>
+#include <algorithm>
+#include <fstream>
 
 void usage(void)
 {
     cout << " Usage:  " << endl;
-    cout << " ./sort_file [-v,-eg] -f [Filename]" << endl;
-    cout << " -eg: Energy Gate output. Default output file extension"
-         << "      becomes \".sort.egate.root\""
-         << " -of: Specifies output filename. Default replaces .cal.root"
-         << "      extension with .cal.sort.root"
-         << " -t:  Optionally sets the expected input tree name."
-         << "      Default is merged"
-         << " -ot: Optionally sets the output tree name."
-         << "      Default is merged";
+    cout << " ./time_cal [-v] -f [Filename]" << endl;
+    cout << " -of: Specifies output filename. Default replaces .cal.root\n"
+         << "      extension with .cal.sort.root\n"
+         << " -t:  Optionally sets the expected input tree name.\n"
+         << "      Default is merged\n"
+         << " -ot: Optionally sets the output tree name.\n"
+         << "      Default is merged\n"
+         << " -a:  Output ascii file of parameters and dtf used for calibration\n";
     return;
 }
 
@@ -34,6 +35,7 @@ int main(int argc, Char_t *argv[])
     string output_treename("merged");
     string output_filename;
     bool output_filename_spec(false);
+    bool output_ascii_flag(false);
 
     for(int ix = 1; ix < argc; ix++) {
         if(strncmp(argv[ix], "-h", 2) == 0) {
@@ -64,6 +66,10 @@ int main(int argc, Char_t *argv[])
 
         if(strncmp(argv[ix], "-ot", 3) == 0) {
             output_treename = string(argv[ix + 1]);
+            ix++;
+        }
+        if(strncmp(argv[ix], "-a", 2) == 0) {
+            output_ascii_flag = true;
             ix++;
         }
     }
@@ -123,12 +129,16 @@ int main(int argc, Char_t *argv[])
     }
     // Get all timestamps and sort events
     int nTerms(1024);
-    Long64_t length(entries);
-    cout << "Armadillo: Allocating matrix space" << endl;
+    Long64_t length(min(entries, Long64_t(1000000)));
+    cout << "Armadillo: Allocating matrix space: " << length << " x " << nTerms << endl;
     arma::mat A_arma(length,nTerms);
     arma::vec y_arma(length);
+    ofstream output_text;
+    if (output_ascii_flag) {
+        output_text.open("system_output.txt");
+    }
 
-    for (Long64_t ii = 0; ii < entries; ii++) {
+    for (Long64_t ii = 0; ii < length; ii++) {
         input_tree->GetEntry(ii);
         int apd1 = (((0 * CARTRIDGES_PER_PANEL + input_event->cartridge1) * 
                     FINS_PER_CARTRIDGE + input_event->fin1) * 
@@ -141,8 +151,19 @@ int main(int argc, Char_t *argv[])
         A_arma(ii, apd1) = 1;
         A_arma(ii, apd2) = -1;
         y_arma(ii) = input_event->dtf;
+        if (output_ascii_flag) {
+            float dtf = input_event->dtf;
+            int crystal1 = input_event->crystal1;
+            int crystal2 = input_event->crystal2;
+            output_text << apd1 << " " << apd2 << " " << crystal1 << " " << crystal2 << " " << dtf << "\n";
+        }
     }
+    output_text.close();
 
+    if (verbose) {
+        cout << "Finished Gathering Timestamp Data" << endl;
+        cout << "Solving Linear System" << endl;
+    }
     arma::vec x_arma(nTerms);
     bool arma_status(arma::solve(x_arma, A_arma, y_arma));
 
@@ -151,7 +172,9 @@ int main(int argc, Char_t *argv[])
         cerr << "Exiting..." << endl;
         return(-9);
     }
-    //arma::vec x_arma = arma::solve(A_arma,y_arma);
+    if (verbose) {
+        cout << "Finished Solving Linear System" << endl;
+    }
 
     /*
     if (verbose) {
