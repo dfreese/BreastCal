@@ -15,6 +15,8 @@ void usage(void){
     cout << " -v : verbose " << endl;
     cout << " -a : ascii  " << endl;
     cout << " -mt :: only give the first maxtime minutes " << endl;
+    cout << " -eh: Set Upper Energy Window - Default is 700keV\n"
+         << " -el: Set Lower Energy Window - Default is 400keV\n";
     return;
 }
 
@@ -88,6 +90,20 @@ int main(int argc, char ** argv)
             }
 
         }
+        
+        if(strncmp(argv[ix], "-eh", 3) == 0) {
+            stringstream ss;
+            ss << argv[ix + 1];
+            ss >> energy_gate_high;
+            ix++;
+        }
+        if(strncmp(argv[ix], "-el", 3) == 0) {
+            stringstream ss;
+            ss << argv[ix + 1];
+            ss >> energy_gate_low;
+            ix++;
+        }
+
     } // loop over arguments
 
     rootlogon(verbose);
@@ -149,7 +165,7 @@ int main(int argc, char ** argv)
     if (RANDOMS) {
         sprintf(temp_name,"%s_p%.2f_random.cuda",filebase.c_str(),PANELDISTANCE);
     } else {
-        sprintf(temp_name,"%s_p%.2f_t%.0f.cuda",filebase.c_str(),PANELDISTANCE, FINETIMEWINDOW);
+        sprintf(temp_name,"%s_p%.2f_t%.0f_el%.0f_eh%.0f.cuda",filebase.c_str(),PANELDISTANCE, FINETIMEWINDOW, energy_gate_low, energy_gate_high);
     }
     string outfile(temp_name);
     delete[] temp_name;

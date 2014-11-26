@@ -79,7 +79,10 @@ int main(int argc, char *argv[]){
 
   ifstream chainfile,rootfile;
   chainfile.open(filelist);
-
+  if (!chainfile.good()) {
+        cout << "Filelist could not be opened: " << filelist << endl;
+        return(-1);
+    }
   TChain *mdata;
   Char_t chainname[40];
 
@@ -168,7 +171,7 @@ int main(int argc, char *argv[]){
                    }
 		  else { 
 		    ETMP[c][f][m][j]= (TH1F *) decodedfile->Get(tmpstring); 
-	            if (ETMP[c][f][m][j]) E[c][f][m][j]->Add(ETMP[c][f][m][j],1);
+	            E[c][f][m][j]->Add(ETMP[c][f][m][j],1);
 		    delete ETMP[c][f][m][j]; //}
 		  }
 		  sprintf(tmpstring,"C%dF%d/E_com[%d][%d][%d][%d]",c,f,c,f,m,j);
@@ -178,7 +181,7 @@ int main(int argc, char *argv[]){
 		    E_com[c][f][m][j]->SetDirectory(0); }
 		  else { 
 		    ETMP_com[c][f][m][j]= (TH1F *) decodedfile->Get(tmpstring);  
-		    if (ETMP_com[c][f][m][j]) E_com[c][f][m][j]->Add(ETMP_com[c][f][m][j]);
+		    E_com[c][f][m][j]->Add(ETMP_com[c][f][m][j]);
 		    delete ETMP_com[c][f][m][j];
 		  }
 		} //j

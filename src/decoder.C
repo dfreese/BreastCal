@@ -1038,11 +1038,14 @@ int main(int argc, char *argv[]) {
             cout << " Total events :: " << rawdata->GetEntries() <<  endl;
             cout << " Total accepted :: " << totalacceptedtriggers ;
             cout << setprecision(1) << fixed;
+            if (rawdata->GetEntries()) 
+			{
             cout << " (= " << 100* (float) totalacceptedtriggers/rawdata->GetEntries() << " %) " ;
             cout << " Total double triggers :: " << totaldoubletriggers ;
             cout << " (= " << 100* (float) totaldoubletriggers/rawdata->GetEntries() << " %) " ;
             cout << " Total below threshold :: " << totalbelowthreshold;
             cout << " (= " << 100* (float) totalbelowthreshold/rawdata->GetEntries() << " %) " <<endl;
+            }
 
             hfile->cd();
             mdata->Write();

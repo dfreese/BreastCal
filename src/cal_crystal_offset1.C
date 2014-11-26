@@ -113,9 +113,9 @@ int main(int argc, Char_t *argv[])
     Int_t DTF_hi;
     Int_t FINELIMIT;
 
-    cout << " Welcome to cal_crystal_ofset2 " << endl;
+    cout << " Welcome to cal_crystal_offset1" << endl;
 
-    Char_t filename[FILENAMELENGTH] = "";
+    string filename;
     Int_t verbose = 0;
     CoincEvent *evt =  new CoincEvent();
     // Parameter for determining if the fine time stamp histogram generated
@@ -139,28 +139,24 @@ int main(int argc, Char_t *argv[])
             cout << " Using Gauss Fit "  <<endl;
         }
 
-        if(strncmp(argv[ix], "-ft", 3) == 0) {
-            coarsetime=0;
-            ix++;
-            if (ix == argc ) {
-                cout << " Please enter finelimit interval: -ft [finelimit]\nExiting. " << endl;
-                return -20;
-            }
-            FINELIMIT=atoi(argv[ix]);
-            if (FINELIMIT<1) {
-                cout << " Error. FINELIMIT = " << FINELIMIT << " too small. Please specify -ft [finelimit]. " << endl;
-                cout << "Exiting." << endl; return -20;
-            }
-            cout << " Fine time interval = "  << FINELIMIT << endl;
-        }
+
 
         if(strncmp(argv[ix], "-f", 3) == 0) {
-            if(strlen(argv[ix + 1]) < FILENAMELENGTH) {
-                sprintf(filename, "%s", argv[ix + 1]);
+            if(strncmp(argv[ix], "-ft", 3) == 0) {
+                coarsetime=0;
+                ix++;
+                if (ix == argc) {
+                    cout << " Please enter finelimit interval: -ft [finelimit]\nExiting. " << endl;
+                    return -20;
+                }
+                FINELIMIT=atoi(argv[ix]);
+                if (FINELIMIT<1) {
+                    cout << " Error. FINELIMIT = " << FINELIMIT << " too small. Please specify -ft [finelimit]. " << endl;
+                    cout << "Exiting." << endl; return -20;
+                }
+                cout << " Fine time interval = "  << FINELIMIT << endl;
             } else {
-                cout << "Filename " << argv[ix + 1] << " too long !" << endl;
-                cout << "Exiting.." << endl;
-                return -99;
+                filename = string(argv[ix + 1]);
             }
         }
     }
@@ -172,17 +168,35 @@ int main(int argc, Char_t *argv[])
     rootlogon(verbose);
     gStyle->SetOptStat(kTRUE); 
 
+    size_t root_file_ext_pos(filename.rfind(".root"));
+    if (root_file_ext_pos == string::npos) {
+        cerr << "Unable to find .root extension in: \"" << filename << "\"" << endl;
+        cerr << "...Exiting." << endl;
+        return(-1);
+    }
+    string filebase(filename, 0, root_file_ext_pos);
+    if (verbose) cout << "filebase: " << filebase << endl;
+
+
     TCanvas *c1;
     c1 = (TCanvas*)gROOT->GetListOfCanvases()->FindObject("c1");
     if (!c1) c1 = new TCanvas("c1","c1",10,10,1000,1000);
     c1->SetCanvasSize(700,700);
 
-    Char_t filebase[FILENAMELENGTH];
-    Char_t rootfile[FILENAMELENGTH]; 
-
     cout << " Opening file " << filename << endl;
-    TFile *rtfile = new TFile(filename,"OPEN");
-    TTree *mm  = (TTree *) rtfile->Get("merged");
+    TFile *rtfile = new TFile(filename.c_str(),"OPEN");
+    if (rtfile->IsZombie()) {
+        cerr << "Could not open file" << endl;
+        cerr << "Exiting..." << endl;
+        return(-1);
+    }
+    TTree *mm  = 0;
+    mm  = (TTree *) rtfile->Get("merged");
+    if (!mm) {
+        cerr << "TTree not found in file" << endl;
+        cerr << "Exiting..." << endl;
+        return(-2);
+    }
     mm->SetBranchAddress("Event",&evt);
 
 
@@ -213,10 +227,6 @@ int main(int argc, Char_t *argv[])
     Long64_t checkevts(0);
 
 
-    strncpy(filebase,filename,strlen(filename)-5);
-    filebase[strlen(filename)-5]='\0';
-    sprintf(rootfile,"%s",filebase);
-    cout << " ROOTFILE = " << rootfile << endl;
 
 
     for (Long64_t ii = 0; ii<entries; ii++) {
@@ -251,18 +261,18 @@ int main(int argc, Char_t *argv[])
     }
 
     Char_t calparfilename[MAXFILELENGTH];
-    sprintf(calparfilename, "%s_calpar.txt", rootfile);
+    sprintf(calparfilename, "%s_calpar.txt", filebase.c_str());
     write_crystal_cal_val(mean_crystaloffset, calparfilename);
 
     TH1F *tres = new TH1F("tres","Time Resolution After Time walk correction",400,-100,100);
 
-    strcat(rootfile,".crystaloffcal.root");
+    string rootfile = filebase + ".crystaloffcal.root";
 
     if (verbose) {
         cout << " Opening file " << rootfile << " for writing " << endl;
     }
     
-    TFile *calfile = new TFile(rootfile,"RECREATE");
+    TFile *calfile = new TFile(rootfile.c_str(),"RECREATE");
     TTree *merged = new  TTree("merged","Merged and Calibrated LYSO-PSAPD data ");
     CoincEvent *calevt = new CoincEvent();
     merged->Branch("Event",&calevt);
@@ -294,17 +304,17 @@ int main(int argc, Char_t *argv[])
     c1->Clear();
     tres->Draw();
     Char_t psfile[MAXFILELENGTH];
-    sprintf(psfile,"%s.tres.crysoffset.ps",rootfile);
+    sprintf(psfile,"%s.tres.crysoffset.ps",rootfile.c_str());
 
     c1->Print(psfile);
 
-    sprintf(psfile,"%s.crysoffset.ps",rootfile);
+    sprintf(psfile,"%s.crysoffset.ps",rootfile.c_str());
     draw_crystal_histograms(crystaloffset, c1, psfile);
 
     // below section added by David
     if (logscale == 1) {
         c1->SetLogy();
-        sprintf(psfile,"%s.tres.crysoffset.log.ps",rootfile);
+        sprintf(psfile,"%s.tres.crysoffset.log.ps",rootfile.c_str());
         c1->Print(psfile);
     }
     return(0);
