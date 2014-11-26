@@ -156,10 +156,11 @@ do
 	-m) domerge=1;;
 	-t) dotimecal=1;;
 	-a) dodecode=1;dosegmentation=1;docalccalibrate=1;docalibrate=1;dosort=1;domerge=1;dotimecal=1;;
-        -u) dodecode=1;dosegmentation=1;;
+        -u) docalccalibrate=1;docalibrate=1;dosort=1;;
         -l) docalibrate=1;dosort=1;domerge=1;dotimecal=1;;
 	-h) usage ; exit; break;;
 	-C) CORES=$2;shift;;
+	-dgcal) dodecode=1;dosegmentation=1;docalccalibrate=1;;
 	*) usage; break;;
     esac
     shift
@@ -324,6 +325,7 @@ if [[ $docalccalibrate -eq 1 ]]; then
         BASE=`ls DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
         mkdir CHIPDATA
         mv *peaks.txt ./CHIPDATA
+	mv *peaks.failed.txt ./CHIPDATA
         enecal -f ${BASE}.root
         check ${?} "enecal -f  ${BASE}.root"; 
         cd ..

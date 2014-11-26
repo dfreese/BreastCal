@@ -191,9 +191,11 @@ int main(int argc, Char_t *argv[])
         DTF_hi = FINELIMIT/2;
     }
 
-    TH2F *energydependence[2];
-    energydependence[0] = new TH2F("energydependence[0]","Edep Panel 0",100,400,600,100,-50,50);
-    energydependence[1] = new TH2F("energydependence[1]","Edep Panel 1",100,400,600,100,-50,50);
+    TH2F *energydependence[2][CARTRIDGES_PER_PANEL];
+    energydependence[0][0] = new TH2F("energydependence[0][0]","Edep Panel 0 C0",100,400,600,100,-50,50);
+    energydependence[0][1] = new TH2F("energydependence[0][1]","Edep Panel 0 C1",100,400,600,100,-50,50);
+    energydependence[1][0] = new TH2F("energydependence[1][0]","Edep Panel 1 C0",100,400,600,100,-50,50);
+    energydependence[1][1] = new TH2F("energydependence[1][1]","Edep Panel 1 C1",100,400,600,100,-50,50);
 
     Long64_t entries = mm->GetEntries();
     cout << " Total  entries: " << entries << endl; 
@@ -217,9 +219,9 @@ int main(int argc, Char_t *argv[])
                     if (TMath::Abs(evt->dtf ) < FINELIMIT ) {
                         checkevts++;
                         if (common) {
-                            energydependence[0]->Fill(evt->Ec1,evt->dtf);
+                            energydependence[0][evt->cartridge1]->Fill(evt->Ec1,evt->dtf);
                         } else {
-                            energydependence[0]->Fill(evt->E1,evt->dtf);
+                            energydependence[0][evt->cartridge2]->Fill(evt->E1,evt->dtf);
                         }
                     }
                 }
@@ -232,31 +234,47 @@ int main(int argc, Char_t *argv[])
         cout << " I made " << checkevts << " calls to Fill() " << endl;         
     }
 
-    TH1F *profehist[2];
-    TF1 *profehistfit[2];
+    TH1F *profehist[2][CARTRIDGES_PER_PANEL];
+    TF1 *profehistfit[2][CARTRIDGES_PER_PANEL];
 
-    profehistfit[0] = new TF1("profehistfit[0]","pol1",400,600);   
-    profehistfit[1] = new TF1("profehistfit[1]","pol1",400,600);   
+    profehistfit[0][0] = new TF1("profehistfit[0][0]","pol1",400,600);   
+    profehistfit[1][0] = new TF1("profehistfit[1][0]","pol1",400,600);   
+    profehistfit[0][1] = new TF1("profehistfit[0][1]","pol1",400,600);   
+    profehistfit[1][1] = new TF1("profehistfit[1][1]","pol1",400,600);   
 
-    profehist[0] = (TH1F *) energydependence[0]->ProfileX();
-    profehist[0]->SetName("profehist[0]");
+
+    profehist[0][0] = (TH1F *) energydependence[0][0]->ProfileX();
+    profehist[0][0]->SetName("profehist[0][0]");
+    profehist[0][1] = (TH1F *) energydependence[0][1]->ProfileX();
+    profehist[0][1]->SetName("profehist[0][0]");
+
 
     if (verbose) {
-        profehist[0]->Fit("profehistfit[0]");
+        profehist[0][0]->Fit("profehistfit[0][0]");
+        profehist[0][1]->Fit("profehistfit[0][1]");
     } else {
-        profehist[0]->Fit("profehistfit[0]","Q");
+        profehist[0][0]->Fit("profehistfit[0][0]","Q");
+        profehist[0][1]->Fit("profehistfit[0][1]","Q");
     }
 
     if (write_out_postscript_flag) {
         c1->Clear();
         c1->Divide(1,2);
         c1->cd(1);
-        energydependence[0]->Draw("colz");
+        energydependence[0][0]->Draw("colz");
         c1->cd(2);
-        profehist[0]->Draw();
-
-        string ps_left_filename(filebase + ".edep_panel0.ps");
+        profehist[0][0]->Draw();
+        string ps_left_filename(filebase + ".edep_panel0C0.ps");
         c1->Print(ps_left_filename.c_str());
+        c1->Clear();
+        c1->Divide(1,2);
+        c1->cd(1);
+        energydependence[0][1]->Draw("colz");
+        c1->cd(2);
+        profehist[0][1]->Draw();
+        ps_left_filename = filebase + ".edep_panel0C1.ps";
+        c1->Print(ps_left_filename.c_str());
+
     }
 
 
@@ -283,7 +301,14 @@ int main(int argc, Char_t *argv[])
                         if (TMath::Abs(evt->dtc ) < 6) {
                             if (TMath::Abs(evt->dtf) < FINELIMIT) {
                                 checkevts++;
-                                energydependence[1]->Fill(evt->Ec2,evt->dtf-profehistfit[0]->Eval(evt->Ec1));
+				if (common) 
+				  {
+				    energydependence[1][evt->cartridge2]->Fill(evt->Ec2,evt->dtf-profehistfit[0][evt->cartridge1]->Eval(evt->Ec1));
+				  }
+				else
+				  {
+				    energydependence[1][evt->cartridge2]->Fill(evt->E2,evt->dtf-profehistfit[0][evt->cartridge1]->Eval(evt->E1));
+				  }
                             }
                         }
                     }
@@ -297,26 +322,37 @@ int main(int argc, Char_t *argv[])
         cout << " I made " << checkevts << " calls to Fill() " << endl;         
     }
 
-    profehist[1] = (TH1F *) energydependence[1]->ProfileX();
-    profehist[1]->SetName("profehist[1]");
+    profehist[1][0] = (TH1F *) energydependence[1][0]->ProfileX();
+    profehist[1][0]->SetName("profehist[1][0]");
+    profehist[1][1] = (TH1F *) energydependence[1][1]->ProfileX();
+    profehist[1][1]->SetName("profehist[1][1]");
 
     if (verbose) {
-        profehist[1]->Fit("profehistfit[1]");
+        profehist[1][0]->Fit("profehistfit[1][0]");
+        profehist[1][1]->Fit("profehistfit[1][1]");
     } else {
-        profehist[1]->Fit("profehistfit[1]","Q");
+        profehist[1][0]->Fit("profehistfit[1][0]","Q");
+        profehist[1][1]->Fit("profehistfit[1][1]","Q");
     }
 
     if (write_out_postscript_flag) {
         c1->Clear();
         c1->Divide(1,2);
         c1->cd(1);
-        energydependence[1]->Draw("colz");
+        energydependence[1][0]->Draw("colz");
         c1->cd(2);
-        profehist[1]->Draw();
-
-
-        string ps_right_filename(filebase + ".edep_panel1.ps");
+        profehist[1][0]->Draw();
+        string ps_right_filename(filebase + ".edep_panel1C0.ps");
         c1->Print(ps_right_filename.c_str());
+        c1->Clear();
+        c1->Divide(1,2);
+        c1->cd(1);
+        energydependence[1][1]->Draw("colz");
+        c1->cd(2);
+        profehist[1][1]->Draw();
+        ps_right_filename =  filebase + ".edep_panel1C1.ps";
+        c1->Print(ps_right_filename.c_str());
+
     }
 
 
@@ -352,11 +388,11 @@ int main(int argc, Char_t *argv[])
                         (evt->m2 < MODULES_PER_FIN))
                 {
                     if (common) {
-                        calevt->dtf -= profehistfit[0]->Eval(evt->Ec1);
-                        calevt->dtf -= profehistfit[1]->Eval(evt->Ec2);
+                        calevt->dtf -= profehistfit[0][evt->cartridge1]->Eval(evt->Ec1);
+                        calevt->dtf -= profehistfit[1][evt->cartridge2]->Eval(evt->Ec2);
                     } else {
-                        calevt->dtf -= profehistfit[0]->Eval(evt->E1);
-                        calevt->dtf -= profehistfit[1]->Eval(evt->E2);
+                        calevt->dtf -= profehistfit[0][evt->cartridge1]->Eval(evt->E1);
+                        calevt->dtf -= profehistfit[1][evt->cartridge2]->Eval(evt->E2);
                     }
                     if  ((evt->E2 > 400) && (evt->E2 < 600)) {
                         if  ((evt->E1 > 400) && (evt->E1 < 600)) {

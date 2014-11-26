@@ -422,10 +422,10 @@ int main(int argc, Char_t *argv[])
         merged->Write();
         calfile->Close();
 
-        if (write_out_postscript_flag) {
+       
         // Fit the fine timestamp histogram
             tres->Fit("gaus","","",-10,10);
-
+ if (write_out_postscript_flag) {
             // Then output the histogram with it's fit to a postscript file
             c1->Clear();
             tres->Draw();

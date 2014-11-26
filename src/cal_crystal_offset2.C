@@ -383,9 +383,11 @@ int main(int argc, Char_t *argv[])
         merged->Write();
         calfile->Close();
 
+            tres->Fit("gaus","","",-10,10);
+
         if (write_out_postscript_flag) {
             // Fit the fine timestamp histogram and print it out with the fit
-            tres->Fit("gaus","","",-10,10);
+
             c1->Clear();
             tres->Draw();
             string ps_tres_filename(filebase + ".tres.crysoffset.ps");
