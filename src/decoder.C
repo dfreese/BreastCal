@@ -76,7 +76,6 @@ void getfinmodule(Short_t panel, Short_t chip, Short_t &module, Short_t &fin)
 
 Int_t pedana( double* mean, double* rms, int*  events, Short_t value )
 {
-
     double val = value;
     // if the value is an outlier (or < 0) , then we reset the value to the current mean.
     // Otherwise I had to include an event array for every channel value
@@ -89,7 +88,6 @@ Int_t pedana( double* mean, double* rms, int*  events, Short_t value )
             val=*mean;
         }
     }
-
 
     double tmp=*mean;
     *mean+=(val-tmp)/(*events);
@@ -129,12 +127,10 @@ int main(int argc, char *argv[])
     int c,r,f,i,j,m;
 
     Int_t ix,verbose;
-    char filename[FILENAMELENGTH];
-    char outfilename[FILENAMELENGTH+5];
-    char pedfilebase[FILENAMELENGTH+10];
-    char ascifilename[FILENAMELENGTH+6];
-    char pedfilename[FILENAMELENGTH+10];
-    char pedvaluefilename[FILENAMELENGTH+10];
+    string filename;
+    string outfilename;
+    string pedfilename;
+    string pedvaluefilename;
     int pedfilenamespec=0;
 
     ofstream pedfile;
@@ -151,8 +147,6 @@ int main(int argc, char *argv[])
     TString nfofile;
 
     for ( ix=1; ix< argc; ix++) {
-
-        /* Verbose  '-v' */
         if (strncmp(argv[ix], "-v", 2) == 0) {
             verbose = 1;
             cout << " Running verbose mode " << endl;
@@ -163,14 +157,13 @@ int main(int argc, char *argv[])
         }
 
         if (strncmp(argv[ix], "-uv", 3) == 0) {
-            uvcalc = 1;
+            if (strncmp(argv[ix], "-uvt", 4) == 0) {
+                uvthreshold = atoi(argv[ix+1]);
+                ix++;
+            } else {
+                uvcalc = 1;
+            }
         }
-
-        if (strncmp(argv[ix], "-uvt", 4) == 0) {
-            uvthreshold = atoi(argv[ix+1]);
-            ix++;
-        }
-
 
         if (strncmp(argv[ix], "-t", 2) == 0) {
             threshold = atoi(argv[ix+1]);
@@ -187,30 +180,17 @@ int main(int argc, char *argv[])
             ix++;
         }
 
-
-
         if (strncmp(argv[ix], "-p", 2) == 0) {
-
             if (strncmp(argv[ix], "-pedfile", 8) == 0) {
+                pedfilenamespec=1;
+                pedvaluefilename = string(argv[ix + 1]);
                 ix++;
-                if (strlen(argv[ix])<FILENAMELENGTH) {
-                    sprintf( pedvaluefilename,"%s", argv[ix]);
-                    pedfilenamespec=1;
-                } else  {
-                    cout << "Filename " << argv[ix] << " too long !" <<endl;
-                    cout << "Exiting.." <<endl;
-                    return(-99);
-                }
+            } else if (strncmp(argv[ix],"-pos",4) == 0) {
+                sourcepos=atoi(argv[ix+1]);
+                ix++;
             } else {
-                if (strncmp(argv[ix],"-pos",4) == 0) {
-                    sourcepos=atoi(argv[ix+1]);
-                    //        cout << " sourcepos :: " << sourcepos << endl;
-                    ix++;
-                } else {
-                    /* Pedestal  '-p' if not  '-pedfile' and not '-pos' !!*/
-                    calcpedestal = 1;
-                    uvcalc = 0;
-                }
+                calcpedestal = 1;
+                uvcalc = 0;
             }
         }
 
@@ -219,32 +199,15 @@ int main(int argc, char *argv[])
             nfofile.Form("%s",argv[ix+1]);
         }
 
-        /* filename '-f' */
         if (strncmp(argv[ix], "-f", 2) == 0) {
-            if (strlen(argv[ix+1])<FILENAMELENGTH) {
-                sprintf( filename,"%s", argv[ix+1]);
-                filenamespec=1;
-            } else  {
-                cout << "Filename " << argv[ix+1] << " too long !" <<endl;
-                cout << "Exiting.." <<endl;
-                return -99;
-            }
+            filename = string(argv[ix+1]);
+            filenamespec = 1;
         }
-
-        /* Outputfile  '-o' */
 
         if (strncmp(argv[ix], "-o", 2) == 0) {
             outfileset = 1;
-            if (strlen(argv[ix+1])<FILENAMELENGTH) {
-                sprintf( outfilename,"%s", argv[ix+1]);
-                sprintf( pedfilebase,"%s.ped", argv[ix+1]);
-                //        sprintf( pedfilename2,"%s.ped.RENA2", argv[ix+1]);
-                sprintf( ascifilename,"%s.ascii",argv[ix+1]);
-            } else  {
-                cout << "Output Filename " << argv[ix+1] << " too long !" <<endl;
-                cout << "Exiting.." <<endl;
-                return(-98);
-            }
+            outfilename = string(argv[ix+1]);
+            pedfilename = string(argv[ix+1]) + ".ped";
         }
     }
 
@@ -329,7 +292,7 @@ int main(int argc, char *argv[])
         int events;
         double tmp;
         Char_t idstring[12]; // form C#R#M#
-        pedvals.open(pedvaluefilename);
+        pedvals.open(pedvaluefilename.c_str());
         if (!pedvals) {
             cout << " Error opening file " << pedvaluefilename << "\n.Exiting.\n";
             return -10;
@@ -379,14 +342,13 @@ int main(int argc, char *argv[])
 
 
     if (!(outfileset)) {
-        sprintf(outfilename,"%s.root",filename);
-        sprintf(pedfilebase,"%s.ped",filename);
-        //     sprintf(pedfilename2,"%s.ped.RENA2",filename);
-        sprintf(ascifilename,"%s.ascii",filename);
+            outfilename = filename + ".root";
+            pedfilename = filename + ".ped";
     }
 
 
-    Char_t treename[10],treetitle[40];
+    Char_t treename[10];
+    Char_t treetitle[40];
 
     ModuleDat *event = new ModuleDat();
     Int_t doubletriggers[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]= {{{0}}};
@@ -395,8 +357,6 @@ int main(int argc, char *argv[])
 
 
     TTree *mdata=0;
-
-
 
     for (int c=0; c<CARTRIDGES_PER_PANEL; c++) {
         for (int f=0; f<FINS_PER_CARTRIDGE; f++) {
@@ -439,13 +399,13 @@ int main(int argc, char *argv[])
         mdata->Branch("eventdata",&event);
     }
 
-    dataFile.open(filename, ios::in | ios::binary);
+    dataFile.open(filename.c_str(), ios::in | ios::binary);
     if (!dataFile.good()) {
         cout << "Cannot open file \"" << filename << "\" for read operation. Exiting." << endl;
         return -1;
     }
 
-    hfile = new TFile(outfilename,"RECREATE");
+    hfile = new TFile(outfilename.c_str(),"RECREATE");
 
 
     chipevent rawevent;
@@ -479,488 +439,479 @@ int main(int argc, char *argv[])
     rawdata->Branch("d",&rawevent.d,"d/S");
     rawdata->Branch("pos",&rawevent.pos,"pos/I");
 
+    char cc;
+    dataFile.seekg(0, ios::end);
+    endPos = dataFile.tellg();
+    dataFile.seekg(lastPos);
+    if (verbose) {
+        cout << " endPos :: " << endPos << endl;
+        cout << " lastPos :: " << lastPos << endl;
+    }
 
-    if (dataFile) {
-        char cc;
-        dataFile.seekg(0, ios::end);
-        endPos = dataFile.tellg();
-        dataFile.seekg(lastPos);
-        if (verbose) {
-            cout << " endPos :: " << endPos << endl;
-            cout << " lastPos :: " << lastPos << endl;
-        }
+    int chipId = 0;
+    int trigCode = 0;
+    Short_t cartridgeId = 0;
+    Short_t panelId =0;
+    int intentionally_dropped(0);
 
-        int chipId = 0;
-        int trigCode = 0;
-        Short_t cartridgeId = 0;
-        Short_t panelId =0;
-        int intentionally_dropped(0);
+    for ( i=0; i<(endPos-lastPos-1); i++) { //slow return
+        dataFile.get(cc);
+        packBuffer.push_back(cc);
+        byteCounter++;
+        if ((unsigned char)cc==0x81) {
+            // end of package (start processing)
+            totalPckCnt++;
 
-        for ( i=0; i<(endPos-lastPos-1); i++) { //slow return
-            dataFile.get(cc);
-            packBuffer.push_back(cc);
-            byteCounter++;
-            if ((unsigned char)cc==0x81) {
-                // end of package (start processing)
-                totalPckCnt++;
+            if (intentionally_dropped < no_events_exclude_beginning) {
+                intentionally_dropped++;
+                packBuffer.clear();
+                continue;
+            }
 
-                if (intentionally_dropped < no_events_exclude_beginning) {
-                    intentionally_dropped++;
-                    packBuffer.clear();
-                    continue;
-                }
+            if ( (int(packBuffer[0] & 0xFF )) != 0x80 ) {
+                // first byte of packet needs to be 0x80
+                droppedPckCnt++;
+                droppedFirstLast++;
+                packBuffer.clear();
+                continue;
+            }
 
-                if ( (int(packBuffer[0] & 0xFF )) != 0x80 ) {
-                    // first byte of packet needs to be 0x80
+            if (PAULS_PANELID) {
+                // ChipId format changed on 06/05/2012
+                int Idnumber = int(( packBuffer[1] & 0x7C ) >> 2 );
+                //        cartridgeId =  Short_t((packBuffer[1] & 0x3c) >> 2);
+                panelId=pclist[Idnumber].panel;
+                cartridgeId=pclist[Idnumber].cartridge;
+
+                if ((panelId >= SYSTEM_PANELS ) || ( cartridgeId >= CARTRIDGES_PER_PANEL ) || (panelId < 0 ) || (cartridgeId < 0)) {
+                    if (verbose)  {
+                        cout << " PanelId " << panelId << " or CartridgeId " << cartridgeId ;
+                        cout << " doesn't match the definitions in include/Syspardef.h" << endl;
+                        cout << " Skipping." << endl;
+                    }
                     droppedPckCnt++;
-                    droppedFirstLast++;
-                    packBuffer.clear();
-                    continue;
-                }
-
-                if (PAULS_PANELID) {
-                    // ChipId format changed on 06/05/2012
-                    int Idnumber = int(( packBuffer[1] & 0x7C ) >> 2 );
-                    //        cartridgeId =  Short_t((packBuffer[1] & 0x3c) >> 2);
-                    panelId=pclist[Idnumber].panel;
-                    cartridgeId=pclist[Idnumber].cartridge;
-
-                    if ((panelId >= SYSTEM_PANELS ) || ( cartridgeId >= CARTRIDGES_PER_PANEL ) || (panelId < 0 ) || (cartridgeId < 0)) {
-                        if (verbose)  {
-                            cout << " PanelId " << panelId << " or CartridgeId " << cartridgeId ;
-                            cout << " doesn't match the definitions in include/Syspardef.h" << endl;
-                            cout << " Skipping." << endl;
-                        }
-                        droppedPckCnt++;
-                        droppedOutOfRange++;
-                        if (verbose) {
-                            cout << "Dropped = " << packBuffer.size() << endl;
-                        }
-                        packBuffer.clear();
-                        continue;
-                    }
-                    int local_four_up_board = int((packBuffer[1] & 0x03) >> 0);
-                    int four_up_board_num = local_four_up_board;
-                    // MAPPING ISSUE !! -- 12/12/2013
-
-                    vector<bool> fpgaIdVec;
-                    fpgaIdVec.push_back((packBuffer[2] & 0x20) != 0);
-                    fpgaIdVec.push_back((packBuffer[2] & 0x10) != 0);
-                    int fpgaId = Util::boolVec2Int(fpgaIdVec);
-                    chipId = 2*fpgaId;
-                    if ((packBuffer[2] & 0x40) != 0) {
-                        chipId++;
-                    }
-                    chipId+= four_up_board_num*RENAS_PER_FOURUPBOARD;
-                    trigCode = int(packBuffer[2] & 0x0F);
-                } else {
-                    // This is the old ChipId format which can be used to process old data
-                    vector<bool> fpgaIdVec;
-                    fpgaIdVec.push_back((packBuffer[1] & 0x10) != 0);
-                    fpgaIdVec.push_back((packBuffer[1] & 0x08) != 0);
-                    int fpgaId = Util::boolVec2Int(fpgaIdVec);
-                    chipId = 2*fpgaId;
-                    if ((packBuffer[1] & 0x20) != 0) {
-                        chipId++;
-                    }
-                }
-                // At this point we extracted the chipId from the packet
-                // Now we need to get the who_triggered bits
-
-                unsigned int packetSize;
-
-                int moduletriggers;
-
-                if (!MODULE_BASED_READOUT) {
-                    if (DAQ_BEFORE01042013) {
-                        packetSize=146;
-                    } else {
-                        packetSize=138;
-                    }
-
-                    moduletriggers=4;
-                    trigCode = 0xF;
-                } else {
-                    // MODULE_BASED_READOUT
-                    if (trigCode == 0) {
-                        droppedPckCnt++;
-                        droppedTrigCode++;
-                        packBuffer.clear();
-                        continue;
-                    }
-                    if (PAULS_PANELID) {
-                        packetSize =10;
-                    } else {
-                        packetSize = 9;
-                    }
-                    for (int ii=0; ii<4; ii++) {
-                        packetSize +=  32*( ( trigCode >> ii ) &  0x1  ) ;
-                        moduletriggers +=  ( ( trigCode >> ii ) & 0x1) ;
-                    }
-                }
-
-                if (packBuffer.size()!=packetSize) {
-                    droppedPckCnt++;
-                    droppedSize++;
+                    droppedOutOfRange++;
                     if (verbose) {
                         cout << "Dropped = " << packBuffer.size() << endl;
                     }
                     packBuffer.clear();
                     continue;
                 }
+                int local_four_up_board = int((packBuffer[1] & 0x03) >> 0);
+                int four_up_board_num = local_four_up_board;
+                // MAPPING ISSUE !! -- 12/12/2013
 
-                vector<Short_t> adcBlock;
+                vector<bool> fpgaIdVec;
+                fpgaIdVec.push_back((packBuffer[2] & 0x20) != 0);
+                fpgaIdVec.push_back((packBuffer[2] & 0x10) != 0);
+                int fpgaId = Util::boolVec2Int(fpgaIdVec);
+                chipId = 2*fpgaId;
+                if ((packBuffer[2] & 0x40) != 0) {
+                    chipId++;
+                }
+                chipId+= four_up_board_num*RENAS_PER_FOURUPBOARD;
+                trigCode = int(packBuffer[2] & 0x0F);
+            } else {
+                // This is the old ChipId format which can be used to process old data
+                vector<bool> fpgaIdVec;
+                fpgaIdVec.push_back((packBuffer[1] & 0x10) != 0);
+                fpgaIdVec.push_back((packBuffer[1] & 0x08) != 0);
+                int fpgaId = Util::boolVec2Int(fpgaIdVec);
+                chipId = 2*fpgaId;
+                if ((packBuffer[1] & 0x20) != 0) {
+                    chipId++;
+                }
+            }
+            // At this point we extracted the chipId from the packet
+            // Now we need to get the who_triggered bits
 
-                Long64_t timestamp(0);
-                // Byte 1 is not used - 0x1f
+            unsigned int packetSize;
 
-                // Bytes 2 to 7 are timestamp data
-                if (PAULS_PANELID) {
-                    for (int ii=3; ii<=8; ii++) {
-                        timestamp = timestamp << 7;
-                        timestamp += Long64_t((packBuffer[ii]&0x7F));
-                        // cout << ii << " " << Long64_t((packBuffer[ii]&0x7F)) ;
-                        // cout << " " << timestamp << endl;
-                        // timestamp += Long64_t((packBuffer[ii]&0x3F));
-                    }
+            int moduletriggers;
+
+            if (!MODULE_BASED_READOUT) {
+                if (DAQ_BEFORE01042013) {
+                    packetSize=146;
                 } else {
-                    for (int ii=2; ii<=7; ii++) {
-                        timestamp = timestamp << 7;
-                        timestamp += Long64_t(packBuffer[ii]);
-                    }
+                    packetSize=138;
                 }
 
-
-                // Remaining bytes are ADC data for each channel
-                if (PAULS_PANELID) {
-                    Short_t value;
-                    for (unsigned int counter = 9; counter<(packetSize-1); counter+=2) {
-                        value = (Short_t)packBuffer[counter];
-                        //	    cout << " val 1 = " << value;
-                        value = value << 6;
-                        value += (Short_t)packBuffer[counter+1];
-                        //            cout << " val 2 = " << (Short_t)packBuffer[counter+1] << " totval: " << value << endl;
-                        adcBlock.push_back(value);
-                    }
-                } else {
-                    Short_t value;
-                    for (unsigned int counter = 8; counter<(packetSize-1); counter+=2) {
-                        value = (Short_t)packBuffer[counter];
-                        value = value << 6;
-                        value += (Short_t)packBuffer[counter+1];
-                        adcBlock.push_back(value);
-                    }
+                moduletriggers=4;
+                trigCode = 0xF;
+            } else {
+                // MODULE_BASED_READOUT
+                if (trigCode == 0) {
+                    droppedPckCnt++;
+                    droppedTrigCode++;
+                    packBuffer.clear();
+                    continue;
                 }
-
-                int even=(int) chipId%2;
-                int nrchips=0;
-
+                if (PAULS_PANELID) {
+                    packetSize =10;
+                } else {
+                    packetSize = 9;
+                }
                 for (int ii=0; ii<4; ii++) {
-                    nrchips+= (( trigCode >> ii ) & ( 0x1 ) );
+                    packetSize +=  32*( ( trigCode >> ii ) &  0x1  ) ;
+                    moduletriggers +=  ( ( trigCode >> ii ) & 0x1) ;
                 }
-                int kk=0;
-                for (int iii=0; iii<4; iii++ ) {
-                    if ( trigCode & ( 0x1 << iii )) {
-                        rawevent.ct=timestamp;
-                        rawevent.chip= chipId;
-                        rawevent.cartridge = cartridgeId;
-                        rawevent.module= iii;
-                        rawevent.com1h = adcBlock[kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];  //6
-                        rawevent.u1h = adcBlock[1 + kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
-                        rawevent.v1h = adcBlock[2+kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
-                        rawevent.com1 = adcBlock[+3+kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
-                        rawevent.u1 =adcBlock[+4+kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
-                        rawevent.v1 =adcBlock[5+kk*BYTESPERCOMMON+ even*nrchips*SHIFTFACCOM];
-                        rawevent.com2h = adcBlock[6 + kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
-                        rawevent.u2h = adcBlock[7 + kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
-                        rawevent.v2h = adcBlock[8+kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
-                        rawevent.com2 = adcBlock[9+kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
-                        rawevent.u2=adcBlock[10+kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
-                        rawevent.v2=adcBlock[11+kk*BYTESPERCOMMON+ even*nrchips*SHIFTFACCOM];
-                        rawevent.a=adcBlock[BYTESPERCOMMON*nrchips+kk*VALUESPERSPATIAL - even*nrchips*SHIFTFACSPAT];  //2
-                        rawevent.b=adcBlock[BYTESPERCOMMON*nrchips+1+kk*VALUESPERSPATIAL - even*nrchips*SHIFTFACSPAT];  //3
-                        rawevent.c=adcBlock[BYTESPERCOMMON*nrchips+2+kk*VALUESPERSPATIAL - even*nrchips*SHIFTFACSPAT];  //4
-                        rawevent.d=adcBlock[BYTESPERCOMMON*nrchips+3+kk*VALUESPERSPATIAL - even*nrchips*SHIFTFACSPAT];  //5
-                        rawevent.pos=sourcepos;
-                        kk++;
-                        rawdata->Fill();
+            }
 
-                        module=iii;
+            if (packBuffer.size()!=packetSize) {
+                droppedPckCnt++;
+                droppedSize++;
+                if (verbose) {
+                    cout << "Dropped = " << packBuffer.size() << endl;
+                }
+                packBuffer.clear();
+                continue;
+            }
 
-                        if (pedfilenamespec) {
-                            event->module=module;
-                            event->ct=timestamp;
-                            event->chip=rawevent.chip;
-                            event->cartridge=rawevent.cartridge;
-                            event->a=rawevent.a - pedestals[event->cartridge][chipId][module][0];
-                            event->b=rawevent.b - pedestals[event->cartridge][chipId][module][1];
-                            event->c=rawevent.c - pedestals[event->cartridge][chipId][module][2];
-                            event->d=rawevent.d - pedestals[event->cartridge][chipId][module][3];
+            vector<Short_t> adcBlock;
 
-                            getfinmodule(panelId,event->chip,event->module,event->fin);
-                            event->E=event->a+event->b+event->c+event->d;
-                            event->x= event->c + event->d - ( event->b + event->a );
-                            event->y= event->a + event->d - ( event->b + event->c );
+            Long64_t timestamp(0);
+            // Byte 1 is not used - 0x1f
 
-                            event->x/=event->E;
-                            event->y/=event->E;
+            // Bytes 2 to 7 are timestamp data
+            if (PAULS_PANELID) {
+                for (int ii=3; ii<=8; ii++) {
+                    timestamp = timestamp << 7;
+                    timestamp += Long64_t((packBuffer[ii]&0x7F));
+                    // cout << ii << " " << Long64_t((packBuffer[ii]&0x7F)) ;
+                    // cout << " " << timestamp << endl;
+                    // timestamp += Long64_t((packBuffer[ii]&0x3F));
+                }
+            } else {
+                for (int ii=2; ii<=7; ii++) {
+                    timestamp = timestamp << 7;
+                    timestamp += Long64_t(packBuffer[ii]);
+                }
+            }
 
-                            event->apd=-1;
-                            event->id=-1;
-                            event->pos=rawevent.pos;
 
-                            if ( (rawevent.com1h - pedestals[event->cartridge][chipId][module][5]) < threshold ) {
-                                if ( (rawevent.com2h - pedestals[event->cartridge][chipId][module][7]) > nohit_threshold ) {
-                                    totaltriggers[event->cartridge][chipId][module][0]++;
-                                    event->apd=0;
-                                    event->ft= (  ( ( rawevent.u1h & 0xFFFF ) << 16  )  | (  rawevent.v1h & 0xFFFF ) ) ;
-                                    event->Ec= rawevent.com1 - pedestals[event->cartridge][chipId][module][4];
-                                    event->Ech=rawevent.com1h - pedestals[event->cartridge][chipId][module][5];
+            // Remaining bytes are ADC data for each channel
+            if (PAULS_PANELID) {
+                Short_t value;
+                for (unsigned int counter = 9; counter<(packetSize-1); counter+=2) {
+                    value = (Short_t)packBuffer[counter];
+                    //	    cout << " val 1 = " << value;
+                    value = value << 6;
+                    value += (Short_t)packBuffer[counter+1];
+                    //            cout << " val 2 = " << (Short_t)packBuffer[counter+1] << " totval: " << value << endl;
+                    adcBlock.push_back(value);
+                }
+            } else {
+                Short_t value;
+                for (unsigned int counter = 8; counter<(packetSize-1); counter+=2) {
+                    value = (Short_t)packBuffer[counter];
+                    value = value << 6;
+                    value += (Short_t)packBuffer[counter+1];
+                    adcBlock.push_back(value);
+                }
+            }
+
+            int even=(int) chipId%2;
+            int nrchips=0;
+
+            for (int ii=0; ii<4; ii++) {
+                nrchips+= (( trigCode >> ii ) & ( 0x1 ) );
+            }
+            int kk=0;
+            for (int iii=0; iii<4; iii++ ) {
+                if ( trigCode & ( 0x1 << iii )) {
+                    rawevent.ct=timestamp;
+                    rawevent.chip= chipId;
+                    rawevent.cartridge = cartridgeId;
+                    rawevent.module= iii;
+                    rawevent.com1h = adcBlock[kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];  //6
+                    rawevent.u1h = adcBlock[1 + kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
+                    rawevent.v1h = adcBlock[2+kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
+                    rawevent.com1 = adcBlock[+3+kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
+                    rawevent.u1 =adcBlock[+4+kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
+                    rawevent.v1 =adcBlock[5+kk*BYTESPERCOMMON+ even*nrchips*SHIFTFACCOM];
+                    rawevent.com2h = adcBlock[6 + kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
+                    rawevent.u2h = adcBlock[7 + kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
+                    rawevent.v2h = adcBlock[8+kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
+                    rawevent.com2 = adcBlock[9+kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
+                    rawevent.u2=adcBlock[10+kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
+                    rawevent.v2=adcBlock[11+kk*BYTESPERCOMMON+ even*nrchips*SHIFTFACCOM];
+                    rawevent.a=adcBlock[BYTESPERCOMMON*nrchips+kk*VALUESPERSPATIAL - even*nrchips*SHIFTFACSPAT];  //2
+                    rawevent.b=adcBlock[BYTESPERCOMMON*nrchips+1+kk*VALUESPERSPATIAL - even*nrchips*SHIFTFACSPAT];  //3
+                    rawevent.c=adcBlock[BYTESPERCOMMON*nrchips+2+kk*VALUESPERSPATIAL - even*nrchips*SHIFTFACSPAT];  //4
+                    rawevent.d=adcBlock[BYTESPERCOMMON*nrchips+3+kk*VALUESPERSPATIAL - even*nrchips*SHIFTFACSPAT];  //5
+                    rawevent.pos=sourcepos;
+                    kk++;
+                    rawdata->Fill();
+
+                    module=iii;
+
+                    if (pedfilenamespec) {
+                        event->module=module;
+                        event->ct=timestamp;
+                        event->chip=rawevent.chip;
+                        event->cartridge=rawevent.cartridge;
+                        event->a=rawevent.a - pedestals[event->cartridge][chipId][module][0];
+                        event->b=rawevent.b - pedestals[event->cartridge][chipId][module][1];
+                        event->c=rawevent.c - pedestals[event->cartridge][chipId][module][2];
+                        event->d=rawevent.d - pedestals[event->cartridge][chipId][module][3];
+
+                        getfinmodule(panelId,event->chip,event->module,event->fin);
+                        event->E=event->a+event->b+event->c+event->d;
+                        event->x= event->c + event->d - ( event->b + event->a );
+                        event->y= event->a + event->d - ( event->b + event->c );
+
+                        event->x/=event->E;
+                        event->y/=event->E;
+
+                        event->apd=-1;
+                        event->id=-1;
+                        event->pos=rawevent.pos;
+
+                        if ( (rawevent.com1h - pedestals[event->cartridge][chipId][module][5]) < threshold ) {
+                            if ( (rawevent.com2h - pedestals[event->cartridge][chipId][module][7]) > nohit_threshold ) {
+                                totaltriggers[event->cartridge][chipId][module][0]++;
+                                event->apd=0;
+                                event->ft= (  ( ( rawevent.u1h & 0xFFFF ) << 16  )  | (  rawevent.v1h & 0xFFFF ) ) ;
+                                event->Ec= rawevent.com1 - pedestals[event->cartridge][chipId][module][4];
+                                event->Ech=rawevent.com1h - pedestals[event->cartridge][chipId][module][5];
+                                mdata->Fill();
+                            } else {
+                                doubletriggers[event->cartridge][chipId][module]++;
+                            }
+                        } else {
+                            if ( (rawevent.com2h - pedestals[event->cartridge][chipId][module][7]) < threshold ) {
+                                if ( (rawevent.com1h - pedestals[event->cartridge][chipId][module][5]) > nohit_threshold ) {
+                                    totaltriggers[event->cartridge][chipId][module][1]++;
+                                    event->apd=1;
+                                    event->y*=-1;
+                                    event->ft= (  ( ( rawevent.u2h & 0xFFFF ) << 16  )  | (  rawevent.v2h & 0xFFFF ) ) ;
+                                    event->Ec = rawevent.com2 - pedestals[event->cartridge][chipId][module][6];
+                                    event->Ech=rawevent.com2h- pedestals[event->cartridge][chipId][module][7];
                                     mdata->Fill();
                                 } else {
                                     doubletriggers[event->cartridge][chipId][module]++;
                                 }
                             } else {
-                                if ( (rawevent.com2h - pedestals[event->cartridge][chipId][module][7]) < threshold ) {
-                                    if ( (rawevent.com1h - pedestals[event->cartridge][chipId][module][5]) > nohit_threshold ) {
-                                        totaltriggers[event->cartridge][chipId][module][1]++;
-                                        event->apd=1;
-                                        event->y*=-1;
-                                        event->ft= (  ( ( rawevent.u2h & 0xFFFF ) << 16  )  | (  rawevent.v2h & 0xFFFF ) ) ;
-                                        event->Ec = rawevent.com2 - pedestals[event->cartridge][chipId][module][6];
-                                        event->Ech=rawevent.com2h- pedestals[event->cartridge][chipId][module][7];
-                                        mdata->Fill();
-                                    } else {
-                                        doubletriggers[event->cartridge][chipId][module]++;
-                                    }
-                                } else {
-                                    belowthreshold[event->cartridge][chipId][module]++;
-                                }
-                            }
-                            if (( event->apd == 1 )||(event->apd ==0 )) {
-                                E[event->cartridge][event->fin][event->module][event->apd]->Fill(event->E);
-                                E_com[event->cartridge][event->fin][event->module][event->apd]->Fill(-event->Ec);
+                                belowthreshold[event->cartridge][chipId][module]++;
                             }
                         }
-
-                        if (uvcalc) {
-                            if (( event->apd == 1 )||(event->apd ==0 )) {
-                                if (  ( rawevent.com1h - pedestals[cartridgeId][chipId][module][5] ) < uvthreshold ) {
-                                    uventries[cartridgeId][event->fin][event->module][0]++;
-                                    (*uu_c[cartridgeId][event->fin])[event->module*2+0]+=(Float_t)(rawevent.u1h- (*uu_c[cartridgeId][event->fin])[event->module*2+0])/uventries[cartridgeId][event->fin][event->module][0];
-                                    (*vv_c[cartridgeId][event->fin])[event->module*2+0]+=(Float_t)(rawevent.v1h- (*vv_c[cartridgeId][event->fin])[event->module*2+0])/uventries[cartridgeId][event->fin][event->module][0];
-                                }
-                                if (( rawevent.com2h - pedestals[cartridgeId][chipId][module][7] ) < uvthreshold ) {
-                                    uventries[cartridgeId][event->fin][event->module][1]++;
-                                    (*uu_c[cartridgeId][event->fin])[event->module*2+1]+=(Float_t)(rawevent.u2h- (*uu_c[cartridgeId][event->fin])[event->module*2+1])/uventries[cartridgeId][event->fin][event->module][1];
-                                    (*vv_c[cartridgeId][event->fin])[event->module*2+1]+=(Float_t)(rawevent.v2h- (*vv_c[cartridgeId][event->fin])[event->module*2+1])/uventries[cartridgeId][event->fin][event->module][1];
-                                }
-                            }
+                        if (( event->apd == 1 )||(event->apd ==0 )) {
+                            E[event->cartridge][event->fin][event->module][event->apd]->Fill(event->E);
+                            E_com[event->cartridge][event->fin][event->module][event->apd]->Fill(-event->Ec);
                         }
                     }
-                }
-                packBuffer.clear();
-            }
-        }
 
-        if (totalPckCnt) {
-            cout << " File Processed. Dropped: " << droppedPckCnt << " out of " << totalPckCnt << " (=" << setprecision(2) << 100*droppedPckCnt/totalPckCnt <<" %)." << endl;
-        } else {
-            cout << " File Processed. No packets found." << endl;
-        }
-        cout << setprecision(1) << fixed;
-
-        if (droppedPckCnt) {
-            cout << "                 StartCode: " << (Float_t )100*droppedFirstLast/droppedPckCnt << " %" ;
-            cout << " Out of Range: " << (Float_t) 100*droppedOutOfRange/droppedPckCnt << " %";
-            cout << " Tigger Code: " << (Float_t) 100*droppedTrigCode/droppedPckCnt << " %" ;
-            cout << " Packet Size: " << (Float_t) 100*droppedSize/droppedPckCnt << " %" << endl;
-        }
-
-        if (uvcalc) {
-            if (verbose) {
-                cout <<  " Averaging the circle Centers " << endl;
-            }
-
-            if (verbose) {
-                for (c=0; c<CARTRIDGES_PER_PANEL; c++) {
-                    for (f=0; f<FINS_PER_CARTRIDGE; f++) {
-                        for ( i=0; i<MODULES_PER_FIN; i++) {
-                            for ( j=0; j<APDS_PER_MODULE; j++) {
-                                cout << " Circle Center Cartridge " << c << " Fin " << f << " Module " << i << " APD " << j << ": "  ;
-                                cout << "uu_c = " << (*uu_c[c][f])[i*2+j] << " vv_c = " << (*vv_c[c][f])[i*2+j] << " nn_entries = " << uventries[c][f][i][j] << endl;
+                    if (uvcalc) {
+                        if (( event->apd == 1 )||(event->apd ==0 )) {
+                            if (  ( rawevent.com1h - pedestals[cartridgeId][chipId][module][5] ) < uvthreshold ) {
+                                uventries[cartridgeId][event->fin][event->module][0]++;
+                                (*uu_c[cartridgeId][event->fin])[event->module*2+0]+=(Float_t)(rawevent.u1h- (*uu_c[cartridgeId][event->fin])[event->module*2+0])/uventries[cartridgeId][event->fin][event->module][0];
+                                (*vv_c[cartridgeId][event->fin])[event->module*2+0]+=(Float_t)(rawevent.v1h- (*vv_c[cartridgeId][event->fin])[event->module*2+0])/uventries[cartridgeId][event->fin][event->module][0];
+                            }
+                            if (( rawevent.com2h - pedestals[cartridgeId][chipId][module][7] ) < uvthreshold ) {
+                                uventries[cartridgeId][event->fin][event->module][1]++;
+                                (*uu_c[cartridgeId][event->fin])[event->module*2+1]+=(Float_t)(rawevent.u2h- (*uu_c[cartridgeId][event->fin])[event->module*2+1])/uventries[cartridgeId][event->fin][event->module][1];
+                                (*vv_c[cartridgeId][event->fin])[event->module*2+1]+=(Float_t)(rawevent.v2h- (*vv_c[cartridgeId][event->fin])[event->module*2+1])/uventries[cartridgeId][event->fin][event->module][1];
                             }
                         }
                     }
                 }
             }
+            packBuffer.clear();
         }
+    }
 
-        if (calcpedestal==1) {
-            sprintf(pedfilename,"%s",pedfilebase);
-            pedfile.open(pedfilename);
-            if (verbose) {
-                cout << "Calculating pedestal values "  << endl;
-            }
-
-
-            double ped_ana[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][CHANNELS_PER_MODULE][2]= {{{{{0}}}}};
-            int ped_evts[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]= {{{0}}};
-
-            // skip first 20 entries to prevent outliers
-            for (int ii = 20; ii< rawdata->GetEntries(); ii++ ) {
-                rawdata->GetEntry(ii);
-
-                chip= rawevent.chip;
-                module = rawevent.module;
-                cartridge = rawevent.cartridge;
-
-                ped_evts[cartridge][chip][module]++;
-                pedana( &ped_ana[cartridge][chip][module][0][0], &ped_ana[cartridge][chip][module][0][1], &ped_evts[cartridge][chip][module], rawevent.a );
-                pedana( &ped_ana[cartridge][chip][module][1][0], &ped_ana[cartridge][chip][module][1][1], &ped_evts[cartridge][chip][module], rawevent.b );
-                pedana( &ped_ana[cartridge][chip][module][2][0], &ped_ana[cartridge][chip][module][2][1], &ped_evts[cartridge][chip][module], rawevent.c );
-                pedana( &ped_ana[cartridge][chip][module][3][0], &ped_ana[cartridge][chip][module][3][1], &ped_evts[cartridge][chip][module], rawevent.d );
-                pedana( &ped_ana[cartridge][chip][module][4][0], &ped_ana[cartridge][chip][module][4][1], &ped_evts[cartridge][chip][module], rawevent.com1 );
-                pedana( &ped_ana[cartridge][chip][module][5][0], &ped_ana[cartridge][chip][module][5][1], &ped_evts[cartridge][chip][module], rawevent.com1h );
-                pedana( &ped_ana[cartridge][chip][module][6][0], &ped_ana[cartridge][chip][module][6][1], &ped_evts[cartridge][chip][module], rawevent.com2 );
-                pedana( &ped_ana[cartridge][chip][module][7][0], &ped_ana[cartridge][chip][module][7][1], &ped_evts[cartridge][chip][module], rawevent.com2h );
-            }
-
-            if (verbose) {
-                cout << " pedana done. " << endl;
-            }
-
-
-            for (c=0; c<CARTRIDGES_PER_PANEL; c++) {
-                for (r=0; r<RENAS_PER_CARTRIDGE; r++) {
-                    for (i=0; i<MODULES_PER_RENA; i++) {
-                        pedfile << "C" << c << "R" << r << "M" << i  << " " << ped_evts[c][r][i] << " ";
-                        if (r < 10 ) {
-                            pedfile << " ";
-                        }
-                        pedfile << std::setw(6) ;
-                        for (int jjj=0; jjj<CHANNELS_PER_MODULE; jjj++) {
-                            pedfile << std::setprecision(0) << std::fixed;
-                            pedfile << ped_ana[c][r][i][jjj][0] << " ";
-                            pedfile <<  std::setprecision(2) << std::fixed << std::setw(6);
-                            if ( ped_evts[c][r][i] ) {
-                                pedfile  << TMath::Sqrt(ped_ana[c][r][i][jjj][1]/ped_evts[c][r][i]) << " ";
-                            } else {
-                                pedfile << "0 " ;
-                            }
-                            pedfile <<  std::setw(6);
-                        }
-                        pedfile << endl;
-                    }
-                } // r
-            } // c
-            pedfile.close();
-
-        }
-
-        // need to write histograms to disk ::
-        // FIXME :: in principle we could fill histograms even without pedestal subtraction
-        if (pedfilenamespec) {
-
-            Int_t totaldoubletriggers=0;
-            Int_t totalbelowthreshold=0;
-
-            for (c=0; c<CARTRIDGES_PER_PANEL; c++) {
-                for (f=0; f<FINS_PER_CARTRIDGE; f++) {
-                    sprintf(tmpstring,"C%dF%d",c,f);
-                    subdir[c][f] = hfile->mkdir(tmpstring);
-                    subdir[c][f]->cd();
-                    for (m=0; m<MODULES_PER_FIN; m++) {
-                        for ( j=0; j<APDS_PER_MODULE; j++) {
-                            E[c][f][m][j]->Write();
-                            E_com[c][f][m][j]->Write();
-                        } //j
-                    } //m
-                } //f
-            } // c
-
-
-            cout << "========== Double Triggers =============== " << endl;
-            for (c=0; c<CARTRIDGES_PER_PANEL; c++) {
-                for (r=0; r<RENAS_PER_CARTRIDGE; r++) {
-                    for ( i=0; i<MODULES_PER_RENA; i++ ) {
-                        cout << doubletriggers[c][r][i] << " " ;
-                        totaldoubletriggers+=doubletriggers[c][r][i];
-                        totalbelowthreshold+=belowthreshold[c][r][i];
-                    } // i
-                    cout << endl;
-                } //r
-            } //c
-
-            cout << "========== Total Triggers =============== " << endl;
-            Long64_t totalmoduletriggers[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]= {{{0}}};
-            Long64_t totalchiptriggers[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE]= {{0}};
-            Long64_t totalacceptedtriggers=0;
-            for (c=0; c<CARTRIDGES_PER_PANEL; c++) {
-                for (r=0; r<RENAS_PER_CARTRIDGE; r++) {
-                    for ( i=0; i<MODULES_PER_RENA; i++ ) {
-                        cout << totaltriggers[c][r][i][0] << " " << totaltriggers[c][r][i][1] << " ";
-                        totalmoduletriggers[c][r][i]=totaltriggers[c][r][i][0]+totaltriggers[c][r][i][1];
-                        cout << totalmoduletriggers[c][r][i] << " " ;
-                        totalchiptriggers[c][r]+=totalmoduletriggers[c][r][i];
-                    } // loop over i
-                    cout << " || " << totalchiptriggers[c][r]  << endl;
-                    totalacceptedtriggers+=totalchiptriggers[c][r]    ;
-                } // loop over r
-            } //loop over c
-
-            cout << " Total events :: " << rawdata->GetEntries() <<  endl;
-            cout << " Total accepted :: " << totalacceptedtriggers ;
-            cout << setprecision(1) << fixed;
-            if (rawdata->GetEntries()) {
-                cout << " (= " << 100* (float) totalacceptedtriggers/rawdata->GetEntries() << " %) " ;
-                cout << " Total double triggers :: " << totaldoubletriggers ;
-                cout << " (= " << 100* (float) totaldoubletriggers/rawdata->GetEntries() << " %) " ;
-                cout << " Total below threshold :: " << totalbelowthreshold;
-                cout << " (= " << 100* (float) totalbelowthreshold/rawdata->GetEntries() << " %) " <<endl;
-            }
-
-            hfile->cd();
-            mdata->Write();
-
-
-        } // pedfilenamespec
-
-        if (uvcalc) {
-            hfile->cd();
-            TDirectory *timing =  hfile->mkdir("timing");
-
-
-            timing->cd();
-
-            // need to store uvcenters ::
-            for (c=0; c<CARTRIDGES_PER_PANEL; c++) {
-                for (f=0; f<FINS_PER_CARTRIDGE; f++) {
-                    sprintf(tmpstring,"uu_c[%d][%d]",c,f);
-                    uu_c[c][f]->Write(tmpstring);
-                    sprintf(tmpstring,"vv_c[%d][%d]",c,f);
-                    vv_c[c][f]->Write(tmpstring);
-                } //r
-            } //c
-
-        } // uvcalc
-
-
-
-
-        if (debugmode) {
-            hfile->cd();
-            rawdata->Write();
-        }
-        hfile->Close();
-        if (verbose) {
-            cout << " byteCounter = " << byteCounter << endl;
-            cout << " totalPckCnt = " << totalPckCnt << endl;
-            cout << " droppedPckCnt = " << droppedPckCnt << endl;
-        }
+    if (totalPckCnt) {
+        cout << " File Processed. Dropped: " << droppedPckCnt << " out of " << totalPckCnt << " (=" << setprecision(2) << 100*droppedPckCnt/totalPckCnt <<" %)." << endl;
     } else {
-        cout << "Error opening File " << filename << endl;
-        return(-1);    // error opening file
+        cout << " File Processed. No packets found." << endl;
+    }
+    cout << setprecision(1) << fixed;
+
+    if (droppedPckCnt) {
+        cout << "                 StartCode: " << (Float_t )100*droppedFirstLast/droppedPckCnt << " %" ;
+        cout << " Out of Range: " << (Float_t) 100*droppedOutOfRange/droppedPckCnt << " %";
+        cout << " Tigger Code: " << (Float_t) 100*droppedTrigCode/droppedPckCnt << " %" ;
+        cout << " Packet Size: " << (Float_t) 100*droppedSize/droppedPckCnt << " %" << endl;
+    }
+
+    if (uvcalc) {
+        if (verbose) {
+            cout <<  " Averaging the circle Centers " << endl;
+        }
+
+        if (verbose) {
+            for (c=0; c<CARTRIDGES_PER_PANEL; c++) {
+                for (f=0; f<FINS_PER_CARTRIDGE; f++) {
+                    for ( i=0; i<MODULES_PER_FIN; i++) {
+                        for ( j=0; j<APDS_PER_MODULE; j++) {
+                            cout << " Circle Center Cartridge " << c << " Fin " << f << " Module " << i << " APD " << j << ": "  ;
+                            cout << "uu_c = " << (*uu_c[c][f])[i*2+j] << " vv_c = " << (*vv_c[c][f])[i*2+j] << " nn_entries = " << uventries[c][f][i][j] << endl;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (calcpedestal==1) {
+        pedfile.open(pedfilename.c_str());
+        if (verbose) {
+            cout << "Calculating pedestal values "  << endl;
+        }
+
+
+        double ped_ana[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][CHANNELS_PER_MODULE][2]= {{{{{0}}}}};
+        int ped_evts[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]= {{{0}}};
+
+        // skip first 20 entries to prevent outliers
+        for (int ii = 20; ii< rawdata->GetEntries(); ii++ ) {
+            rawdata->GetEntry(ii);
+
+            chip= rawevent.chip;
+            module = rawevent.module;
+            cartridge = rawevent.cartridge;
+
+            ped_evts[cartridge][chip][module]++;
+            pedana( &ped_ana[cartridge][chip][module][0][0], &ped_ana[cartridge][chip][module][0][1], &ped_evts[cartridge][chip][module], rawevent.a );
+            pedana( &ped_ana[cartridge][chip][module][1][0], &ped_ana[cartridge][chip][module][1][1], &ped_evts[cartridge][chip][module], rawevent.b );
+            pedana( &ped_ana[cartridge][chip][module][2][0], &ped_ana[cartridge][chip][module][2][1], &ped_evts[cartridge][chip][module], rawevent.c );
+            pedana( &ped_ana[cartridge][chip][module][3][0], &ped_ana[cartridge][chip][module][3][1], &ped_evts[cartridge][chip][module], rawevent.d );
+            pedana( &ped_ana[cartridge][chip][module][4][0], &ped_ana[cartridge][chip][module][4][1], &ped_evts[cartridge][chip][module], rawevent.com1 );
+            pedana( &ped_ana[cartridge][chip][module][5][0], &ped_ana[cartridge][chip][module][5][1], &ped_evts[cartridge][chip][module], rawevent.com1h );
+            pedana( &ped_ana[cartridge][chip][module][6][0], &ped_ana[cartridge][chip][module][6][1], &ped_evts[cartridge][chip][module], rawevent.com2 );
+            pedana( &ped_ana[cartridge][chip][module][7][0], &ped_ana[cartridge][chip][module][7][1], &ped_evts[cartridge][chip][module], rawevent.com2h );
+        }
+
+        if (verbose) {
+            cout << " pedana done. " << endl;
+        }
+
+
+        for (c=0; c<CARTRIDGES_PER_PANEL; c++) {
+            for (r=0; r<RENAS_PER_CARTRIDGE; r++) {
+                for (i=0; i<MODULES_PER_RENA; i++) {
+                    pedfile << "C" << c << "R" << r << "M" << i  << " " << ped_evts[c][r][i] << " ";
+                    if (r < 10 ) {
+                        pedfile << " ";
+                    }
+                    pedfile << std::setw(6) ;
+                    for (int jjj=0; jjj<CHANNELS_PER_MODULE; jjj++) {
+                        pedfile << std::setprecision(0) << std::fixed;
+                        pedfile << ped_ana[c][r][i][jjj][0] << " ";
+                        pedfile <<  std::setprecision(2) << std::fixed << std::setw(6);
+                        if ( ped_evts[c][r][i] ) {
+                            pedfile  << TMath::Sqrt(ped_ana[c][r][i][jjj][1]/ped_evts[c][r][i]) << " ";
+                        } else {
+                            pedfile << "0 " ;
+                        }
+                        pedfile <<  std::setw(6);
+                    }
+                    pedfile << endl;
+                }
+            } // r
+        } // c
+        pedfile.close();
+
+    }
+
+    // need to write histograms to disk ::
+    // FIXME :: in principle we could fill histograms even without pedestal subtraction
+    if (pedfilenamespec) {
+
+        Int_t totaldoubletriggers=0;
+        Int_t totalbelowthreshold=0;
+
+        for (c=0; c<CARTRIDGES_PER_PANEL; c++) {
+            for (f=0; f<FINS_PER_CARTRIDGE; f++) {
+                sprintf(tmpstring,"C%dF%d",c,f);
+                subdir[c][f] = hfile->mkdir(tmpstring);
+                subdir[c][f]->cd();
+                for (m=0; m<MODULES_PER_FIN; m++) {
+                    for ( j=0; j<APDS_PER_MODULE; j++) {
+                        E[c][f][m][j]->Write();
+                        E_com[c][f][m][j]->Write();
+                    } //j
+                } //m
+            } //f
+        } // c
+
+
+        cout << "========== Double Triggers =============== " << endl;
+        for (c=0; c<CARTRIDGES_PER_PANEL; c++) {
+            for (r=0; r<RENAS_PER_CARTRIDGE; r++) {
+                for ( i=0; i<MODULES_PER_RENA; i++ ) {
+                    cout << doubletriggers[c][r][i] << " " ;
+                    totaldoubletriggers+=doubletriggers[c][r][i];
+                    totalbelowthreshold+=belowthreshold[c][r][i];
+                } // i
+                cout << endl;
+            } //r
+        } //c
+
+        cout << "========== Total Triggers =============== " << endl;
+        Long64_t totalmoduletriggers[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]= {{{0}}};
+        Long64_t totalchiptriggers[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE]= {{0}};
+        Long64_t totalacceptedtriggers=0;
+        for (c=0; c<CARTRIDGES_PER_PANEL; c++) {
+            for (r=0; r<RENAS_PER_CARTRIDGE; r++) {
+                for ( i=0; i<MODULES_PER_RENA; i++ ) {
+                    cout << totaltriggers[c][r][i][0] << " " << totaltriggers[c][r][i][1] << " ";
+                    totalmoduletriggers[c][r][i]=totaltriggers[c][r][i][0]+totaltriggers[c][r][i][1];
+                    cout << totalmoduletriggers[c][r][i] << " " ;
+                    totalchiptriggers[c][r]+=totalmoduletriggers[c][r][i];
+                } // loop over i
+                cout << " || " << totalchiptriggers[c][r]  << endl;
+                totalacceptedtriggers+=totalchiptriggers[c][r]    ;
+            } // loop over r
+        } //loop over c
+
+        cout << " Total events :: " << rawdata->GetEntries() <<  endl;
+        cout << " Total accepted :: " << totalacceptedtriggers ;
+        cout << setprecision(1) << fixed;
+        if (rawdata->GetEntries()) {
+            cout << " (= " << 100* (float) totalacceptedtriggers/rawdata->GetEntries() << " %) " ;
+            cout << " Total double triggers :: " << totaldoubletriggers ;
+            cout << " (= " << 100* (float) totaldoubletriggers/rawdata->GetEntries() << " %) " ;
+            cout << " Total below threshold :: " << totalbelowthreshold;
+            cout << " (= " << 100* (float) totalbelowthreshold/rawdata->GetEntries() << " %) " <<endl;
+        }
+
+        hfile->cd();
+        mdata->Write();
+
+
+    } // pedfilenamespec
+
+    if (uvcalc) {
+        hfile->cd();
+        TDirectory *timing =  hfile->mkdir("timing");
+
+
+        timing->cd();
+
+        // need to store uvcenters ::
+        for (c=0; c<CARTRIDGES_PER_PANEL; c++) {
+            for (f=0; f<FINS_PER_CARTRIDGE; f++) {
+                sprintf(tmpstring,"uu_c[%d][%d]",c,f);
+                uu_c[c][f]->Write(tmpstring);
+                sprintf(tmpstring,"vv_c[%d][%d]",c,f);
+                vv_c[c][f]->Write(tmpstring);
+            } //r
+        } //c
+
+    } // uvcalc
+
+
+    if (debugmode) {
+        hfile->cd();
+        rawdata->Write();
+    }
+    hfile->Close();
+    if (verbose) {
+        cout << " byteCounter = " << byteCounter << endl;
+        cout << " totalPckCnt = " << totalPckCnt << endl;
+        cout << " droppedPckCnt = " << droppedPckCnt << endl;
     }
 
     return(0);
