@@ -23,7 +23,8 @@
 // This the number of events that is excluded at the beginning of the file
 int no_events_exclude_beginning(0);
 
-void usage(void) {
+void usage(void)
+{
     int t=DEFAULTTHRESHOLD;
     int tnohit=DEFAULT_NOHIT_THRESHOLD;
     cout << " decode  -f [filename] [-v -o [outputfilename] -p  -d -t [threshold] " ;
@@ -44,7 +45,8 @@ void usage(void) {
 
 using namespace std;
 
-void getfinmodule(Short_t panel, Short_t chip, Short_t &module, Short_t &fin) {
+void getfinmodule(Short_t panel, Short_t chip, Short_t &module, Short_t &fin)
+{
     Short_t fourup=TMath::Floor(chip/8);
     Short_t localchip=chip%8;
     fin = 6-2*TMath::Floor(localchip/2);
@@ -60,13 +62,20 @@ void getfinmodule(Short_t panel, Short_t chip, Short_t &module, Short_t &fin) {
             module+=(MODULES_PER_FIN/2 );
         }
     } else {
-        if (chip>=16) fin++;
-        if (chip%2) module+=MODULES_PER_RENA;
-        if (fourup%2)  module+=(MODULES_PER_FIN/2 );
+        if (chip>=16) {
+            fin++;
+        }
+        if (chip%2) {
+            module+=MODULES_PER_RENA;
+        }
+        if (fourup%2) {
+            module+=(MODULES_PER_FIN/2 );
+        }
     }
 }
 
-Int_t pedana( double* mean, double* rms, int*  events, Short_t value ) {
+Int_t pedana( double* mean, double* rms, int*  events, Short_t value )
+{
 
     double val = value;
     // if the value is an outlier (or < 0) , then we reset the value to the current mean.
@@ -101,8 +110,9 @@ vector<unsigned int> chipRate;
 
 
 
-int main(int argc, char *argv[]) {
-    float pedestals[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][CHANNELS_PER_MODULE]={{{{0}}}};
+int main(int argc, char *argv[])
+{
+    float pedestals[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][CHANNELS_PER_MODULE]= {{{{0}}}};
     Int_t calcpedestal=0;
     // changed this to be always one, because ana code expects the vectors containing u,v centers to be in the root file.
     // however,this is set to 0 if the user specifies "-p" on the command line.
@@ -112,7 +122,7 @@ int main(int argc, char *argv[]) {
     int module;
     int cartridge;
     int uvthreshold = -1000;
-    // FIXME hardcoded value :: 
+    // FIXME hardcoded value ::
     pcnumber pclist[32];
 
     TFile *hfile;
@@ -140,7 +150,7 @@ int main(int argc, char *argv[]) {
     Bool_t cmapspec=kFALSE;
     TString nfofile;
 
-    for ( ix=1;ix< argc;ix++) {
+    for ( ix=1; ix< argc; ix++) {
 
         /* Verbose  '-v' */
         if (strncmp(argv[ix], "-v", 2) == 0) {
@@ -183,7 +193,7 @@ int main(int argc, char *argv[]) {
 
             if (strncmp(argv[ix], "-pedfile", 8) == 0) {
                 ix++;
-                if (strlen(argv[ix])<FILENAMELENGTH) {  
+                if (strlen(argv[ix])<FILENAMELENGTH) {
                     sprintf( pedvaluefilename,"%s", argv[ix]);
                     pedfilenamespec=1;
                 } else  {
@@ -211,7 +221,7 @@ int main(int argc, char *argv[]) {
 
         /* filename '-f' */
         if (strncmp(argv[ix], "-f", 2) == 0) {
-            if (strlen(argv[ix+1])<FILENAMELENGTH) {  
+            if (strlen(argv[ix+1])<FILENAMELENGTH) {
                 sprintf( filename,"%s", argv[ix+1]);
                 filenamespec=1;
             } else  {
@@ -225,7 +235,7 @@ int main(int argc, char *argv[]) {
 
         if (strncmp(argv[ix], "-o", 2) == 0) {
             outfileset = 1;
-            if (strlen(argv[ix+1])<FILENAMELENGTH) {  
+            if (strlen(argv[ix+1])<FILENAMELENGTH) {
                 sprintf( outfilename,"%s", argv[ix+1]);
                 sprintf( pedfilebase,"%s.ped", argv[ix+1]);
                 //        sprintf( pedfilename2,"%s.ped.RENA2", argv[ix+1]);
@@ -293,20 +303,20 @@ int main(int argc, char *argv[]) {
         i++;
     }
 
-    if (verbose) {  
+    if (verbose) {
         cout << " pclist.daqid     = " ;
-        for ( i=0;i<32;i++) {
+        for ( i=0; i<32; i++) {
             cout << pclist[i].panel << " ";
         }
         cout << endl;
 
         cout << " pclist.panel     = " ;
-        for ( i=0;i<32;i++) {
+        for ( i=0; i<32; i++) {
             cout << pclist[i].panel << " ";
         }
         cout << endl;
         cout << " pclist.cartridge = " ;
-        for (i=0;i<32;i++) {
+        for (i=0; i<32; i++) {
             cout << pclist[i].cartridge << " ";
         }
         cout << endl;
@@ -321,10 +331,11 @@ int main(int argc, char *argv[]) {
         Char_t idstring[12]; // form C#R#M#
         pedvals.open(pedvaluefilename);
         if (!pedvals) {
-            cout << " Error opening file " << pedvaluefilename << "\n.Exiting.\n";  return -10;
+            cout << " Error opening file " << pedvaluefilename << "\n.Exiting.\n";
+            return -10;
         }
         cout << " Decoding file " << filename << " with pedestals " << pedvaluefilename << endl;
-        while ( pedvals >> idstring ) { 
+        while ( pedvals >> idstring ) {
             sscanf(idstring,"C%dR%dM%d",&cartridge,&chip,&module);
             // cout << " c = " << cartridge << " R = " << chip << " M = " << module << endl;
             pedvals >> events;
@@ -333,7 +344,7 @@ int main(int argc, char *argv[]) {
                 cout << " module = " << module << ", chip = " << chip << ".\nExiting." << endl;
                 return(-2);
             }
-            for ( int ii=0; ii< CHANNELS_PER_MODULE;ii++) {
+            for ( int ii=0; ii< CHANNELS_PER_MODULE; ii++) {
                 pedvals >> pedestals[cartridge][chip][module][ii] ;
                 pedvals >> tmp;
             }
@@ -341,10 +352,10 @@ int main(int argc, char *argv[]) {
 
         if (verbose) {
             cout << " Pedestal values :: " << endl;
-            for (c=0;c<CARTRIDGES_PER_PANEL;c++) {
-                for (r=0;r<RENAS_PER_CARTRIDGE;r++) {
-                    for (i=0;i<MODULES_PER_RENA;i++) {
-                        for (int k=0;k<CHANNELS_PER_MODULE;k++) {
+            for (c=0; c<CARTRIDGES_PER_PANEL; c++) {
+                for (r=0; r<RENAS_PER_CARTRIDGE; r++) {
+                    for (i=0; i<MODULES_PER_RENA; i++) {
+                        for (int k=0; k<CHANNELS_PER_MODULE; k++) {
                             cout << pedestals[c][r][i][k] << " " ;
                         }
                         cout << endl;
@@ -378,17 +389,17 @@ int main(int argc, char *argv[]) {
     Char_t treename[10],treetitle[40];
 
     ModuleDat *event = new ModuleDat();
-    Int_t doubletriggers[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]={{{0}}};
-    Int_t belowthreshold[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]={{{0}}};
-    Int_t totaltriggers[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][APDS_PER_MODULE]={{{{0}}}};
+    Int_t doubletriggers[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]= {{{0}}};
+    Int_t belowthreshold[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]= {{{0}}};
+    Int_t totaltriggers[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][APDS_PER_MODULE]= {{{{0}}}};
 
 
-    TTree *mdata=0; 
+    TTree *mdata=0;
 
 
 
-    for (int c=0;c<CARTRIDGES_PER_PANEL;c++) {
-        for (int f=0;f<FINS_PER_CARTRIDGE;f++) {
+    for (int c=0; c<CARTRIDGES_PER_PANEL; c++) {
+        for (int f=0; f<FINS_PER_CARTRIDGE; f++) {
             uu_c[c][f] = new TVector(APDS_PER_MODULE*MODULES_PER_FIN);
             vv_c[c][f] = new TVector(APDS_PER_MODULE*MODULES_PER_FIN);
         }
@@ -403,10 +414,10 @@ int main(int argc, char *argv[]) {
         if (verbose) {
             cout << " Creating energy histograms " << endl;
         }
-        for (int c=0;c<CARTRIDGES_PER_PANEL;c++) {
-            for (int f=0;f<FINS_PER_CARTRIDGE;f++) {
-                for (int i=0;i<MODULES_PER_FIN;i++) {	
-                    for (int j=0;j<APDS_PER_MODULE;j++) {
+        for (int c=0; c<CARTRIDGES_PER_PANEL; c++) {
+            for (int f=0; f<FINS_PER_CARTRIDGE; f++) {
+                for (int i=0; i<MODULES_PER_FIN; i++) {
+                    for (int j=0; j<APDS_PER_MODULE; j++) {
                         sprintf(tmpstring,"E[%d][%d][%d][%d]",c,f,i,j);
                         sprintf(titlestring,"E C%dF%d, Module %d, PSAPD %d ",c,f,i,j);
                         E[c][f][i][j]=new TH1F(tmpstring,titlestring,Ebins,E_low,E_up);
@@ -434,16 +445,18 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    hfile = new TFile(outfilename,"RECREATE"); 
+    hfile = new TFile(outfilename,"RECREATE");
 
 
     chipevent rawevent;
-    TTree *rawdata; 
+    TTree *rawdata;
 
     sprintf(treename,"rawdata");
     sprintf(treetitle,"Converted Raw RENA data" );
     rawdata =  new TTree(treename,treetitle);
-    if (!debugmode) rawdata->SetDirectory(0);
+    if (!debugmode) {
+        rawdata->SetDirectory(0);
+    }
     rawdata->Branch("ct",&rawevent.ct,"ct/L");
     rawdata->Branch("chip",&rawevent.chip,"chip/S");
     rawdata->Branch("cartridge",&rawevent.cartridge,"cartridge/S");
@@ -492,7 +505,7 @@ int main(int argc, char *argv[]) {
                 totalPckCnt++;
 
                 if (intentionally_dropped < no_events_exclude_beginning) {
-                    intentionally_dropped++; 
+                    intentionally_dropped++;
                     packBuffer.clear();
                     continue;
                 }
@@ -503,20 +516,21 @@ int main(int argc, char *argv[]) {
                     droppedFirstLast++;
                     packBuffer.clear();
                     continue;
-                }           
+                }
 
                 if (PAULS_PANELID) {
                     // ChipId format changed on 06/05/2012
                     int Idnumber = int(( packBuffer[1] & 0x7C ) >> 2 );
                     //        cartridgeId =  Short_t((packBuffer[1] & 0x3c) >> 2);
                     panelId=pclist[Idnumber].panel;
-                    cartridgeId=pclist[Idnumber].cartridge; 
+                    cartridgeId=pclist[Idnumber].cartridge;
 
                     if ((panelId >= SYSTEM_PANELS ) || ( cartridgeId >= CARTRIDGES_PER_PANEL ) || (panelId < 0 ) || (cartridgeId < 0)) {
-                        if (verbose)  { 
+                        if (verbose)  {
                             cout << " PanelId " << panelId << " or CartridgeId " << cartridgeId ;
                             cout << " doesn't match the definitions in include/Syspardef.h" << endl;
-                            cout << " Skipping." << endl;}
+                            cout << " Skipping." << endl;
+                        }
                         droppedPckCnt++;
                         droppedOutOfRange++;
                         if (verbose) {
@@ -566,7 +580,7 @@ int main(int argc, char *argv[]) {
 
                     moduletriggers=4;
                     trigCode = 0xF;
-                } else { 
+                } else {
                     // MODULE_BASED_READOUT
                     if (trigCode == 0) {
                         droppedPckCnt++;
@@ -579,7 +593,7 @@ int main(int argc, char *argv[]) {
                     } else {
                         packetSize = 9;
                     }
-                    for (int ii=0;ii<4;ii++) {
+                    for (int ii=0; ii<4; ii++) {
                         packetSize +=  32*( ( trigCode >> ii ) &  0x1  ) ;
                         moduletriggers +=  ( ( trigCode >> ii ) & 0x1) ;
                     }
@@ -602,7 +616,7 @@ int main(int argc, char *argv[]) {
 
                 // Bytes 2 to 7 are timestamp data
                 if (PAULS_PANELID) {
-                    for (int ii=3; ii<=8; ii++){
+                    for (int ii=3; ii<=8; ii++) {
                         timestamp = timestamp << 7;
                         timestamp += Long64_t((packBuffer[ii]&0x7F));
                         // cout << ii << " " << Long64_t((packBuffer[ii]&0x7F)) ;
@@ -641,11 +655,11 @@ int main(int argc, char *argv[]) {
                 int even=(int) chipId%2;
                 int nrchips=0;
 
-                for (int ii=0;ii<4;ii++) {
+                for (int ii=0; ii<4; ii++) {
                     nrchips+= (( trigCode >> ii ) & ( 0x1 ) );
                 }
                 int kk=0;
-                for (int iii=0;iii<4;iii++ ) {
+                for (int iii=0; iii<4; iii++ ) {
                     if ( trigCode & ( 0x1 << iii )) {
                         rawevent.ct=timestamp;
                         rawevent.chip= chipId;
@@ -675,7 +689,7 @@ int main(int argc, char *argv[]) {
 
                         if (pedfilenamespec) {
                             event->module=module;
-                            event->ct=timestamp; 
+                            event->ct=timestamp;
                             event->chip=rawevent.chip;
                             event->cartridge=rawevent.cartridge;
                             event->a=rawevent.a - pedestals[event->cartridge][chipId][module][0];
@@ -695,8 +709,8 @@ int main(int argc, char *argv[]) {
                             event->id=-1;
                             event->pos=rawevent.pos;
 
-                            if ( (rawevent.com1h - pedestals[event->cartridge][chipId][module][5]) < threshold ) { 
-                                if ( (rawevent.com2h - pedestals[event->cartridge][chipId][module][7]) > nohit_threshold ) { 
+                            if ( (rawevent.com1h - pedestals[event->cartridge][chipId][module][5]) < threshold ) {
+                                if ( (rawevent.com2h - pedestals[event->cartridge][chipId][module][7]) > nohit_threshold ) {
                                     totaltriggers[event->cartridge][chipId][module][0]++;
                                     event->apd=0;
                                     event->ft= (  ( ( rawevent.u1h & 0xFFFF ) << 16  )  | (  rawevent.v1h & 0xFFFF ) ) ;
@@ -706,12 +720,11 @@ int main(int argc, char *argv[]) {
                                 } else {
                                     doubletriggers[event->cartridge][chipId][module]++;
                                 }
-                            }
-                            else {
+                            } else {
                                 if ( (rawevent.com2h - pedestals[event->cartridge][chipId][module][7]) < threshold ) {
-                                    if ( (rawevent.com1h - pedestals[event->cartridge][chipId][module][5]) > nohit_threshold ) { 
+                                    if ( (rawevent.com1h - pedestals[event->cartridge][chipId][module][5]) > nohit_threshold ) {
                                         totaltriggers[event->cartridge][chipId][module][1]++;
-                                        event->apd=1;   
+                                        event->apd=1;
                                         event->y*=-1;
                                         event->ft= (  ( ( rawevent.u2h & 0xFFFF ) << 16  )  | (  rawevent.v2h & 0xFFFF ) ) ;
                                         event->Ec = rawevent.com2 - pedestals[event->cartridge][chipId][module][6];
@@ -724,23 +737,23 @@ int main(int argc, char *argv[]) {
                                     belowthreshold[event->cartridge][chipId][module]++;
                                 }
                             }
-                            if (( event->apd == 1 )||(event->apd ==0 )) { 
+                            if (( event->apd == 1 )||(event->apd ==0 )) {
                                 E[event->cartridge][event->fin][event->module][event->apd]->Fill(event->E);
                                 E_com[event->cartridge][event->fin][event->module][event->apd]->Fill(-event->Ec);
                             }
                         }
 
                         if (uvcalc) {
-                            if (( event->apd == 1 )||(event->apd ==0 )) { 
+                            if (( event->apd == 1 )||(event->apd ==0 )) {
                                 if (  ( rawevent.com1h - pedestals[cartridgeId][chipId][module][5] ) < uvthreshold ) {
                                     uventries[cartridgeId][event->fin][event->module][0]++;
-                                    (*uu_c[cartridgeId][event->fin])[event->module*2+0]+=(Float_t)(rawevent.u1h- (*uu_c[cartridgeId][event->fin])[event->module*2+0])/uventries[cartridgeId][event->fin][event->module][0]; 
-                                    (*vv_c[cartridgeId][event->fin])[event->module*2+0]+=(Float_t)(rawevent.v1h- (*vv_c[cartridgeId][event->fin])[event->module*2+0])/uventries[cartridgeId][event->fin][event->module][0]; 
+                                    (*uu_c[cartridgeId][event->fin])[event->module*2+0]+=(Float_t)(rawevent.u1h- (*uu_c[cartridgeId][event->fin])[event->module*2+0])/uventries[cartridgeId][event->fin][event->module][0];
+                                    (*vv_c[cartridgeId][event->fin])[event->module*2+0]+=(Float_t)(rawevent.v1h- (*vv_c[cartridgeId][event->fin])[event->module*2+0])/uventries[cartridgeId][event->fin][event->module][0];
                                 }
                                 if (( rawevent.com2h - pedestals[cartridgeId][chipId][module][7] ) < uvthreshold ) {
                                     uventries[cartridgeId][event->fin][event->module][1]++;
-                                    (*uu_c[cartridgeId][event->fin])[event->module*2+1]+=(Float_t)(rawevent.u2h- (*uu_c[cartridgeId][event->fin])[event->module*2+1])/uventries[cartridgeId][event->fin][event->module][1]; 
-                                    (*vv_c[cartridgeId][event->fin])[event->module*2+1]+=(Float_t)(rawevent.v2h- (*vv_c[cartridgeId][event->fin])[event->module*2+1])/uventries[cartridgeId][event->fin][event->module][1]; 
+                                    (*uu_c[cartridgeId][event->fin])[event->module*2+1]+=(Float_t)(rawevent.u2h- (*uu_c[cartridgeId][event->fin])[event->module*2+1])/uventries[cartridgeId][event->fin][event->module][1];
+                                    (*vv_c[cartridgeId][event->fin])[event->module*2+1]+=(Float_t)(rawevent.v2h- (*vv_c[cartridgeId][event->fin])[event->module*2+1])/uventries[cartridgeId][event->fin][event->module][1];
                                 }
                             }
                         }
@@ -750,21 +763,19 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        if (totalPckCnt)
-	  {
-        cout << " File Processed. Dropped: " << droppedPckCnt << " out of " << totalPckCnt << " (=" << setprecision(2) << 100*droppedPckCnt/totalPckCnt <<" %)." << endl;
-	  }
-	else
-	  {
-	    cout << " File Processed. No packets found." << endl;
-	  }
+        if (totalPckCnt) {
+            cout << " File Processed. Dropped: " << droppedPckCnt << " out of " << totalPckCnt << " (=" << setprecision(2) << 100*droppedPckCnt/totalPckCnt <<" %)." << endl;
+        } else {
+            cout << " File Processed. No packets found." << endl;
+        }
         cout << setprecision(1) << fixed;
 
         if (droppedPckCnt) {
             cout << "                 StartCode: " << (Float_t )100*droppedFirstLast/droppedPckCnt << " %" ;
-            cout << " Out of Range: " << (Float_t) 100*droppedOutOfRange/droppedPckCnt << " %"; 
+            cout << " Out of Range: " << (Float_t) 100*droppedOutOfRange/droppedPckCnt << " %";
             cout << " Tigger Code: " << (Float_t) 100*droppedTrigCode/droppedPckCnt << " %" ;
-            cout << " Packet Size: " << (Float_t) 100*droppedSize/droppedPckCnt << " %" << endl;}
+            cout << " Packet Size: " << (Float_t) 100*droppedSize/droppedPckCnt << " %" << endl;
+        }
 
         if (uvcalc) {
             if (verbose) {
@@ -772,12 +783,12 @@ int main(int argc, char *argv[]) {
             }
 
             if (verbose) {
-                for (c=0;c<CARTRIDGES_PER_PANEL;c++) {
-                    for (f=0;f<FINS_PER_CARTRIDGE;f++) {
-                        for ( i=0;i<MODULES_PER_FIN;i++) {
-                            for ( j=0;j<APDS_PER_MODULE;j++) {
+                for (c=0; c<CARTRIDGES_PER_PANEL; c++) {
+                    for (f=0; f<FINS_PER_CARTRIDGE; f++) {
+                        for ( i=0; i<MODULES_PER_FIN; i++) {
+                            for ( j=0; j<APDS_PER_MODULE; j++) {
                                 cout << " Circle Center Cartridge " << c << " Fin " << f << " Module " << i << " APD " << j << ": "  ;
-                                cout << "uu_c = " << (*uu_c[c][f])[i*2+j] << " vv_c = " << (*vv_c[c][f])[i*2+j] << " nn_entries = " << uventries[c][f][i][j] << endl;   
+                                cout << "uu_c = " << (*uu_c[c][f])[i*2+j] << " vv_c = " << (*vv_c[c][f])[i*2+j] << " nn_entries = " << uventries[c][f][i][j] << endl;
                             }
                         }
                     }
@@ -788,11 +799,13 @@ int main(int argc, char *argv[]) {
         if (calcpedestal==1) {
             sprintf(pedfilename,"%s",pedfilebase);
             pedfile.open(pedfilename);
-            if (verbose)  cout << "Calculating pedestal values "  << endl;  
+            if (verbose) {
+                cout << "Calculating pedestal values "  << endl;
+            }
 
 
-            double ped_ana[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][CHANNELS_PER_MODULE][2]={{{{{0}}}}};
-            int ped_evts[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]={{{0}}};
+            double ped_ana[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][CHANNELS_PER_MODULE][2]= {{{{{0}}}}};
+            int ped_evts[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]= {{{0}}};
 
             // skip first 20 entries to prevent outliers
             for (int ii = 20; ii< rawdata->GetEntries(); ii++ ) {
@@ -818,13 +831,15 @@ int main(int argc, char *argv[]) {
             }
 
 
-            for (c=0;c<CARTRIDGES_PER_PANEL;c++) {
-                for (r=0; r<RENAS_PER_CARTRIDGE;r++) {
-                    for (i=0;i<MODULES_PER_RENA;i++) {
-                        pedfile << "C" << c << "R" << r << "M" << i  << " " << ped_evts[c][r][i] << " ";    
-                        if (r < 10 ) pedfile << " ";
+            for (c=0; c<CARTRIDGES_PER_PANEL; c++) {
+                for (r=0; r<RENAS_PER_CARTRIDGE; r++) {
+                    for (i=0; i<MODULES_PER_RENA; i++) {
+                        pedfile << "C" << c << "R" << r << "M" << i  << " " << ped_evts[c][r][i] << " ";
+                        if (r < 10 ) {
+                            pedfile << " ";
+                        }
                         pedfile << std::setw(6) ;
-                        for (int jjj=0;jjj<CHANNELS_PER_MODULE;jjj++) {
+                        for (int jjj=0; jjj<CHANNELS_PER_MODULE; jjj++) {
                             pedfile << std::setprecision(0) << std::fixed;
                             pedfile << ped_ana[c][r][i][jjj][0] << " ";
                             pedfile <<  std::setprecision(2) << std::fixed << std::setw(6);
@@ -850,13 +865,13 @@ int main(int argc, char *argv[]) {
             Int_t totaldoubletriggers=0;
             Int_t totalbelowthreshold=0;
 
-            for (c=0;c<CARTRIDGES_PER_PANEL;c++) {
-                for (f=0;f<FINS_PER_CARTRIDGE;f++) {
+            for (c=0; c<CARTRIDGES_PER_PANEL; c++) {
+                for (f=0; f<FINS_PER_CARTRIDGE; f++) {
                     sprintf(tmpstring,"C%dF%d",c,f);
                     subdir[c][f] = hfile->mkdir(tmpstring);
                     subdir[c][f]->cd();
-                    for (m=0;m<MODULES_PER_FIN;m++) {
-                        for ( j=0;j<APDS_PER_MODULE;j++) {
+                    for (m=0; m<MODULES_PER_FIN; m++) {
+                        for ( j=0; j<APDS_PER_MODULE; j++) {
                             E[c][f][m][j]->Write();
                             E_com[c][f][m][j]->Write();
                         } //j
@@ -866,25 +881,25 @@ int main(int argc, char *argv[]) {
 
 
             cout << "========== Double Triggers =============== " << endl;
-            for (c=0;c<CARTRIDGES_PER_PANEL;c++){
-                for (r=0;r<RENAS_PER_CARTRIDGE;r++){
-                    for ( i=0;i<MODULES_PER_RENA;i++ ) {
-                        cout << doubletriggers[c][r][i] << " " ; 
-                        totaldoubletriggers+=doubletriggers[c][r][i]; 
-                        totalbelowthreshold+=belowthreshold[c][r][i]; 
+            for (c=0; c<CARTRIDGES_PER_PANEL; c++) {
+                for (r=0; r<RENAS_PER_CARTRIDGE; r++) {
+                    for ( i=0; i<MODULES_PER_RENA; i++ ) {
+                        cout << doubletriggers[c][r][i] << " " ;
+                        totaldoubletriggers+=doubletriggers[c][r][i];
+                        totalbelowthreshold+=belowthreshold[c][r][i];
                     } // i
                     cout << endl;
                 } //r
             } //c
 
             cout << "========== Total Triggers =============== " << endl;
-            Long64_t totalmoduletriggers[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]={{{0}}};
-            Long64_t totalchiptriggers[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE]={{0}};
+            Long64_t totalmoduletriggers[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]= {{{0}}};
+            Long64_t totalchiptriggers[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE]= {{0}};
             Long64_t totalacceptedtriggers=0;
-            for (c=0;c<CARTRIDGES_PER_PANEL;c++) {
-                for (r=0;r<RENAS_PER_CARTRIDGE;r++) {
-                    for ( i=0;i<MODULES_PER_RENA;i++ ) {
-                        cout << totaltriggers[c][r][i][0] << " " << totaltriggers[c][r][i][1] << " "; 
+            for (c=0; c<CARTRIDGES_PER_PANEL; c++) {
+                for (r=0; r<RENAS_PER_CARTRIDGE; r++) {
+                    for ( i=0; i<MODULES_PER_RENA; i++ ) {
+                        cout << totaltriggers[c][r][i][0] << " " << totaltriggers[c][r][i][1] << " ";
                         totalmoduletriggers[c][r][i]=totaltriggers[c][r][i][0]+totaltriggers[c][r][i][1];
                         cout << totalmoduletriggers[c][r][i] << " " ;
                         totalchiptriggers[c][r]+=totalmoduletriggers[c][r][i];
@@ -897,13 +912,12 @@ int main(int argc, char *argv[]) {
             cout << " Total events :: " << rawdata->GetEntries() <<  endl;
             cout << " Total accepted :: " << totalacceptedtriggers ;
             cout << setprecision(1) << fixed;
-            if (rawdata->GetEntries()) 
-			{
-            cout << " (= " << 100* (float) totalacceptedtriggers/rawdata->GetEntries() << " %) " ;
-            cout << " Total double triggers :: " << totaldoubletriggers ;
-            cout << " (= " << 100* (float) totaldoubletriggers/rawdata->GetEntries() << " %) " ;
-            cout << " Total below threshold :: " << totalbelowthreshold;
-            cout << " (= " << 100* (float) totalbelowthreshold/rawdata->GetEntries() << " %) " <<endl;
+            if (rawdata->GetEntries()) {
+                cout << " (= " << 100* (float) totalacceptedtriggers/rawdata->GetEntries() << " %) " ;
+                cout << " Total double triggers :: " << totaldoubletriggers ;
+                cout << " (= " << 100* (float) totaldoubletriggers/rawdata->GetEntries() << " %) " ;
+                cout << " Total below threshold :: " << totalbelowthreshold;
+                cout << " (= " << 100* (float) totalbelowthreshold/rawdata->GetEntries() << " %) " <<endl;
             }
 
             hfile->cd();
@@ -920,8 +934,8 @@ int main(int argc, char *argv[]) {
             timing->cd();
 
             // need to store uvcenters ::
-            for (c=0;c<CARTRIDGES_PER_PANEL;c++) {
-                for (f=0;f<FINS_PER_CARTRIDGE;f++) {
+            for (c=0; c<CARTRIDGES_PER_PANEL; c++) {
+                for (f=0; f<FINS_PER_CARTRIDGE; f++) {
                     sprintf(tmpstring,"uu_c[%d][%d]",c,f);
                     uu_c[c][f]->Write(tmpstring);
                     sprintf(tmpstring,"vv_c[%d][%d]",c,f);
@@ -935,7 +949,8 @@ int main(int argc, char *argv[]) {
 
 
         if (debugmode) {
-            hfile->cd(); rawdata->Write();
+            hfile->cd();
+            rawdata->Write();
         }
         hfile->Close();
         if (verbose) {
