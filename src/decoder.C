@@ -488,7 +488,7 @@ int main(int argc, char *argv[])
                 continue;
             }
             int local_four_up_board = int((packBuffer[1] & 0x03) >> 0);
-            int fpgaId = int((packBuffer[2] & 0x03) >> 4);
+            int fpgaId = int((packBuffer[2] & 0x30) >> 4);
             int local_chip_id = int((packBuffer[2] & 0x40) >> 6);
             int trigCode = int(packBuffer[2] & 0x0F);
 
