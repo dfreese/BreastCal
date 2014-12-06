@@ -531,44 +531,50 @@ int main(int argc, char *argv[])
             for (unsigned int counter = 9; counter < (packetSize - 1); counter += 2) {
                 Short_t value = (Short_t)packBuffer[counter];
                 value = value << 6;
-                value += (Short_t)packBuffer[counter+1];
+                value += (Short_t)packBuffer[counter + 1];
                 adcBlock.push_back(value);
             }
 
-            int even=(int) chipId%2;
-            int nrchips=0;
-
-            for (int ii=0; ii<4; ii++) {
-                nrchips+= (( trigCode >> ii ) & ( 0x1 ) );
+            int even = (int)chipId % 2;
+            int number_of_chips=0;
+            for (int ii = 0; ii < 4; ii++) {
+                number_of_chips += ((trigCode >> ii) & (0x01));
             }
+
             int kk=0;
-            for (int iii = 0; iii < 4; iii++ ) {
-                if (trigCode & (0x01 << iii)) {
+            for (int module = 0; module < 4; module++ ) {
+                if (trigCode & (0x01 << module)) {
                     rawevent.ct=timestamp;
                     rawevent.chip= chipId;
                     rawevent.cartridge = cartridgeId;
-                    rawevent.module= iii;
-                    rawevent.com1h = adcBlock[kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];  //6
-                    rawevent.u1h = adcBlock[1 + kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
-                    rawevent.v1h = adcBlock[2+kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
-                    rawevent.com1 = adcBlock[3+kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
-                    rawevent.u1 =adcBlock[4+kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
-                    rawevent.v1 =adcBlock[5+kk*BYTESPERCOMMON+ even*nrchips*SHIFTFACCOM];
-                    rawevent.com2h = adcBlock[6 + kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
-                    rawevent.u2h = adcBlock[7 + kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
-                    rawevent.v2h = adcBlock[8+kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
-                    rawevent.com2 = adcBlock[9+kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
-                    rawevent.u2=adcBlock[10+kk*BYTESPERCOMMON + even*nrchips*SHIFTFACCOM];
-                    rawevent.v2=adcBlock[11+kk*BYTESPERCOMMON+ even*nrchips*SHIFTFACCOM];
-                    rawevent.a=adcBlock[BYTESPERCOMMON*nrchips+kk*VALUESPERSPATIAL - even*nrchips*SHIFTFACSPAT];  //2
-                    rawevent.b=adcBlock[BYTESPERCOMMON*nrchips+1+kk*VALUESPERSPATIAL - even*nrchips*SHIFTFACSPAT];  //3
-                    rawevent.c=adcBlock[BYTESPERCOMMON*nrchips+2+kk*VALUESPERSPATIAL - even*nrchips*SHIFTFACSPAT];  //4
-                    rawevent.d=adcBlock[BYTESPERCOMMON*nrchips+3+kk*VALUESPERSPATIAL - even*nrchips*SHIFTFACSPAT];  //5
+                    rawevent.module = module;
+
+                    int channel_offset = kk * BYTESPERCOMMON
+                                         + even * number_of_chips * SHIFTFACCOM;
+                    int spatial_offset = BYTESPERCOMMON * number_of_chips
+                                         + kk * VALUESPERSPATIAL
+                                         - even * number_of_chips * SHIFTFACSPAT;
+                    rawevent.com1h = adcBlock[0 + channel_offset];
+                    rawevent.u1h = adcBlock[1 + channel_offset];
+                    rawevent.v1h = adcBlock[2 + channel_offset];
+                    rawevent.com1 = adcBlock[3 + channel_offset];
+                    rawevent.u1 = adcBlock[4 + channel_offset];
+                    rawevent.v1 = adcBlock[5 + channel_offset];
+                    rawevent.com2h = adcBlock[6 + channel_offset];
+                    rawevent.u2h = adcBlock[7 + channel_offset];
+                    rawevent.v2h = adcBlock[8 + channel_offset];
+                    rawevent.com2 = adcBlock[9 + channel_offset];
+                    rawevent.u2 = adcBlock[10 + channel_offset];
+                    rawevent.v2 = adcBlock[11 + channel_offset];
+
+                    rawevent.a = adcBlock[0 + spatial_offset];
+                    rawevent.b = adcBlock[1 + spatial_offset];
+                    rawevent.c = adcBlock[2 + spatial_offset];
+                    rawevent.d = adcBlock[3 + spatial_offset];
                     rawevent.pos=sourcepos;
+
                     kk++;
                     rawdata->Fill();
-
-                    module=iii;
 
                     if (pedfilenamespec) {
                         event->module=module;
@@ -581,24 +587,24 @@ int main(int argc, char *argv[])
                         event->d=rawevent.d - pedestals[event->cartridge][chipId][module][3];
 
                         getfinmodule(panelId,event->chip,event->module,event->fin);
-                        event->E=event->a+event->b+event->c+event->d;
-                        event->x= event->c + event->d - ( event->b + event->a );
-                        event->y= event->a + event->d - ( event->b + event->c );
+                        event->E = event->a + event->b + event->c + event->d;
+                        event->x = event->c + event->d - (event->b + event->a);
+                        event->y = event->a + event->d - (event->b + event->c);
 
-                        event->x/=event->E;
-                        event->y/=event->E;
+                        event->x /= event->E;
+                        event->y /= event->E;
 
-                        event->apd=-1;
-                        event->id=-1;
-                        event->pos=rawevent.pos;
+                        event->apd = -1;
+                        event->id = -1;
+                        event->pos = rawevent.pos;
 
                         if ((rawevent.com1h - pedestals[event->cartridge][chipId][module][5]) < threshold) {
                             if ((rawevent.com2h - pedestals[event->cartridge][chipId][module][7]) > nohit_threshold) {
                                 totaltriggers[event->cartridge][chipId][module][0]++;
-                                event->apd=0;
-                                event->ft=(((rawevent.u1h & 0xFFFF) << 16) | (rawevent.v1h & 0xFFFF));
-                                event->Ec=rawevent.com1 - pedestals[event->cartridge][chipId][module][4];
-                                event->Ech=rawevent.com1h - pedestals[event->cartridge][chipId][module][5];
+                                event->apd = 0;
+                                event->ft = (((rawevent.u1h & 0xFFFF) << 16) | (rawevent.v1h & 0xFFFF));
+                                event->Ec = rawevent.com1 - pedestals[event->cartridge][chipId][module][4];
+                                event->Ech = rawevent.com1h - pedestals[event->cartridge][chipId][module][5];
                                 mdata->Fill();
                             } else {
                                 doubletriggers[event->cartridge][chipId][module]++;
@@ -606,11 +612,11 @@ int main(int argc, char *argv[])
                         } else if ((rawevent.com2h - pedestals[event->cartridge][chipId][module][7]) < threshold ) {
                             if ( (rawevent.com1h - pedestals[event->cartridge][chipId][module][5]) > nohit_threshold ) {
                                 totaltriggers[event->cartridge][chipId][module][1]++;
-                                event->apd=1;
-                                event->y*=-1;
-                                event->ft=(((rawevent.u2h & 0xFFFF) << 16) | (rawevent.v2h & 0xFFFF));
-                                event->Ec= rawevent.com2 - pedestals[event->cartridge][chipId][module][6];
-                                event->Ech=rawevent.com2h- pedestals[event->cartridge][chipId][module][7];
+                                event->apd = 1;
+                                event->y *= -1;
+                                event->ft = (((rawevent.u2h & 0xFFFF) << 16) | (rawevent.v2h & 0xFFFF));
+                                event->Ec = rawevent.com2 - pedestals[event->cartridge][chipId][module][6];
+                                event->Ech = rawevent.com2h- pedestals[event->cartridge][chipId][module][7];
                                 mdata->Fill();
                             } else {
                                 doubletriggers[event->cartridge][chipId][module]++;
