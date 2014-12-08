@@ -68,9 +68,6 @@ struct chipevent
   Int_t pos;
 };
 
-
-
-
 using namespace std;
 
 

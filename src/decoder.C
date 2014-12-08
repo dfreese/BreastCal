@@ -10,7 +10,7 @@
 #include "TVector.h"
 #include "decoder.h"
 #include "ModuleDat.h"
-
+#include "daqboardmap.h"
 
 #define FILENAMELENGTH 120
 
@@ -121,8 +121,6 @@ int main(int argc, char *argv[])
     int cartridge;
     int uvthreshold = -1000;
 
-    pcnumber pclist[32];
-
     TFile *hfile;
 
     Int_t verbose = 0;
@@ -223,67 +221,14 @@ int main(int argc, char *argv[])
     }
     cout <<" Using Cartridge map file " << nfofile << endl;
 
-    // read in cartridge map
-    ifstream carmap;
-    carmap.open(nfofile.c_str());
-    if (!carmap.good()) {
-        cout << " Error opening file " << nfofile << endl;
-        cout << " Exiting " << endl;
-        return(-9);
+    DaqBoardMap daq_board_map;
+    int daq_board_map_status(daq_board_map.loadMap(nfofile));
+
+    if (daq_board_map_status < 0) {
+        cerr << "Error: failed to load DAQ Board map: " << nfofile << endl;
+        cerr << "Exiting." << endl;
+        return(-2);
     }
-
-    string fileline;
-    while(getline(carmap, fileline)) {
-        if (fileline.empty() > 0) {
-            continue;
-        } else if (fileline[0] == '#') {
-            // If a line starts with a pound sign, it is ignored
-            continue;
-        }
-
-        std::stringstream linestream(fileline);
-        string c_id;
-        linestream >> c_id;
-        string dummy;
-        linestream >> dummy;
-        int id_val;
-        if (!(linestream >> id_val)) {
-            cout << " Error parsing " << fileline << " from file " << nfofile << endl;
-            break;
-        }
-        int panel_id;
-        int cartridge_id;
-        sscanf(c_id.c_str(),"P%dC%d",&panel_id,&cartridge_id);
-        cout << " PANEL :: " << panel_id  << " CARTRIDGE :: " << cartridge_id << " ID : " << id_val << endl;
-        if (id_val < 0 || id_val >= 32) {
-            cerr << "Error: Invalid Cartridge map id_val in \""
-                 << nfofile << "\"" << endl;
-            return(-1);
-        }
-        pclist[id_val].panel=panel_id;
-        pclist[id_val].cartridge=cartridge_id;
-    }
-
-    if (verbose) {
-        cout << " pclist.daqid     = " ;
-        for (int i=0; i<32; i++) {
-            cout << pclist[i].panel << " ";
-        }
-        cout << endl;
-
-        cout << " pclist.panel     = " ;
-        for (int i=0; i<32; i++) {
-            cout << pclist[i].panel << " ";
-        }
-        cout << endl;
-        cout << " pclist.cartridge = " ;
-        for (int i=0; i<32; i++) {
-            cout << pclist[i].cartridge << " ";
-        }
-        cout << endl;
-    }
-    carmap.close();
-
 
     if (pedfilenamespec) {
         ifstream pedvals;
@@ -469,16 +414,14 @@ int main(int argc, char *argv[])
                 continue;
             }
 
-            int Idnumber = int((packBuffer[1] & 0x7C) >> 2);
-            Short_t panelId = pclist[Idnumber].panel;
-            Short_t cartridgeId = pclist[Idnumber].cartridge;
+            int address = int((packBuffer[1] & 0x7C) >> 2);
 
-            if ((panelId >= SYSTEM_PANELS ) || ( cartridgeId >= CARTRIDGES_PER_PANEL ) || (panelId < 0 ) || (cartridgeId < 0)) {
-                if (verbose)  {
-                    cout << " PanelId " << panelId << " or CartridgeId " << cartridgeId ;
-                    cout << " doesn't match the definitions in include/Syspardef.h" << endl;
-                    cout << " Skipping." << endl;
-                }
+            int panel_id;
+            int cartridge_id;
+            int address_status(daq_board_map.getPanelCartridgeNumber(address,
+                                                                     panel_id,
+                                                                     cartridge_id));
+            if (address_status < 0) {
                 droppedPckCnt++;
                 droppedOutOfRange++;
                 if (verbose) {
@@ -487,6 +430,7 @@ int main(int argc, char *argv[])
                 packBuffer.clear();
                 continue;
             }
+
             int local_four_up_board = int((packBuffer[1] & 0x03) >> 0);
             int fpgaId = int((packBuffer[2] & 0x30) >> 4);
             int local_chip_id = int((packBuffer[2] & 0x40) >> 6);
@@ -546,7 +490,7 @@ int main(int argc, char *argv[])
                 if (trigCode & (0x01 << module)) {
                     rawevent.ct=timestamp;
                     rawevent.chip= chipId;
-                    rawevent.cartridge = cartridgeId;
+                    rawevent.cartridge = cartridge_id;
                     rawevent.module = module;
 
                     int channel_offset = kk * BYTESPERCOMMON
@@ -586,7 +530,11 @@ int main(int argc, char *argv[])
                         event->c=rawevent.c - pedestals[event->cartridge][chipId][module][2];
                         event->d=rawevent.d - pedestals[event->cartridge][chipId][module][3];
 
-                        getfinmodule(panelId,event->chip,event->module,event->fin);
+                        getfinmodule(panel_id,
+                                     event->chip,
+                                     event->module,
+                                     event->fin);
+
                         event->E = event->a + event->b + event->c + event->d;
                         event->x = event->c + event->d - (event->b + event->a);
                         event->y = event->a + event->d - (event->b + event->c);
@@ -632,15 +580,15 @@ int main(int argc, char *argv[])
 
                     if (uvcalc) {
                         if ((event->apd == 1)||(event->apd == 0)) {
-                            if ((rawevent.com1h - pedestals[cartridgeId][chipId][module][5]) < uvthreshold) {
-                                uventries[cartridgeId][event->fin][event->module][0]++;
-                                (*uu_c[cartridgeId][event->fin])[event->module*2+0]+=(Float_t)(rawevent.u1h- (*uu_c[cartridgeId][event->fin])[event->module*2+0])/uventries[cartridgeId][event->fin][event->module][0];
-                                (*vv_c[cartridgeId][event->fin])[event->module*2+0]+=(Float_t)(rawevent.v1h- (*vv_c[cartridgeId][event->fin])[event->module*2+0])/uventries[cartridgeId][event->fin][event->module][0];
+                            if ((rawevent.com1h - pedestals[cartridge_id][chipId][module][5]) < uvthreshold) {
+                                uventries[cartridge_id][event->fin][event->module][0]++;
+                                (*uu_c[cartridge_id][event->fin])[event->module*2+0]+=(Float_t)(rawevent.u1h- (*uu_c[cartridge_id][event->fin])[event->module*2+0])/uventries[cartridge_id][event->fin][event->module][0];
+                                (*vv_c[cartridge_id][event->fin])[event->module*2+0]+=(Float_t)(rawevent.v1h- (*vv_c[cartridge_id][event->fin])[event->module*2+0])/uventries[cartridge_id][event->fin][event->module][0];
                             }
-                            if (( rawevent.com2h - pedestals[cartridgeId][chipId][module][7] ) < uvthreshold ) {
-                                uventries[cartridgeId][event->fin][event->module][1]++;
-                                (*uu_c[cartridgeId][event->fin])[event->module*2+1]+=(Float_t)(rawevent.u2h- (*uu_c[cartridgeId][event->fin])[event->module*2+1])/uventries[cartridgeId][event->fin][event->module][1];
-                                (*vv_c[cartridgeId][event->fin])[event->module*2+1]+=(Float_t)(rawevent.v2h- (*vv_c[cartridgeId][event->fin])[event->module*2+1])/uventries[cartridgeId][event->fin][event->module][1];
+                            if (( rawevent.com2h - pedestals[cartridge_id][chipId][module][7] ) < uvthreshold ) {
+                                uventries[cartridge_id][event->fin][event->module][1]++;
+                                (*uu_c[cartridge_id][event->fin])[event->module*2+1]+=(Float_t)(rawevent.u2h- (*uu_c[cartridge_id][event->fin])[event->module*2+1])/uventries[cartridge_id][event->fin][event->module][1];
+                                (*vv_c[cartridge_id][event->fin])[event->module*2+1]+=(Float_t)(rawevent.v2h- (*vv_c[cartridge_id][event->fin])[event->module*2+1])/uventries[cartridge_id][event->fin][event->module][1];
                             }
                         }
                     }
