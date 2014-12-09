@@ -11,6 +11,8 @@
 #include "decoder.h"
 #include "ModuleDat.h"
 #include "daqboardmap.h"
+#include "daqpacket.h"
+#include "decoderlib.h"
 
 #define FILENAMELENGTH 120
 
@@ -94,18 +96,6 @@ Int_t pedana( double* mean, double* rms, int*  events, Short_t value )
     *rms+=(val-*mean)*(val-tmp);
     return(0);
 }
-
-
-// huh, global variable ..
-unsigned long totalPckCnt=0;
-unsigned long droppedPckCnt=0;
-unsigned long droppedFirstLast=0;
-unsigned long droppedOutOfRange=0;
-unsigned long droppedTrigCode=0;
-unsigned long droppedSize=0;
-vector<unsigned int> chipRate;
-
-
 
 
 int main(int argc, char *argv[])
@@ -285,19 +275,14 @@ int main(int argc, char *argv[])
 
 
     if (!(outfileset)) {
-            outfilename = filename + ".root";
-            pedfilename = filename + ".ped";
+        outfilename = filename + ".root";
+        pedfilename = filename + ".ped";
     }
-
-
-    Char_t treename[10];
-    Char_t treetitle[40];
 
     ModuleDat *event = new ModuleDat();
     Int_t doubletriggers[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]= {{{0}}};
     Int_t belowthreshold[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]= {{{0}}};
     Int_t totaltriggers[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][APDS_PER_MODULE]= {{{{0}}}};
-
 
     TTree *mdata=0;
 
@@ -334,28 +319,24 @@ int main(int argc, char *argv[])
         if (verbose) {
             cout << " Creating tree " << endl;
         }
-
-        sprintf(treename,"mdata");
-        sprintf(treetitle,"Converted RENA data" );
-        mdata =  new TTree(treename,treetitle);
+        mdata = new TTree("mdata","Converted RENA data");
         mdata->Branch("eventdata",&event);
     }
 
+    ifstream dataFile;
     dataFile.open(filename.c_str(), ios::in | ios::binary);
     if (!dataFile.good()) {
-        cout << "Cannot open file \"" << filename << "\" for read operation. Exiting." << endl;
-        return -1;
+        cerr << "Cannot open file \"" << filename
+             << "\" for read operation." << endl;
+        cerr << "Exiting." << endl;
+        return(-1);
     }
-
     hfile = new TFile(outfilename.c_str(),"RECREATE");
 
 
     chipevent rawevent;
     TTree *rawdata;
-
-    sprintf(treename,"rawdata");
-    sprintf(treetitle,"Converted Raw RENA data" );
-    rawdata =  new TTree(treename,treetitle);
+    rawdata =  new TTree("rawdata", "Converted Raw RENA data");
     if (!debugmode) {
         rawdata->SetDirectory(0);
     }
@@ -381,140 +362,121 @@ int main(int argc, char *argv[])
     rawdata->Branch("d",&rawevent.d,"d/S");
     rawdata->Branch("pos",&rawevent.pos,"pos/I");
 
-    dataFile.seekg(0, ios::end);
-    endPos = dataFile.tellg();
-    dataFile.seekg(lastPos);
-    if (verbose) {
-        cout << " endPos :: " << endPos << endl;
-        cout << " lastPos :: " << lastPos << endl;
-    }
+    vector<char> packBuffer;
 
-    int intentionally_dropped(0);
+    long byteCounter(0);
+    long totalPckCnt(0);
+    long droppedIntentional(0);
+    long droppedPckCnt(0);
+    long droppedFirstLast(0);
+    long droppedOutOfRange(0);
+    long droppedTrigCode(0);
+    long droppedSize(0);
 
-    for (int i = 0; i < (endPos-lastPos-1); i++) {
-        char cc;
-        dataFile.get(cc);
+    char cc;
+    while (dataFile.get(cc)) {
         packBuffer.push_back(cc);
         byteCounter++;
         if ((unsigned char)cc==0x81) {
             // end of package (start processing)
             totalPckCnt++;
 
-            if (intentionally_dropped < no_events_exclude_beginning) {
-                intentionally_dropped++;
+            if (droppedIntentional < no_events_exclude_beginning) {
+                droppedIntentional++;
                 packBuffer.clear();
                 continue;
             }
 
-            if ( (int(packBuffer[0] & 0xFF )) != 0x80 ) {
-                // first byte of packet needs to be 0x80
+            DaqPacket packet_info;
+            int decode_status(DecodePacketByteStream(packBuffer, packet_info));
+
+            if (decode_status < 0) {
+                if (decode_status == -1) {
+                    droppedFirstLast++;
+                    if (verbose) {
+                        cout << "Dropped: Empty Packet Vector" << endl;
+                    }
+                } else if (decode_status == -2){
+                    droppedFirstLast++;
+                    if (verbose) {
+                        cout << "Dropped: First Byte not 0x80" << endl;
+                    }
+                } else if (decode_status == -3) {
+                    droppedTrigCode++;
+                    if (verbose) {
+                        cout << "Dropped: Trigger Code = 0" << endl;
+                    }
+                } else if (decode_status == -4) {
+                    droppedSize++;
+                    if (verbose) {
+                        cout << "Dropped: Packet Size Wrong - "
+                             << packBuffer.size() << endl;
+                    }
+                }
                 droppedPckCnt++;
-                droppedFirstLast++;
                 packBuffer.clear();
                 continue;
             }
-
-            int address = int((packBuffer[1] & 0x7C) >> 2);
 
             int panel_id;
             int cartridge_id;
-            int address_status(daq_board_map.getPanelCartridgeNumber(address,
+            int address_status(daq_board_map.getPanelCartridgeNumber(packet_info.backend_address,
                                                                      panel_id,
                                                                      cartridge_id));
+
             if (address_status < 0) {
                 droppedPckCnt++;
                 droppedOutOfRange++;
                 if (verbose) {
-                    cout << "Dropped = " << packBuffer.size() << endl;
+                    cout << "Dropped: Invalid Address Byte" << endl;
                 }
                 packBuffer.clear();
                 continue;
-            }
-
-            int local_four_up_board = int((packBuffer[1] & 0x03) >> 0);
-            int fpgaId = int((packBuffer[2] & 0x30) >> 4);
-            int local_chip_id = int((packBuffer[2] & 0x40) >> 6);
-            int trigCode = int(packBuffer[2] & 0x0F);
-
-            int chipId = local_chip_id + 2 * fpgaId
-                         + local_four_up_board * RENAS_PER_FOURUPBOARD;
-
-            if (trigCode == 0) {
-                droppedPckCnt++;
-                droppedTrigCode++;
-                packBuffer.clear();
-                continue;
-            }
-
-            int moduletriggers = 0;
-            for (int ii = 0; ii < 4; ii++) {
-                moduletriggers += (( trigCode >> ii) & 0x1);
-            }
-            unsigned int packetSize = 10 + 32 * moduletriggers;
-
-            if (packBuffer.size()!=packetSize) {
-                droppedPckCnt++;
-                droppedSize++;
-                if (verbose) {
-                    cout << "Dropped = " << packBuffer.size() << endl;
-                }
-                packBuffer.clear();
-                continue;
-            }
-            // Byte 1 is not used - 0x1f
-
-            Long64_t timestamp(0);
-            for (int ii = 3; ii < 9; ii++) {
-                timestamp = timestamp << 7;
-                timestamp += Long64_t((packBuffer[ii] & 0x7F));
-            }
-
-            // Remaining bytes are ADC data for each channel
-
-            vector<Short_t> adcBlock;
-            for (unsigned int counter = 9; counter < (packetSize - 1); counter += 2) {
-                Short_t value = (Short_t)packBuffer[counter];
-                value = value << 6;
-                value += (Short_t)packBuffer[counter + 1];
-                adcBlock.push_back(value);
-            }
-
-            int even = (int)chipId % 2;
-            int number_of_chips=0;
-            for (int ii = 0; ii < 4; ii++) {
-                number_of_chips += ((trigCode >> ii) & (0x01));
             }
 
             int kk=0;
-            for (int module = 0; module < 4; module++ ) {
-                if (trigCode & (0x01 << module)) {
-                    rawevent.ct=timestamp;
-                    rawevent.chip= chipId;
+            for (int module = 0; module < 4; module++) {
+                if (packet_info.module_trigger_flags[module]) {
+
+                    int chipId = packet_info.rena + 2 * packet_info.fpga
+                                 + packet_info.daq_board * RENAS_PER_FOURUPBOARD;
+
+                    rawevent.ct = packet_info.timestamp;
+                    rawevent.chip = chipId;
                     rawevent.cartridge = cartridge_id;
                     rawevent.module = module;
 
-                    int channel_offset = kk * BYTESPERCOMMON
-                                         + even * number_of_chips * SHIFTFACCOM;
-                    int spatial_offset = BYTESPERCOMMON * number_of_chips
-                                         + kk * VALUESPERSPATIAL
-                                         - even * number_of_chips * SHIFTFACSPAT;
-                    rawevent.com1h = adcBlock[0 + channel_offset];
-                    rawevent.u1h = adcBlock[1 + channel_offset];
-                    rawevent.v1h = adcBlock[2 + channel_offset];
-                    rawevent.com1 = adcBlock[3 + channel_offset];
-                    rawevent.u1 = adcBlock[4 + channel_offset];
-                    rawevent.v1 = adcBlock[5 + channel_offset];
-                    rawevent.com2h = adcBlock[6 + channel_offset];
-                    rawevent.u2h = adcBlock[7 + channel_offset];
-                    rawevent.v2h = adcBlock[8 + channel_offset];
-                    rawevent.com2 = adcBlock[9 + channel_offset];
-                    rawevent.u2 = adcBlock[10 + channel_offset];
-                    rawevent.v2 = adcBlock[11 + channel_offset];
+                    int even = chipId % 2;
 
-                    rawevent.a = adcBlock[0 + spatial_offset];
-                    rawevent.b = adcBlock[1 + spatial_offset];
-                    rawevent.c = adcBlock[2 + spatial_offset];
-                    rawevent.d = adcBlock[3 + spatial_offset];
+                    int channel_offset = kk * BYTESPERCOMMON
+                                         + even *
+                                           packet_info.no_modules_triggered *
+                                           SHIFTFACCOM;
+
+                    int spatial_offset = BYTESPERCOMMON *
+                                         packet_info.no_modules_triggered
+                                         + kk * VALUESPERSPATIAL
+                                         - even *
+                                           packet_info.no_modules_triggered *
+                                           SHIFTFACSPAT;
+
+                    rawevent.com1h = packet_info.adc_values[0 + channel_offset];
+                    rawevent.u1h = packet_info.adc_values[1 + channel_offset];
+                    rawevent.v1h = packet_info.adc_values[2 + channel_offset];
+                    rawevent.com1 = packet_info.adc_values[3 + channel_offset];
+                    rawevent.u1 = packet_info.adc_values[4 + channel_offset];
+                    rawevent.v1 = packet_info.adc_values[5 + channel_offset];
+                    rawevent.com2h = packet_info.adc_values[6 + channel_offset];
+                    rawevent.u2h = packet_info.adc_values[7 + channel_offset];
+                    rawevent.v2h = packet_info.adc_values[8 + channel_offset];
+                    rawevent.com2 = packet_info.adc_values[9 + channel_offset];
+                    rawevent.u2 = packet_info.adc_values[10 + channel_offset];
+                    rawevent.v2 = packet_info.adc_values[11 + channel_offset];
+
+                    rawevent.a = packet_info.adc_values[0 + spatial_offset];
+                    rawevent.b = packet_info.adc_values[1 + spatial_offset];
+                    rawevent.c = packet_info.adc_values[2 + spatial_offset];
+                    rawevent.d = packet_info.adc_values[3 + spatial_offset];
                     rawevent.pos=sourcepos;
 
                     kk++;
@@ -522,7 +484,7 @@ int main(int argc, char *argv[])
 
                     if (pedfilenamespec) {
                         event->module=module;
-                        event->ct=timestamp;
+                        event->ct = packet_info.timestamp;
                         event->chip=rawevent.chip;
                         event->cartridge=rawevent.cartridge;
                         event->a=rawevent.a - pedestals[event->cartridge][chipId][module][0];
@@ -572,14 +534,14 @@ int main(int argc, char *argv[])
                         } else {
                             belowthreshold[event->cartridge][chipId][module]++;
                         }
-                        if ((event->apd == 1)||(event->apd ==0 )) {
+                        if ((event->apd == 1) || (event->apd == 0)) {
                             E[event->cartridge][event->fin][event->module][event->apd]->Fill(event->E);
                             E_com[event->cartridge][event->fin][event->module][event->apd]->Fill(-event->Ec);
                         }
                     }
 
                     if (uvcalc) {
-                        if ((event->apd == 1)||(event->apd == 0)) {
+                        if ((event->apd == 1) || (event->apd == 0)) {
                             if ((rawevent.com1h - pedestals[cartridge_id][chipId][module][5]) < uvthreshold) {
                                 uventries[cartridge_id][event->fin][event->module][0]++;
                                 (*uu_c[cartridge_id][event->fin])[event->module*2+0]+=(Float_t)(rawevent.u1h- (*uu_c[cartridge_id][event->fin])[event->module*2+0])/uventries[cartridge_id][event->fin][event->module][0];
@@ -599,19 +561,24 @@ int main(int argc, char *argv[])
     }
 
     if (totalPckCnt) {
-        cout << " File Processed. Dropped: " << droppedPckCnt << " out of "
-             << totalPckCnt << " (=" << setprecision(2)
-             << 100*droppedPckCnt/totalPckCnt <<" %)." << endl;
+        cout << "File Processed.\n"
+             << "Dropped: " << droppedPckCnt << " out of "
+             << totalPckCnt << " (" << setprecision(2)
+             << 100*droppedPckCnt/totalPckCnt <<"%)." << endl;
     } else {
         cout << " File Processed. No packets found." << endl;
     }
     cout << setprecision(1) << fixed;
 
     if (droppedPckCnt) {
-        cout << "                 StartCode: " << (Float_t )100*droppedFirstLast/droppedPckCnt << " %" ;
-        cout << " Out of Range: " << (Float_t) 100*droppedOutOfRange/droppedPckCnt << " %";
-        cout << " Tigger Code: " << (Float_t) 100*droppedTrigCode/droppedPckCnt << " %" ;
-        cout << " Packet Size: " << (Float_t) 100*droppedSize/droppedPckCnt << " %" << endl;
+        cout << "Start Code: "
+             << (float) 100 * droppedFirstLast / droppedPckCnt << "% ";
+        cout << "Out of Range: "
+             << (float) 100 * droppedOutOfRange / droppedPckCnt << "% ";
+        cout << "Tigger Code: "
+             << (float) 100 * droppedTrigCode / droppedPckCnt << "% ";
+        cout << "Packet Size: "
+             << (float) 100 * droppedSize / droppedPckCnt << "% " << endl;
     }
 
     if (uvcalc) {
@@ -691,8 +658,8 @@ int main(int argc, char *argv[])
                     }
                     pedfile << endl;
                 }
-            } // r
-        } // c
+            }
+        }
         pedfile.close();
     }
 
