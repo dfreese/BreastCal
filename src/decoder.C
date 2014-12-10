@@ -17,6 +17,9 @@
 #define FILENAMELENGTH 120
 
 
+using namespace std;
+
+
 #define SHIFTFACCOM 4
 #define SHIFTFACSPAT 12
 #define BYTESPERCOMMON 12 // 4 * 3 = 12 ( 4 commons per module, 3 values per common )
@@ -45,8 +48,6 @@ void usage(void)
     return;
 }
 
-using namespace std;
-
 void getfinmodule(Short_t panel, Short_t chip, Short_t &module, Short_t &fin)
 {
     Short_t fourup=TMath::Floor(chip/8);
@@ -71,29 +72,29 @@ void getfinmodule(Short_t panel, Short_t chip, Short_t &module, Short_t &fin)
             module+=MODULES_PER_RENA;
         }
         if (fourup%2) {
-            module+=(MODULES_PER_FIN/2 );
+            module+=(MODULES_PER_FIN/2);
         }
     }
 }
 
-Int_t pedana( double* mean, double* rms, int*  events, Short_t value )
+int pedana(double * mean, double * rms, int * events, Short_t value)
 {
     double val = value;
     // if the value is an outlier (or < 0) , then we reset the value to the current mean.
     // Otherwise I had to include an event array for every channel value
 
-    if ( value < 0 ) {
+    if (value < 0) {
         val=*mean;
     }
     if (*events > 10) {
-        if ( TMath::Abs( value - *mean ) >  12*(TMath::Sqrt(*rms /(*events)) )) {
+        if (TMath::Abs(value - *mean) > 12 * (TMath::Sqrt(*rms / *events))) {
             val=*mean;
         }
     }
 
-    double tmp=*mean;
-    *mean+=(val-tmp)/(*events);
-    *rms+=(val-*mean)*(val-tmp);
+    double tmp = *mean;
+    *mean += (val - tmp) / (*events);
+    *rms += (val - *mean) * (val - tmp);
     return(0);
 }
 
@@ -101,14 +102,8 @@ Int_t pedana( double* mean, double* rms, int*  events, Short_t value )
 int main(int argc, char *argv[])
 {
     float pedestals[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][CHANNELS_PER_MODULE]= {{{{0}}}};
-    Int_t calcpedestal=0;
-    // changed this to be always one, because ana code expects the vectors containing u,v centers to be in the root file.
-    // however,this is set to 0 if the user specifies "-p" on the command line.
-    int uvcalc;//=1;
-
-    int chip;
-    int module;
-    int cartridge;
+    bool calculate_pedestal_values_flag(false);
+    bool calculate_uv_centers_flag(false);
     int uvthreshold = -1000;
 
     TFile *hfile;
@@ -147,7 +142,7 @@ int main(int argc, char *argv[])
                 uvthreshold = atoi(argv[ix+1]);
                 ix++;
             } else {
-                uvcalc = 1;
+                calculate_uv_centers_flag = true;
             }
         }
 
@@ -175,8 +170,7 @@ int main(int argc, char *argv[])
                 sourcepos=atoi(argv[ix+1]);
                 ix++;
             } else {
-                calcpedestal = 1;
-                uvcalc = 0;
+                calculate_pedestal_values_flag = true;
             }
         }
 
@@ -195,6 +189,10 @@ int main(int argc, char *argv[])
             outfilename = string(argv[ix+1]);
             pedfilename = string(argv[ix+1]) + ".ped";
         }
+    }
+
+    if (calculate_pedestal_values_flag) {
+        calculate_uv_centers_flag = 0;
     }
 
     if (!(filenamespec)) {
@@ -227,20 +225,27 @@ int main(int argc, char *argv[])
         Char_t idstring[12]; // form C#R#M#
         pedvals.open(pedvaluefilename.c_str());
         if (!pedvals) {
-            cout << " Error opening file " << pedvaluefilename << "\n.Exiting.\n";
-            return -10;
+            cout << " Error opening file "
+                 << pedvaluefilename << "\n.Exiting.\n";
+            return(-10);
         }
-        cout << " Decoding file " << filename << " with pedestals " << pedvaluefilename << endl;
-        while ( pedvals >> idstring ) {
+        cout << " Decoding file " << filename
+             << " with pedestals " << pedvaluefilename << endl;
+        while (pedvals >> idstring) {
+            int cartridge;
+            int chip;
+            int module;
             sscanf(idstring,"C%dR%dM%d",&cartridge,&chip,&module);
-            // cout << " c = " << cartridge << " R = " << chip << " M = " << module << endl;
             pedvals >> events;
-            if (( chip >= RENAS_PER_CARTRIDGE )||(module >= MODULES_PER_RENA ) ||(cartridge >= CARTRIDGES_PER_PANEL)) {
+            if ((chip >= RENAS_PER_CARTRIDGE) ||
+                    (module >= MODULES_PER_RENA) ||
+                    (cartridge >= CARTRIDGES_PER_PANEL))
+            {
                 cout << " Error reading pedfile, module or chipnumber too high: " << endl;
                 cout << " module = " << module << ", chip = " << chip << ".\nExiting." << endl;
                 return(-2);
             }
-            for ( int ii=0; ii< CHANNELS_PER_MODULE; ii++) {
+            for (int ii=0; ii< CHANNELS_PER_MODULE; ii++) {
                 pedvals >> pedestals[cartridge][chip][module][ii] ;
                 pedvals >> tmp;
             }
@@ -267,12 +272,11 @@ int main(int argc, char *argv[])
         cout << " threshold :: " << threshold << endl;
     }
 
-    if (!uvcalc) {
+    if (!calculate_uv_centers_flag) {
         cout << " ======================================================================== " << endl;
         cout << " |  Warning you did not enable UV calc, this will affect chain_parsed ! | " << endl;
         cout << " ======================================================================== " << endl;
     }
-
 
     if (!(outfileset)) {
         outfilename = filename + ".root";
@@ -540,7 +544,7 @@ int main(int argc, char *argv[])
                         }
                     }
 
-                    if (uvcalc) {
+                    if (calculate_uv_centers_flag) {
                         if ((event->apd == 1) || (event->apd == 0)) {
                             if ((rawevent.com1h - pedestals[cartridge_id][chipId][module][5]) < uvthreshold) {
                                 uventries[cartridge_id][event->fin][event->module][0]++;
@@ -581,7 +585,7 @@ int main(int argc, char *argv[])
              << (float) 100 * droppedSize / droppedPckCnt << "% " << endl;
     }
 
-    if (uvcalc) {
+    if (calculate_uv_centers_flag) {
         if (verbose) {
             cout <<  " Averaging the circle Centers " << endl;
         }
@@ -605,32 +609,33 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (calcpedestal==1) {
+    if (calculate_pedestal_values_flag) {
         pedfile.open(pedfilename.c_str());
         if (verbose) {
             cout << "Calculating pedestal values "  << endl;
         }
 
-        double ped_ana[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][CHANNELS_PER_MODULE][2]= {{{{{0}}}}};
-        int ped_evts[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]= {{{0}}};
+        double pedestal_mean[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][CHANNELS_PER_MODULE]= {{{{0}}}};
+        double pedestal_rms[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][CHANNELS_PER_MODULE]= {{{{0}}}};
+        int pedestal_events[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]= {{{0}}};
 
         // skip first 20 entries to prevent outliers
-        for (int ii = 20; ii< rawdata->GetEntries(); ii++ ) {
+        for (int ii = 20; ii < rawdata->GetEntries(); ii++) {
             rawdata->GetEntry(ii);
 
-            chip= rawevent.chip;
-            module = rawevent.module;
-            cartridge = rawevent.cartridge;
+            int chip = rawevent.chip;
+            int module = rawevent.module;
+            int cartridge = rawevent.cartridge;
 
-            ped_evts[cartridge][chip][module]++;
-            pedana( &ped_ana[cartridge][chip][module][0][0], &ped_ana[cartridge][chip][module][0][1], &ped_evts[cartridge][chip][module], rawevent.a );
-            pedana( &ped_ana[cartridge][chip][module][1][0], &ped_ana[cartridge][chip][module][1][1], &ped_evts[cartridge][chip][module], rawevent.b );
-            pedana( &ped_ana[cartridge][chip][module][2][0], &ped_ana[cartridge][chip][module][2][1], &ped_evts[cartridge][chip][module], rawevent.c );
-            pedana( &ped_ana[cartridge][chip][module][3][0], &ped_ana[cartridge][chip][module][3][1], &ped_evts[cartridge][chip][module], rawevent.d );
-            pedana( &ped_ana[cartridge][chip][module][4][0], &ped_ana[cartridge][chip][module][4][1], &ped_evts[cartridge][chip][module], rawevent.com1 );
-            pedana( &ped_ana[cartridge][chip][module][5][0], &ped_ana[cartridge][chip][module][5][1], &ped_evts[cartridge][chip][module], rawevent.com1h );
-            pedana( &ped_ana[cartridge][chip][module][6][0], &ped_ana[cartridge][chip][module][6][1], &ped_evts[cartridge][chip][module], rawevent.com2 );
-            pedana( &ped_ana[cartridge][chip][module][7][0], &ped_ana[cartridge][chip][module][7][1], &ped_evts[cartridge][chip][module], rawevent.com2h );
+            pedestal_events[cartridge][chip][module]++;
+            pedana(&pedestal_mean[cartridge][chip][module][0], &pedestal_rms[cartridge][chip][module][0], &pedestal_events[cartridge][chip][module], rawevent.a );
+            pedana(&pedestal_mean[cartridge][chip][module][1], &pedestal_rms[cartridge][chip][module][1], &pedestal_events[cartridge][chip][module], rawevent.b );
+            pedana(&pedestal_mean[cartridge][chip][module][2], &pedestal_rms[cartridge][chip][module][2], &pedestal_events[cartridge][chip][module], rawevent.c );
+            pedana(&pedestal_mean[cartridge][chip][module][3], &pedestal_rms[cartridge][chip][module][3], &pedestal_events[cartridge][chip][module], rawevent.d );
+            pedana(&pedestal_mean[cartridge][chip][module][4], &pedestal_rms[cartridge][chip][module][4], &pedestal_events[cartridge][chip][module], rawevent.com1 );
+            pedana(&pedestal_mean[cartridge][chip][module][5], &pedestal_rms[cartridge][chip][module][5], &pedestal_events[cartridge][chip][module], rawevent.com1h );
+            pedana(&pedestal_mean[cartridge][chip][module][6], &pedestal_rms[cartridge][chip][module][6], &pedestal_events[cartridge][chip][module], rawevent.com2 );
+            pedana(&pedestal_mean[cartridge][chip][module][7], &pedestal_rms[cartridge][chip][module][7], &pedestal_events[cartridge][chip][module], rawevent.com2h );
         }
 
         if (verbose) {
@@ -640,21 +645,21 @@ int main(int argc, char *argv[])
         for (int c=0; c<CARTRIDGES_PER_PANEL; c++) {
             for (int r=0; r<RENAS_PER_CARTRIDGE; r++) {
                 for (int i=0; i<MODULES_PER_RENA; i++) {
-                    pedfile << "C" << c << "R" << r << "M" << i  << " " << ped_evts[c][r][i] << " ";
-                    if (r < 10 ) {
-                        pedfile << " ";
-                    }
-                    pedfile << std::setw(6) ;
+                    pedfile << std::setfill('0');
+                    pedfile << "C" << std::setw(1) << c
+                            << "R" << std::setw(3) << r
+                            << "M" << std::setw(1) << i;
+                    pedfile << std::setfill(' ') << std::setw(9)
+                            << pedestal_events[c][r][i];
                     for (int jjj=0; jjj<CHANNELS_PER_MODULE; jjj++) {
-                        pedfile << std::setprecision(0) << std::fixed;
-                        pedfile << ped_ana[c][r][i][jjj][0] << " ";
-                        pedfile <<  std::setprecision(2) << std::fixed << std::setw(6);
-                        if ( ped_evts[c][r][i] ) {
-                            pedfile  << TMath::Sqrt(ped_ana[c][r][i][jjj][1]/ped_evts[c][r][i]) << " ";
+                        pedfile << std::setprecision(0) << std::fixed << std::setw(7);
+                        pedfile << pedestal_mean[c][r][i][jjj];
+                        pedfile <<  std::setprecision(2) << std::fixed << std::setw(8);
+                        if (pedestal_events[c][r][i]) {
+                            pedfile << TMath::Sqrt(pedestal_rms[c][r][i][jjj]/pedestal_events[c][r][i]);
                         } else {
-                            pedfile << "0 " ;
+                            pedfile << 0;
                         }
-                        pedfile <<  std::setw(6);
                     }
                     pedfile << endl;
                 }
@@ -728,7 +733,7 @@ int main(int argc, char *argv[])
         mdata->Write();
     }
 
-    if (uvcalc) {
+    if (calculate_uv_centers_flag) {
         hfile->cd();
         TDirectory *timing =  hfile->mkdir("timing");
         timing->cd();
