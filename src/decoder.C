@@ -13,6 +13,7 @@
 #include "daqboardmap.h"
 #include "daqpacket.h"
 #include "decoderlib.h"
+#include "chipevent.h"
 
 using namespace std;
 

@@ -20,32 +20,6 @@ Long64_t uventries[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][2]
 
 TDirectory *subdir[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE];
 
-
-struct chipevent
-{ Long64_t ct;
-  Short_t chip;
-  Short_t cartridge;
-  Short_t module;
-  Short_t com1;
-  Short_t com2;
-  Short_t com1h;
-  Short_t com2h;
-  Short_t u1;
-  Short_t v1;
-  Short_t u2;
-  Short_t v2;
-  Short_t u1h;
-  Short_t v1h;
-  Short_t u2h;
-  Short_t v2h;
-  Short_t a;
-  Short_t b;
-  Short_t c;
-  Short_t d;
-  Int_t pos;
-};
-
 using namespace std;
-
 
 #endif 
