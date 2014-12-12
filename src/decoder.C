@@ -14,15 +14,12 @@
 #include "daqpacket.h"
 #include "decoderlib.h"
 
-#define FILENAMELENGTH 120
-
-
 using namespace std;
 
 
 #define SHIFTFACCOM 4
 #define SHIFTFACSPAT 12
-#define BYTESPERCOMMON 12 // 4 * 3 = 12 ( 4 commons per module, 3 values per common )
+#define BYTESPERCOMMON 12 // ( 4 commons per module * 3 values per common )
 #define VALUESPERSPATIAL 4
 
 // This the number of events that is excluded at the beginning of the file
@@ -115,7 +112,7 @@ int main(int argc, char *argv[])
     string pedvaluefilename;
     int pedfilenamespec=0;
 
-    ofstream pedfile;
+
     int outfileset=0;
     int filenamespec=0;
     Int_t sourcepos=0;
@@ -219,36 +216,13 @@ int main(int argc, char *argv[])
     }
 
     if (pedfilenamespec) {
-        ifstream pedvals;
-        int events;
-        double tmp;
-        Char_t idstring[12]; // form C#R#M#
-        pedvals.open(pedvaluefilename.c_str());
-        if (!pedvals) {
-            cout << " Error opening file "
-                 << pedvaluefilename << "\n.Exiting.\n";
-            return(-10);
-        }
-        cout << " Decoding file " << filename
-             << " with pedestals " << pedvaluefilename << endl;
-        while (pedvals >> idstring) {
-            int cartridge;
-            int chip;
-            int module;
-            sscanf(idstring,"C%dR%dM%d",&cartridge,&chip,&module);
-            pedvals >> events;
-            if ((chip >= RENAS_PER_CARTRIDGE) ||
-                    (module >= MODULES_PER_RENA) ||
-                    (cartridge >= CARTRIDGES_PER_PANEL))
-            {
-                cout << " Error reading pedfile, module or chipnumber too high: " << endl;
-                cout << " module = " << module << ", chip = " << chip << ".\nExiting." << endl;
-                return(-2);
-            }
-            for (int ii=0; ii< CHANNELS_PER_MODULE; ii++) {
-                pedvals >> pedestals[cartridge][chip][module][ii] ;
-                pedvals >> tmp;
-            }
+        int read_ped_status(ReadPedestalFile(pedvaluefilename, pedestals));
+
+        if (read_ped_status < 0) {
+            cerr << "Error reading Pedestal Value File: "
+                 << read_ped_status << endl;
+            cerr << "Exiting." << endl;
+            return(-3);
         }
 
         if (verbose) {
@@ -284,9 +258,9 @@ int main(int argc, char *argv[])
     }
 
     ModuleDat *event = new ModuleDat();
-    Int_t doubletriggers[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]= {{{0}}};
-    Int_t belowthreshold[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]= {{{0}}};
-    Int_t totaltriggers[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][APDS_PER_MODULE]= {{{{0}}}};
+    int doubletriggers[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]= {{{0}}};
+    int belowthreshold[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]= {{{0}}};
+    int totaltriggers[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][APDS_PER_MODULE]= {{{{0}}}};
 
     TTree *mdata=0;
 
@@ -298,10 +272,9 @@ int main(int argc, char *argv[])
     }
 
 
-    Char_t tmpstring[30];
+
 
     if (pedfilenamespec) {
-        Char_t titlestring[50];
         if (verbose) {
             cout << " Creating energy histograms " << endl;
         }
@@ -309,6 +282,8 @@ int main(int argc, char *argv[])
             for (int f=0; f<FINS_PER_CARTRIDGE; f++) {
                 for (int i=0; i<MODULES_PER_FIN; i++) {
                     for (int j=0; j<APDS_PER_MODULE; j++) {
+                        char tmpstring[30];
+                        char titlestring[50];
                         sprintf(tmpstring,"E[%d][%d][%d][%d]",c,f,i,j);
                         sprintf(titlestring,"E C%dF%d, Module %d, PSAPD %d ",c,f,i,j);
                         E[c][f][i][j]=new TH1F(tmpstring,titlestring,Ebins,E_low,E_up);
@@ -548,13 +523,21 @@ int main(int argc, char *argv[])
                         if ((event->apd == 1) || (event->apd == 0)) {
                             if ((rawevent.com1h - pedestals[cartridge_id][chipId][module][5]) < uvthreshold) {
                                 uventries[cartridge_id][event->fin][event->module][0]++;
-                                (*uu_c[cartridge_id][event->fin])[event->module*2+0]+=(Float_t)(rawevent.u1h- (*uu_c[cartridge_id][event->fin])[event->module*2+0])/uventries[cartridge_id][event->fin][event->module][0];
-                                (*vv_c[cartridge_id][event->fin])[event->module*2+0]+=(Float_t)(rawevent.v1h- (*vv_c[cartridge_id][event->fin])[event->module*2+0])/uventries[cartridge_id][event->fin][event->module][0];
+                                (*uu_c[cartridge_id][event->fin])[event->module*2+0] +=
+                                        (Float_t)(rawevent.u1h- (*uu_c[cartridge_id][event->fin])[event->module*2+0]) /
+                                        uventries[cartridge_id][event->fin][event->module][0];
+                                (*vv_c[cartridge_id][event->fin])[event->module*2+0] +=
+                                        (Float_t)(rawevent.v1h- (*vv_c[cartridge_id][event->fin])[event->module*2+0]) /
+                                        uventries[cartridge_id][event->fin][event->module][0];
                             }
                             if (( rawevent.com2h - pedestals[cartridge_id][chipId][module][7] ) < uvthreshold ) {
                                 uventries[cartridge_id][event->fin][event->module][1]++;
-                                (*uu_c[cartridge_id][event->fin])[event->module*2+1]+=(Float_t)(rawevent.u2h- (*uu_c[cartridge_id][event->fin])[event->module*2+1])/uventries[cartridge_id][event->fin][event->module][1];
-                                (*vv_c[cartridge_id][event->fin])[event->module*2+1]+=(Float_t)(rawevent.v2h- (*vv_c[cartridge_id][event->fin])[event->module*2+1])/uventries[cartridge_id][event->fin][event->module][1];
+                                (*uu_c[cartridge_id][event->fin])[event->module*2+1] +=
+                                        (Float_t)(rawevent.u2h- (*uu_c[cartridge_id][event->fin])[event->module*2+1]) /
+                                        uventries[cartridge_id][event->fin][event->module][1];
+                                (*vv_c[cartridge_id][event->fin])[event->module*2+1] +=
+                                        (Float_t)(rawevent.v2h- (*vv_c[cartridge_id][event->fin])[event->module*2+1]) /
+                                        uventries[cartridge_id][event->fin][event->module][1];
                             }
                         }
                     }
@@ -610,7 +593,6 @@ int main(int argc, char *argv[])
     }
 
     if (calculate_pedestal_values_flag) {
-        pedfile.open(pedfilename.c_str());
         if (verbose) {
             cout << "Calculating pedestal values "  << endl;
         }
@@ -642,30 +624,15 @@ int main(int argc, char *argv[])
             cout << " pedana done. " << endl;
         }
 
-        for (int c=0; c<CARTRIDGES_PER_PANEL; c++) {
-            for (int r=0; r<RENAS_PER_CARTRIDGE; r++) {
-                for (int i=0; i<MODULES_PER_RENA; i++) {
-                    pedfile << std::setfill('0');
-                    pedfile << "C" << std::setw(1) << c
-                            << "R" << std::setw(3) << r
-                            << "M" << std::setw(1) << i;
-                    pedfile << std::setfill(' ') << std::setw(9)
-                            << pedestal_events[c][r][i];
-                    for (int jjj=0; jjj<CHANNELS_PER_MODULE; jjj++) {
-                        pedfile << std::setprecision(0) << std::fixed << std::setw(7);
-                        pedfile << pedestal_mean[c][r][i][jjj];
-                        pedfile <<  std::setprecision(2) << std::fixed << std::setw(8);
-                        if (pedestal_events[c][r][i]) {
-                            pedfile << TMath::Sqrt(pedestal_rms[c][r][i][jjj]/pedestal_events[c][r][i]);
-                        } else {
-                            pedfile << 0;
-                        }
-                    }
-                    pedfile << endl;
-                }
-            }
+        int ped_write_status(WritePedestalFile(pedfilename,
+                                               pedestal_mean,
+                                               pedestal_rms,
+                                               pedestal_events));
+        if (ped_write_status < 0) {
+            cerr << "Error writing out pedestal value file" << endl;
+            cerr << "Exiting." << endl;
+            return(-4);
         }
-        pedfile.close();
     }
 
     // need to write histograms to disk ::
@@ -677,6 +644,7 @@ int main(int argc, char *argv[])
 
         for (int c=0; c<CARTRIDGES_PER_PANEL; c++) {
             for (int f=0; f<FINS_PER_CARTRIDGE; f++) {
+                char tmpstring[30];
                 sprintf(tmpstring,"C%dF%d",c,f);
                 subdir[c][f] = hfile->mkdir(tmpstring);
                 subdir[c][f]->cd();
@@ -740,6 +708,7 @@ int main(int argc, char *argv[])
         // store uvcenters
         for (int c=0; c<CARTRIDGES_PER_PANEL; c++) {
             for (int f=0; f<FINS_PER_CARTRIDGE; f++) {
+                char tmpstring[30];
                 sprintf(tmpstring,"uu_c[%d][%d]",c,f);
                 uu_c[c][f]->Write(tmpstring);
                 sprintf(tmpstring,"vv_c[%d][%d]",c,f);
