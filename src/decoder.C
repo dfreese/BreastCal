@@ -75,8 +75,6 @@ int main(int argc, char *argv[])
     bool calculate_uv_centers_flag(false);
     int uvthreshold = -1000;
 
-    TFile *hfile;
-
     Int_t verbose = 0;
     string filename;
     string outfilename;
@@ -280,8 +278,11 @@ int main(int argc, char *argv[])
         cerr << "Exiting." << endl;
         return(-1);
     }
-    hfile = new TFile(outfilename.c_str(),"RECREATE");
 
+    TFile * hfile;
+    if (pedfilenamespec || debugmode) {
+        hfile = new TFile(outfilename.c_str(),"RECREATE");
+    }
 
     chipevent rawevent;
     TTree * rawdata;
@@ -634,7 +635,10 @@ int main(int argc, char *argv[])
         hfile->cd();
         rawdata->Write();
     }
-    hfile->Close();
+    if (pedfilenamespec || debugmode) {
+        hfile->Close();
+    }
+
     if (verbose) {
         cout << " byteCounter = " << byteCounter << endl;
         cout << " totalPckCnt = " << totalPckCnt << endl;
