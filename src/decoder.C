@@ -46,35 +46,6 @@ void usage(void)
     return;
 }
 
-void getfinmodule(Short_t panel, Short_t chip, Short_t &module, Short_t &fin)
-{
-    Short_t fourup=TMath::Floor(chip/8);
-    Short_t localchip=chip%8;
-    fin = 6-2*TMath::Floor(localchip/2);
-    if (panel) {
-        if (chip < 16) {
-            fin++;
-        }
-        module=(3-module)%4;
-        if (!(chip%2)) {
-            module+=MODULES_PER_RENA;
-        }
-        if (!(fourup%2)) {
-            module+=(MODULES_PER_FIN/2 );
-        }
-    } else {
-        if (chip>=16) {
-            fin++;
-        }
-        if (chip%2) {
-            module+=MODULES_PER_RENA;
-        }
-        if (fourup%2) {
-            module+=(MODULES_PER_FIN/2);
-        }
-    }
-}
-
 int pedana(double * mean, double * rms, int * events, Short_t value)
 {
     double val = value;
@@ -273,8 +244,6 @@ int main(int argc, char *argv[])
     }
 
 
-
-
     if (pedfilenamespec) {
         if (verbose) {
             cout << " Creating energy histograms " << endl;
@@ -414,133 +383,67 @@ int main(int argc, char *argv[])
                 continue;
             }
 
-            int kk=0;
-            for (int module = 0; module < 4; module++) {
-                if (packet_info.module_trigger_flags[module]) {
+            std::vector<chipevent> raw_events;
+            int packet_status(PacketToRawEvents(packet_info,
+                                                raw_events,
+                                                cartridge_id,
+                                                sourcepos));
 
-                    int chipId = packet_info.rena + 2 * packet_info.fpga
-                                 + packet_info.daq_board * RENAS_PER_FOURUPBOARD;
+            for (size_t ii = 0; ii < raw_events.size(); ii++) {
+                // Add the event to the raw data tree
+                rawevent = raw_events.at(ii);
+                rawdata->Fill();
 
-                    rawevent.ct = packet_info.timestamp;
-                    rawevent.chip = chipId;
-                    rawevent.cartridge = cartridge_id;
-                    rawevent.module = module;
+                if (pedfilenamespec) {
+                    ModuleDat processed_event;
+                    int process_status(RawEventToModuleDat(raw_events.at(ii),
+                                                           processed_event,
+                                                           pedestals,
+                                                           threshold,
+                                                           nohit_threshold,
+                                                           panel_id));
+                    if (process_status == 0) {
+                        // Add the event to the root tree
+                        event = &processed_event;
+                        mdata->Fill();
 
-                    int even = chipId % 2;
+                        totaltriggers[raw_events.at(ii).cartridge]
+                                [raw_events.at(ii).chip]
+                                [raw_events.at(ii).module]
+                                [processed_event.apd]++;
 
-                    int channel_offset = kk * BYTESPERCOMMON
-                                         + even *
-                                           packet_info.no_modules_triggered *
-                                           SHIFTFACCOM;
-
-                    int spatial_offset = BYTESPERCOMMON *
-                                         packet_info.no_modules_triggered
-                                         + kk * VALUESPERSPATIAL
-                                         - even *
-                                           packet_info.no_modules_triggered *
-                                           SHIFTFACSPAT;
-
-                    rawevent.com1h = packet_info.adc_values[0 + channel_offset];
-                    rawevent.u1h = packet_info.adc_values[1 + channel_offset];
-                    rawevent.v1h = packet_info.adc_values[2 + channel_offset];
-                    rawevent.com1 = packet_info.adc_values[3 + channel_offset];
-                    rawevent.u1 = packet_info.adc_values[4 + channel_offset];
-                    rawevent.v1 = packet_info.adc_values[5 + channel_offset];
-                    rawevent.com2h = packet_info.adc_values[6 + channel_offset];
-                    rawevent.u2h = packet_info.adc_values[7 + channel_offset];
-                    rawevent.v2h = packet_info.adc_values[8 + channel_offset];
-                    rawevent.com2 = packet_info.adc_values[9 + channel_offset];
-                    rawevent.u2 = packet_info.adc_values[10 + channel_offset];
-                    rawevent.v2 = packet_info.adc_values[11 + channel_offset];
-
-                    rawevent.a = packet_info.adc_values[0 + spatial_offset];
-                    rawevent.b = packet_info.adc_values[1 + spatial_offset];
-                    rawevent.c = packet_info.adc_values[2 + spatial_offset];
-                    rawevent.d = packet_info.adc_values[3 + spatial_offset];
-                    rawevent.pos=sourcepos;
-
-                    kk++;
-                    rawdata->Fill();
-
-                    if (pedfilenamespec) {
-                        event->module=module;
-                        event->ct = packet_info.timestamp;
-                        event->chip=rawevent.chip;
-                        event->cartridge=rawevent.cartridge;
-                        event->a=rawevent.a - pedestals[event->cartridge][chipId][module][0];
-                        event->b=rawevent.b - pedestals[event->cartridge][chipId][module][1];
-                        event->c=rawevent.c - pedestals[event->cartridge][chipId][module][2];
-                        event->d=rawevent.d - pedestals[event->cartridge][chipId][module][3];
-
-                        getfinmodule(panel_id,
-                                     event->chip,
-                                     event->module,
-                                     event->fin);
-
-                        event->E = event->a + event->b + event->c + event->d;
-                        event->x = event->c + event->d - (event->b + event->a);
-                        event->y = event->a + event->d - (event->b + event->c);
-
-                        event->x /= event->E;
-                        event->y /= event->E;
-
-                        event->apd = -1;
-                        event->id = -1;
-                        event->pos = rawevent.pos;
-
-                        if ((rawevent.com1h - pedestals[event->cartridge][chipId][module][5]) < threshold) {
-                            if ((rawevent.com2h - pedestals[event->cartridge][chipId][module][7]) > nohit_threshold) {
-                                totaltriggers[event->cartridge][chipId][module][0]++;
-                                event->apd = 0;
-                                event->ft = (((rawevent.u1h & 0xFFFF) << 16) | (rawevent.v1h & 0xFFFF));
-                                event->Ec = rawevent.com1 - pedestals[event->cartridge][chipId][module][4];
-                                event->Ech = rawevent.com1h - pedestals[event->cartridge][chipId][module][5];
-                                mdata->Fill();
-                            } else {
-                                doubletriggers[event->cartridge][chipId][module]++;
-                            }
-                        } else if ((rawevent.com2h - pedestals[event->cartridge][chipId][module][7]) < threshold ) {
-                            if ( (rawevent.com1h - pedestals[event->cartridge][chipId][module][5]) > nohit_threshold ) {
-                                totaltriggers[event->cartridge][chipId][module][1]++;
-                                event->apd = 1;
-                                event->y *= -1;
-                                event->ft = (((rawevent.u2h & 0xFFFF) << 16) | (rawevent.v2h & 0xFFFF));
-                                event->Ec = rawevent.com2 - pedestals[event->cartridge][chipId][module][6];
-                                event->Ech = rawevent.com2h- pedestals[event->cartridge][chipId][module][7];
-                                mdata->Fill();
-                            } else {
-                                doubletriggers[event->cartridge][chipId][module]++;
-                            }
-                        } else {
-                            belowthreshold[event->cartridge][chipId][module]++;
-                        }
-                        if ((event->apd == 1) || (event->apd == 0)) {
-                            E[event->cartridge][event->fin][event->module][event->apd]->Fill(event->E);
-                            E_com[event->cartridge][event->fin][event->module][event->apd]->Fill(-event->Ec);
-                        }
-                    }
-
-                    if (calculate_uv_centers_flag) {
-                        if ((event->apd == 1) || (event->apd == 0)) {
-                            if ((rawevent.com1h - pedestals[cartridge_id][chipId][module][5]) < uvthreshold) {
-                                uventries[cartridge_id][event->fin][event->module][0]++;
-                                (*uu_c[cartridge_id][event->fin])[event->module*2+0] +=
-                                        (Float_t)(rawevent.u1h- (*uu_c[cartridge_id][event->fin])[event->module*2+0]) /
-                                        uventries[cartridge_id][event->fin][event->module][0];
-                                (*vv_c[cartridge_id][event->fin])[event->module*2+0] +=
-                                        (Float_t)(rawevent.v1h- (*vv_c[cartridge_id][event->fin])[event->module*2+0]) /
-                                        uventries[cartridge_id][event->fin][event->module][0];
-                            }
-                            if (( rawevent.com2h - pedestals[cartridge_id][chipId][module][7] ) < uvthreshold ) {
-                                uventries[cartridge_id][event->fin][event->module][1]++;
-                                (*uu_c[cartridge_id][event->fin])[event->module*2+1] +=
-                                        (Float_t)(rawevent.u2h- (*uu_c[cartridge_id][event->fin])[event->module*2+1]) /
-                                        uventries[cartridge_id][event->fin][event->module][1];
-                                (*vv_c[cartridge_id][event->fin])[event->module*2+1] +=
-                                        (Float_t)(rawevent.v2h- (*vv_c[cartridge_id][event->fin])[event->module*2+1]) /
-                                        uventries[cartridge_id][event->fin][event->module][1];
+                        if (calculate_uv_centers_flag) {
+                            if (processed_event.Ech < uvthreshold) {
+                                uventries[processed_event.cartridge]
+                                        [processed_event.fin]
+                                        [processed_event.module]
+                                        [processed_event.apd]++;
+                                short uh = (bool) processed_event.apd ?
+                                            raw_events.at(ii).u1h : raw_events.at(ii).u2h;
+                                short vh = (bool) processed_event.apd ?
+                                            raw_events.at(ii).v1h : raw_events.at(ii).v2h;
+                                (*uu_c[processed_event.cartridge][processed_event.fin])[processed_event.module*2+processed_event.apd] +=
+                                        (Float_t)(uh - (*uu_c[processed_event.cartridge][processed_event.fin])[processed_event.module*2+processed_event.apd]) /
+                                        uventries[processed_event.cartridge]
+                                                [processed_event.fin]
+                                                [processed_event.module]
+                                                [processed_event.apd];
+                                (*vv_c[processed_event.cartridge][processed_event.fin])[processed_event.module*2+processed_event.apd] +=
+                                        (Float_t)(vh - (*uu_c[processed_event.cartridge][processed_event.fin])[processed_event.module*2+processed_event.apd]) /
+                                        uventries[processed_event.cartridge]
+                                                [processed_event.fin]
+                                                [processed_event.module]
+                                                [processed_event.apd];
                             }
                         }
+                    } else if (process_status == -1) {
+                        belowthreshold[raw_events.at(ii).cartridge]
+                                [raw_events.at(ii).chip]
+                                [raw_events.at(ii).module]++;
+                    } else if (process_status == -2) {
+                        doubletriggers[raw_events.at(ii).cartridge]
+                                [raw_events.at(ii).chip]
+                                [raw_events.at(ii).module]++;
                     }
                 }
             }

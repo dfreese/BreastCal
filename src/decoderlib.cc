@@ -1,10 +1,53 @@
 #include "decoderlib.h"
 #include "daqpacket.h"
+#include "chipevent.h"
+#include "ModuleDat.h"
 #include <fstream>
 #include <sstream>
 #include <iostream>
 #include <iomanip>
 #include <cmath>
+
+#define SHIFTFACCOM 4
+#define SHIFTFACSPAT 12
+#define BYTESPERCOMMON 12 // ( 4 commons per module * 3 values per common )
+#define VALUESPERSPATIAL 4
+
+
+void getfinmodule(
+        short panel,
+        short chip,
+        short local_module,
+        short & module,
+        short & fin)
+{
+    short fourup = std::floor(chip / 8);
+    short localchip = chip % 8;
+    fin = 6 - 2 * std::floor(localchip / 2);
+    if (panel) {
+        if (chip < 16) {
+            fin++;
+        }
+        module = (3 - local_module) % 4;
+        if (!(chip%2)) {
+            module += MODULES_PER_RENA;
+        }
+        if (!(fourup % 2)) {
+            module += (MODULES_PER_FIN / 2);
+        }
+    } else {
+        if (chip >= 16) {
+            fin++;
+        }
+        module = local_module % 4;
+        if (chip % 2) {
+            module += MODULES_PER_RENA;
+        }
+        if (fourup % 2) {
+            module += (MODULES_PER_FIN / 2);
+        }
+    }
+}
 
 int DecodePacketByteStream(
         const std::vector<char> & packet_byte_stream,
@@ -65,6 +108,128 @@ int DecodePacketByteStream(
     return(0);
 }
 
+int PacketToRawEvents(
+        const DaqPacket & packet_info,
+        std::vector<chipevent> & raw_events,
+        int cartridge_id,
+        int sourcepos)
+{
+    raw_events.reserve(packet_info.no_modules_triggered);
+    int current_module_count(0);
+    for (int module = 0; module < 4; module++) {
+        if (packet_info.module_trigger_flags[module]) {
+            chipevent rawevent;
+
+            rawevent.ct = packet_info.timestamp;
+            rawevent.chip = packet_info.rena + 2 * packet_info.fpga
+                    + packet_info.daq_board * RENAS_PER_FOURUPBOARD;
+            rawevent.cartridge = cartridge_id;
+            rawevent.module = module;
+
+            int even = rawevent.chip % 2;
+
+            int channel_offset = current_module_count * BYTESPERCOMMON
+                                 + even *
+                                   packet_info.no_modules_triggered *
+                                   SHIFTFACCOM;
+
+            int spatial_offset = BYTESPERCOMMON *
+                                 packet_info.no_modules_triggered
+                                 + current_module_count * VALUESPERSPATIAL
+                                 - even *
+                                   packet_info.no_modules_triggered *
+                                   SHIFTFACSPAT;
+
+            rawevent.com1h = packet_info.adc_values[0 + channel_offset];
+            rawevent.u1h = packet_info.adc_values[1 + channel_offset];
+            rawevent.v1h = packet_info.adc_values[2 + channel_offset];
+            rawevent.com1 = packet_info.adc_values[3 + channel_offset];
+            rawevent.u1 = packet_info.adc_values[4 + channel_offset];
+            rawevent.v1 = packet_info.adc_values[5 + channel_offset];
+            rawevent.com2h = packet_info.adc_values[6 + channel_offset];
+            rawevent.u2h = packet_info.adc_values[7 + channel_offset];
+            rawevent.v2h = packet_info.adc_values[8 + channel_offset];
+            rawevent.com2 = packet_info.adc_values[9 + channel_offset];
+            rawevent.u2 = packet_info.adc_values[10 + channel_offset];
+            rawevent.v2 = packet_info.adc_values[11 + channel_offset];
+
+            rawevent.a = packet_info.adc_values[0 + spatial_offset];
+            rawevent.b = packet_info.adc_values[1 + spatial_offset];
+            rawevent.c = packet_info.adc_values[2 + spatial_offset];
+            rawevent.d = packet_info.adc_values[3 + spatial_offset];
+            rawevent.pos = sourcepos;
+
+            current_module_count++;
+            raw_events.push_back(rawevent);
+        }
+    }
+    return(0);
+}
+
+int RawEventToModuleDat(
+        const chipevent & rawevent,
+        ModuleDat & event,
+        float pedestals[CARTRIDGES_PER_PANEL]
+                       [RENAS_PER_CARTRIDGE]
+                       [MODULES_PER_RENA]
+                       [CHANNELS_PER_MODULE],
+        int threshold,
+        int nohit_threshold,
+        int panel_id)
+{
+    float * module_pedestals =
+            pedestals[rawevent.cartridge][rawevent.chip][rawevent.module];
+
+    if ((rawevent.com1h - module_pedestals[5]) < threshold) {
+        if ((rawevent.com2h - module_pedestals[7]) > nohit_threshold) {
+            event.apd = 0;
+            event.ft = (((rawevent.u1h & 0xFFFF) << 16) | (rawevent.v1h & 0xFFFF));
+            event.Ec = rawevent.com1 - module_pedestals[4];
+            event.Ech = rawevent.com1h - module_pedestals[5];
+        } else {
+            return(-2);
+        }
+    } else if ((rawevent.com2h - module_pedestals[7]) < threshold ) {
+        if ( (rawevent.com1h - module_pedestals[5]) > nohit_threshold ) {
+            event.apd = 1;
+            event.ft = (((rawevent.u2h & 0xFFFF) << 16) | (rawevent.v2h & 0xFFFF));
+            event.Ec = rawevent.com2 - module_pedestals[6];
+            event.Ech = rawevent.com2h- module_pedestals[7];
+        } else {
+            return(-2);
+        }
+    } else {
+        return(-1);
+    }
+
+    event.ct = rawevent.ct;
+    event.chip = rawevent.chip;
+    event.cartridge = rawevent.cartridge;
+    event.a = rawevent.a - module_pedestals[0];
+    event.b = rawevent.b - module_pedestals[1];
+    event.c = rawevent.c - module_pedestals[2];
+    event.d = rawevent.d - module_pedestals[3];
+
+    event.module = rawevent.module;
+
+    getfinmodule(panel_id,
+                 rawevent.chip,
+                 rawevent.module,
+                 event.module,
+                 event.fin);
+
+    event.E = event.a + event.b + event.c + event.d;
+    event.x = (event.c + event.d - (event.b + event.a)) / event.E;
+    event.y = (event.a + event.d - (event.b + event.c)) / event.E;
+
+    if (event.apd == 1) {
+        event.y *= -1;
+    }
+
+    event.pos = rawevent.pos;
+
+    return(0);
+}
 
 int ReadPedestalFile(
         const std::string & filename,

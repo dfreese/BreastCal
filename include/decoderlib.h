@@ -2,6 +2,8 @@
 #define DECODERLIB_H
 
 struct DaqPacket;
+struct chipevent;
+class ModuleDat;
 
 #include <vector>
 #include <string>
@@ -9,6 +11,23 @@ struct DaqPacket;
 
 int DecodePacketByteStream(const std::vector<char> & packet_byte_stream,
                            DaqPacket & packet_info);
+
+int PacketToRawEvents(
+        const DaqPacket & packet_info,
+        std::vector<chipevent> & raw_events,
+        int cartridge_id,
+        int sourcepos);
+
+int RawEventToModuleDat(
+        const chipevent & rawevent,
+        ModuleDat & event,
+        float pedestals[CARTRIDGES_PER_PANEL]
+                       [RENAS_PER_CARTRIDGE]
+                       [MODULES_PER_RENA]
+                       [CHANNELS_PER_MODULE],
+        int threshold,
+        int nohit_threshold,
+        int panel_id);
 
 int ReadPedestalFile(const std::string & filename,
                      float pedestals[CARTRIDGES_PER_PANEL]
