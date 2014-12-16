@@ -46,24 +46,24 @@ void usage(void)
     return;
 }
 
-int pedana(double * mean, double * rms, int * events, Short_t value)
+int pedana(double & mean, double & rms, int events, short value)
 {
     double val = value;
     // if the value is an outlier (or < 0) , then we reset the value to the current mean.
     // Otherwise I had to include an event array for every channel value
 
     if (value < 0) {
-        val=*mean;
+        val = mean;
     }
-    if (*events > 10) {
-        if (TMath::Abs(value - *mean) > 12 * (TMath::Sqrt(*rms / *events))) {
-            val=*mean;
+    if (events > 10) {
+        if (std::abs(val - mean) > 12 * (std::sqrt(rms/double(events)))) {
+            val = mean;
         }
     }
 
-    double tmp = *mean;
-    *mean += (val - tmp) / (*events);
-    *rms += (val - *mean) * (val - tmp);
+    double tmp = mean;
+    mean += (val - tmp) / (events);
+    rms += (val - mean) * (val - tmp);
     return(0);
 }
 
@@ -284,32 +284,35 @@ int main(int argc, char *argv[])
 
 
     chipevent rawevent;
-    TTree *rawdata;
-    rawdata =  new TTree("rawdata", "Converted Raw RENA data");
-    if (!debugmode) {
-        rawdata->SetDirectory(0);
+    TTree * rawdata;
+
+    if (debugmode) {
+        rawdata =  new TTree("rawdata", "Converted Raw RENA data");
+        if (!debugmode) {
+            rawdata->SetDirectory(0);
+        }
+        rawdata->Branch("ct",&rawevent.ct,"ct/L");
+        rawdata->Branch("chip",&rawevent.chip,"chip/S");
+        rawdata->Branch("cartridge",&rawevent.cartridge,"cartridge/S");
+        rawdata->Branch("module",&rawevent.module,"module/S");
+        rawdata->Branch("com1",&rawevent.com1,"com1/S");
+        rawdata->Branch("com2",&rawevent.com2,"com2/S");
+        rawdata->Branch("com1h",&rawevent.com1h,"com1h/S");
+        rawdata->Branch("com2h",&rawevent.com2h,"com2h/S");
+        rawdata->Branch("u1",&rawevent.u1,"u1/S");
+        rawdata->Branch("v1",&rawevent.v1,"v1/S");
+        rawdata->Branch("u2",&rawevent.u2,"u2/S");
+        rawdata->Branch("v2",&rawevent.v2,"v2/S");
+        rawdata->Branch("u1h",&rawevent.u1h,"u1h/S");
+        rawdata->Branch("v1h",&rawevent.v1h,"v1h/S");
+        rawdata->Branch("u2h",&rawevent.u2h,"u2h/S");
+        rawdata->Branch("v2h",&rawevent.v2h,"v2h/S");
+        rawdata->Branch("a",&rawevent.a,"a/S");
+        rawdata->Branch("b",&rawevent.b,"b/S");
+        rawdata->Branch("c",&rawevent.c,"c/S");
+        rawdata->Branch("d",&rawevent.d,"d/S");
+        rawdata->Branch("pos",&rawevent.pos,"pos/I");
     }
-    rawdata->Branch("ct",&rawevent.ct,"ct/L");
-    rawdata->Branch("chip",&rawevent.chip,"chip/S");
-    rawdata->Branch("cartridge",&rawevent.cartridge,"cartridge/S");
-    rawdata->Branch("module",&rawevent.module,"module/S");
-    rawdata->Branch("com1",&rawevent.com1,"com1/S");
-    rawdata->Branch("com2",&rawevent.com2,"com2/S");
-    rawdata->Branch("com1h",&rawevent.com1h,"com1h/S");
-    rawdata->Branch("com2h",&rawevent.com2h,"com2h/S");
-    rawdata->Branch("u1",&rawevent.u1,"u1/S");
-    rawdata->Branch("v1",&rawevent.v1,"v1/S");
-    rawdata->Branch("u2",&rawevent.u2,"u2/S");
-    rawdata->Branch("v2",&rawevent.v2,"v2/S");
-    rawdata->Branch("u1h",&rawevent.u1h,"u1h/S");
-    rawdata->Branch("v1h",&rawevent.v1h,"v1h/S");
-    rawdata->Branch("u2h",&rawevent.u2h,"u2h/S");
-    rawdata->Branch("v2h",&rawevent.v2h,"v2h/S");
-    rawdata->Branch("a",&rawevent.a,"a/S");
-    rawdata->Branch("b",&rawevent.b,"b/S");
-    rawdata->Branch("c",&rawevent.c,"c/S");
-    rawdata->Branch("d",&rawevent.d,"d/S");
-    rawdata->Branch("pos",&rawevent.pos,"pos/I");
 
     vector<char> packBuffer;
 
@@ -321,6 +324,15 @@ int main(int argc, char *argv[])
     long droppedOutOfRange(0);
     long droppedTrigCode(0);
     long droppedSize(0);
+
+    long total_raw_events(0);
+
+    int pedestals_no_events_skipped(0);
+    const int pedestals_no_events_to_skip(20);
+
+    double pedestal_mean[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][CHANNELS_PER_MODULE]= {{{{0}}}};
+    double pedestal_rms[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][CHANNELS_PER_MODULE]= {{{{0}}}};
+    int pedestal_events[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]= {{{0}}};
 
     char cc;
     while (dataFile.get(cc)) {
@@ -383,6 +395,8 @@ int main(int argc, char *argv[])
                 continue;
             }
 
+            total_raw_events += packet_info.no_modules_triggered;
+
             std::vector<chipevent> raw_events;
             int packet_status(PacketToRawEvents(packet_info,
                                                 raw_events,
@@ -390,9 +404,35 @@ int main(int argc, char *argv[])
                                                 sourcepos));
 
             for (size_t ii = 0; ii < raw_events.size(); ii++) {
-                // Add the event to the raw data tree
-                rawevent = raw_events.at(ii);
-                rawdata->Fill();
+
+                if (calculate_pedestal_values_flag) {
+                    if (pedestals_no_events_skipped < pedestals_no_events_to_skip) {
+                        pedestals_no_events_skipped++;
+                    } else {
+                        int chip = raw_events.at(ii).chip;
+                        int module = raw_events.at(ii).module;
+                        int cartridge = raw_events.at(ii).cartridge;
+
+                        double * mean(pedestal_mean[cartridge][chip][module]);
+                        double * rms(pedestal_rms[cartridge][chip][module]);
+
+                        pedestal_events[cartridge][chip][module]++;
+                        pedana(mean[0], rms[0], pedestal_events[cartridge][chip][module], raw_events.at(ii).a );
+                        pedana(mean[1], rms[1], pedestal_events[cartridge][chip][module], raw_events.at(ii).b );
+                        pedana(mean[2], rms[2], pedestal_events[cartridge][chip][module], raw_events.at(ii).c );
+                        pedana(mean[3], rms[3], pedestal_events[cartridge][chip][module], raw_events.at(ii).d );
+                        pedana(mean[4], rms[4], pedestal_events[cartridge][chip][module], raw_events.at(ii).com1 );
+                        pedana(mean[5], rms[5], pedestal_events[cartridge][chip][module], raw_events.at(ii).com1h );
+                        pedana(mean[6], rms[6], pedestal_events[cartridge][chip][module], raw_events.at(ii).com2 );
+                        pedana(mean[7], rms[7], pedestal_events[cartridge][chip][module], raw_events.at(ii).com2h );
+                    }
+                }
+
+                if (debugmode) {
+                    // Add the event to the raw data tree
+                    rawevent = raw_events.at(ii);
+                    rawdata->Fill();
+                }
 
                 if (pedfilenamespec) {
                     ModuleDat processed_event;
@@ -497,37 +537,6 @@ int main(int argc, char *argv[])
     }
 
     if (calculate_pedestal_values_flag) {
-        if (verbose) {
-            cout << "Calculating pedestal values "  << endl;
-        }
-
-        double pedestal_mean[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][CHANNELS_PER_MODULE]= {{{{0}}}};
-        double pedestal_rms[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][CHANNELS_PER_MODULE]= {{{{0}}}};
-        int pedestal_events[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]= {{{0}}};
-
-        // skip first 20 entries to prevent outliers
-        for (int ii = 20; ii < rawdata->GetEntries(); ii++) {
-            rawdata->GetEntry(ii);
-
-            int chip = rawevent.chip;
-            int module = rawevent.module;
-            int cartridge = rawevent.cartridge;
-
-            pedestal_events[cartridge][chip][module]++;
-            pedana(&pedestal_mean[cartridge][chip][module][0], &pedestal_rms[cartridge][chip][module][0], &pedestal_events[cartridge][chip][module], rawevent.a );
-            pedana(&pedestal_mean[cartridge][chip][module][1], &pedestal_rms[cartridge][chip][module][1], &pedestal_events[cartridge][chip][module], rawevent.b );
-            pedana(&pedestal_mean[cartridge][chip][module][2], &pedestal_rms[cartridge][chip][module][2], &pedestal_events[cartridge][chip][module], rawevent.c );
-            pedana(&pedestal_mean[cartridge][chip][module][3], &pedestal_rms[cartridge][chip][module][3], &pedestal_events[cartridge][chip][module], rawevent.d );
-            pedana(&pedestal_mean[cartridge][chip][module][4], &pedestal_rms[cartridge][chip][module][4], &pedestal_events[cartridge][chip][module], rawevent.com1 );
-            pedana(&pedestal_mean[cartridge][chip][module][5], &pedestal_rms[cartridge][chip][module][5], &pedestal_events[cartridge][chip][module], rawevent.com1h );
-            pedana(&pedestal_mean[cartridge][chip][module][6], &pedestal_rms[cartridge][chip][module][6], &pedestal_events[cartridge][chip][module], rawevent.com2 );
-            pedana(&pedestal_mean[cartridge][chip][module][7], &pedestal_rms[cartridge][chip][module][7], &pedestal_events[cartridge][chip][module], rawevent.com2h );
-        }
-
-        if (verbose) {
-            cout << " pedana done. " << endl;
-        }
-
         int ped_write_status(WritePedestalFile(pedfilename,
                                                pedestal_mean,
                                                pedestal_rms,
@@ -590,15 +599,15 @@ int main(int argc, char *argv[])
             }
         }
 
-        cout << " Total events :: " << rawdata->GetEntries() <<  endl;
+        cout << " Total events :: " << total_raw_events <<  endl;
         cout << " Total accepted :: " << totalacceptedtriggers ;
         cout << setprecision(1) << fixed;
-        if (rawdata->GetEntries()) {
-            cout << " (= " << 100* (float) totalacceptedtriggers/rawdata->GetEntries() << " %) " ;
+        if (total_raw_events) {
+            cout << " (= " << 100* (float) totalacceptedtriggers/total_raw_events << " %) " ;
             cout << " Total double triggers :: " << totaldoubletriggers ;
-            cout << " (= " << 100* (float) totaldoubletriggers/rawdata->GetEntries() << " %) " ;
+            cout << " (= " << 100* (float) totaldoubletriggers/total_raw_events << " %) " ;
             cout << " Total below threshold :: " << totalbelowthreshold;
-            cout << " (= " << 100* (float) totalbelowthreshold/rawdata->GetEntries() << " %) " <<endl;
+            cout << " (= " << 100* (float) totalbelowthreshold/total_raw_events << " %) " <<endl;
         }
 
         hfile->cd();
