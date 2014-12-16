@@ -419,9 +419,9 @@ int main(int argc, char *argv[])
                                         [processed_event.module]
                                         [processed_event.apd]++;
                                 short uh = (bool) processed_event.apd ?
-                                            raw_events.at(ii).u1h : raw_events.at(ii).u2h;
+                                            raw_events.at(ii).u2h : raw_events.at(ii).u1h;
                                 short vh = (bool) processed_event.apd ?
-                                            raw_events.at(ii).v1h : raw_events.at(ii).v2h;
+                                            raw_events.at(ii).v2h : raw_events.at(ii).v1h;
                                 (*uu_c[processed_event.cartridge][processed_event.fin])[processed_event.module*2+processed_event.apd] +=
                                         (Float_t)(uh - (*uu_c[processed_event.cartridge][processed_event.fin])[processed_event.module*2+processed_event.apd]) /
                                         uventries[processed_event.cartridge]
