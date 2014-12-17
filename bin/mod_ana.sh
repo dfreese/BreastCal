@@ -1,7 +1,10 @@
 
 # The folder on the system in which the analysis should be placed
-analysis_output_dir="/data/Module_Analysis"
-data_output_dir="/data/Module_Data"
+#analysis_output_dir="/data/Module_Analysis"
+analysis_output_dir=.
+#data_output_dir="/data/Module_Data"
+data_output_dir=.
+STORAGEFOLDER=/home/miil/MODULE_DATA
 
 function usage () {
     echo "mod_ana.sh [Filename Base] [DAQ Board Map (Optional)]"
@@ -80,7 +83,7 @@ fi
 if [ -e $FILENAME*modulenames.txt ]; then
     module_list=$(ls $FILENAME*modulenames.txt | head -n 1)
     # Copy over the list to the data output directory
-    cp $module_list $data_output_dir/
+    #    cp $module_list $data_output_dir/
 else
     echo "Module list not found for the file set specified. Exiting"
     exit -1
@@ -90,17 +93,18 @@ fi
 #Generate filelist and exclude right panel, because we assume data is on left
 ls $FILENAME*.dat | grep -v _R[0-9]_[0-9].dat > filelist
 
+
 # Find all pedestal files in the filelist
 peddatafiles=$(grep ped_Data filelist)
 
 # Decode the first pedestal file and get the relevant data
 for file in $peddatafiles; do
     if [ ! -e $file.root ]; then
-        decoder -f $file -p -cmap $daqmap
+        decoder -f $file -p -cmap $daqmap > $file.decoder.out
         check ${?} "decoder -f $file -p -cmap $daqmap"
     fi
     # copy the file to the data output directory
-    cp $file $data_output_dir/
+#    cp $file $data_output_dir/
     pedfile=$file.ped
     # Just take the first pedestal file
     if [ ! "$pedfile" == "" ]; then
@@ -114,16 +118,19 @@ done
 datafiles=$(grep -v ped_Data filelist)
 for file in $datafiles; do 
     if [ ! -e $file.root ]; then
-        decoder -f $file -pedfile $pedfile -uv -cmap $daqmap
+        decoder -f $file -pedfile $pedfile -uv -cmap $daqmap > $file.decoder.out 
         check ${?} "decoder -f $file -pedfile $pedfile -uv -cmap $daqmap"
 
         # copy the file to the data output directory
-        cp $file $data_output_dir/
+#        cp $file $data_output_dir/
+    else
+	echo "$file already decoded" 
     fi
 done
 
 # Pull out the voltages from the files, excluding the pedestal data
 voltages=$(cat filelist | grep -v _ped_ | sed 's/V.\{7,\}dat//g' | sed 's/.\{11,\}_//g')
+
 
 # Now run through the calibration chain for each of the voltages
 for voltage in $voltages; do
@@ -131,7 +138,10 @@ for voltage in $voltages; do
         continue;
     fi
     voltage_files=$(grep $voltage filelist)
-    echo "Calibrating dataset for voltage: ${voltage}V"
+    echo ""
+    echo " +++++++++++++++++++++++++++++++++++++++++++++++++ "
+    echo " Calibrating dataset for voltage: ${voltage}V"
+    echo " +++++++++++++++++++++++++++++++++++++++++++++++++ "
     voltage_filelist="filelist_${voltage}v"
     grep $voltage filelist | sed 's/\.dat/\.dat\.root/g' > $voltage_filelist
 
@@ -156,11 +166,12 @@ for voltage in $voltages; do
         echo "getfloods -f $chain_filename"
         getfloods -f $chain_filename
         check ${?} "getfloods -f $chain_filename"
+	
 
         # For each of the modules, run the segmentation algorithm, and verify
         # that the segmentation passes for both APDs. A peaks.failed.txt file
         # indicates failure, however, does not guarantee a good segmentation.
-        for i in `seq 0 7`; do
+        for i in `seq 8 15`; do
             anafloods_psf_v2 -f $chain_filename -c 0 -l 6 -m $i
             check ${?} "anafloods_psf_v2 -f $chain_filename -c 0 -l 6 -m $i"
 
@@ -196,7 +207,7 @@ for voltage in $voltages; do
         check ${?} "enecal -f $chain_filename"
 
         # Apply the calibration to the data to generate the cal.root file
-        calibrate -f $chain_filename
+        calibrate -q -P -f $chain_filename
         check ${?} "calibrate -f $chain_filename"
     fi
 
@@ -211,7 +222,8 @@ for voltage in $voltages; do
         # each line int he modulenames.txt file is the module number followed by
         # the module name.  Separate those out
         name=$( echo "$line" | awk '{print $2}' )
-        module=$( echo "$line" | awk '{print $1}' )
+	# modules run from 8 -> 15 
+        module=$( echo "$line" | awk '{print $1+8}' )
         # Check for modules with blank names, and assume there wasn't a module
         # there to be tested.
         if [ -z "$name" ]; then
@@ -221,7 +233,7 @@ for voltage in $voltages; do
         else
             echo "Working on ${name} number: ${module}"
             # Make sure the module number makes sense 0-7
-            if [ $module -ge 0 ] && [ $module -lt 8 ]; then
+            if [ $module -ge 0 ] && [ $module -le 15 ]; then
                 # If the number makes sense, run modana, which generates the images
                 # displayed in generated webpage
                 for i in 0 1; do
@@ -252,17 +264,34 @@ for voltage in $voltages; do
 
             # Finally copy over all of the images to be used in the generation of
             # the webpages to view each of these images
-            echo "cp ${FILENAME}_${voltage}V_C0F6M${module}A[0,1]_* $voltage_dir/"
-            cp ${FILENAME}_${voltage}V_C0F6M${module}A[0,1]_* $voltage_dir/
+            echo "mv ${FILENAME}_${voltage}V_C0F6M${module}A[0,1]_* $voltage_dir/"
+            mv ${FILENAME}_${voltage}V_C0F6M${module}A[0,1]_* $voltage_dir/
+	    rm ${FILENAME}_${voltage}V.C0F6M${module}A[0,1]_FOM.ps
         fi
-    done  < $module_list
+    done  <  $module_list 
 done
+
+
+#exit -92133434;
+
 
 while read line ; do 
     # each line int he modulenames.txt file is the module number followed by
     # the module name.  Separate those out
     name=$( echo "$line" | awk '{print $2}' )
-    module=$( echo "$line" | awk '{print $1}' )
+    module=$( echo "$line" | awk '{print $1+8 }' )
+    shipdate=$( echo "$line" | awk '{print $3}' )
+    boxnr=$(echo "$line" | awk '{print $4}' )
+    boxdir=$( echo "BOX$boxnr" )
+    # check if folders exist, if not make them :: 
+    if [ ! -d $STORAGEFOLDER/$shipdate ]; then
+	mkdir $STORAGEFOLDER/$shipdate
+        mkdir $STORAGEFOLDER/$shipdate/$boxdir
+    else
+	if [ ! -d $STORAGEFOLDER/$shipdate/$boxdir ] ; then
+	    mkdir $STORAGEFOLDER/$shipdate/$boxdir
+	fi
+    fi
     # Check for modules with blank names, and assume there wasn't a module
     # there to be tested.
     if [ -z "$name" ]; then
@@ -271,17 +300,17 @@ while read line ; do
         echo "##################################################"
     else
         echo "Working on ${name} number: ${module}"
-        module_dir="$analysis_output_dir/$name"
+        module_dir="$name"
 
         # Save the current directory to switch back to it after doing the work
         prev_dir=`pwd`
-        cd $module_dir
+        cd ./$module_dir
 
         # generate the summary images within the root director for each module from
         # summary images for each apd for each voltage
         for voltage in $voltages; do
-            voltage_dir="$module_dir/$voltage"
-            cd $voltage_dir
+            voltage_dir="$voltage"
+            cd ./$voltage_dir
             voltage_summary_pic="${FILENAME}_${voltage}_C0F6M${module}_${name}.sum.png"
             # check to see if any of the required images exist
             if ls *.sum.png &> /dev/null; then
@@ -291,9 +320,9 @@ while read line ; do
                 check ${?} "convert -append *.sum.png $voltage_summary_pic"
                 # move that into the root directory after it is generated in the
                 # voltage directory
-                mv $voltage_summary_pic $module_dir/
+                mv $voltage_summary_pic ../
             fi
-            cd $module_dir
+            cd ..
         done
         # Generate the main webpage within the root director of the module, as well
         # as the landing pages for each of the voltages.  The landing pages then
@@ -329,33 +358,37 @@ while read line ; do
             fi
         done
 
-        # Go back to the working directory
-        cd $prev_dir
+        #Go back to the working directory
+        cd .. 
+	ln -s `pwd`/$module_dir ${STORAGEFOLDER}/${shipdate}/${boxdir}
+        # $prev_dir
     fi
 
-done  < $module_list
+done  <  $module_list 
+
+
 
 # Save the current directory to switch back to it after doing the work
-prev_dir=`pwd`
+#prev_dir=`pwd`
 
 # Generate base webpage for the module analysis folder that contains a link to
 # each of the modules
-cd $analysis_output_dir
-if [ -e index.html ]; then
-    rm index.html
-fi
+#cd $analysis_output_dir
+#if [ -e index.html ]; then
+#    rm index.html
+#fi
 # Generate the header with title
-echo "<html><title>List of Modules</title><body>" >> index.html
-modules=$(ls -d1 *_*_*)
+#echo "<html><title>List of Modules</title><body>" >> index.html
+#modules=$(ls -d1 *_*_*)
 # Generate a link for each module
-for module in $modules; do 
-    if [ -e ./${module}/index.html ]; then
-        echo "<p><a href=\"./${module}/index.html\">${module}</a></p>" >> index.html
-    fi
-done
+#for module in $modules; do 
+#    if [ -e ./${module}/index.html ]; then
+#        echo "<p><a href=\"./${module}/index.html\">${module}</a></p>" >> index.html
+#    fi
+#done
 # close of the webpage
-echo "</body></html>" >> index.html
+#echo "</body></html>" >> index.html
 
-cd $prev_dir
+#cd $prev_dir
 # Base webpage is complete
 
