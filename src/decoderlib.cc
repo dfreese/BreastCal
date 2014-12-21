@@ -90,6 +90,7 @@ int DecodePacketByteStream(
     }
     // Byte 1 is not used - 0x1f
 
+    packet_info.timestamp = 0;
     for (int ii = 3; ii < 9; ii++) {
         packet_info.timestamp = packet_info.timestamp << 7;
         packet_info.timestamp += long((packet_byte_stream[ii] & 0x7F));
