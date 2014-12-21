@@ -453,6 +453,17 @@ int main(int argc, char *argv[])
                                 [raw_events.at(ii).module]
                                 [processed_event.apd]++;
 
+                        E[raw_events.at(ii).cartridge]
+                                [processed_event.fin]
+                                [processed_event.module]
+                                [processed_event.apd]->Fill(processed_event.E);
+
+                        E_com[raw_events.at(ii).cartridge]
+                                [processed_event.fin]
+                                [processed_event.module]
+                                [processed_event.apd]->Fill(-processed_event.Ec);
+
+
                         if (calculate_uv_centers_flag) {
                             if (processed_event.Ech < uvthreshold) {
                                 uventries[processed_event.cartridge]
