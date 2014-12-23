@@ -2,6 +2,9 @@
 #include "TStyle.h"
 #include "Riostream.h"
 #include "TMath.h"
+#include <sstream>
+#include <string>
+#include <vector>
 
 Int_t drawmod(
         TH1F *hi[FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE],
@@ -223,3 +226,269 @@ Float_t getmax(TSpectrum *s,Int_t npeaks, Int_t verbose) {
     }
     return(maxpos);
 }
+
+int ReadPerCrystalCal(
+        std::string filename,
+        float crystal_correction[SYSTEM_PANELS]
+                                [CARTRIDGES_PER_PANEL]
+                                [FINS_PER_CARTRIDGE]
+                                [MODULES_PER_FIN]
+                                [APDS_PER_MODULE]
+                                [CRYSTALS_PER_APD])
+{
+    std::ifstream input;
+    input.open(filename.c_str());
+    if (!input.good()) {
+        return(-1);
+    }
+
+    int entries(SYSTEM_PANELS *
+            CARTRIDGES_PER_PANEL *
+            FINS_PER_CARTRIDGE *
+            MODULES_PER_FIN *
+            APDS_PER_MODULE *
+            CRYSTALS_PER_APD);
+
+    std::string file_line;
+    std::vector<float> file_values(entries, 0);
+    int no_entries_found(0);
+    while (getline(input, file_line)) {
+        std::stringstream ss(file_line);
+        if (ss >> file_values[no_entries_found++]) {
+            if (no_entries_found >= entries) {
+                return(-2);
+            }
+        } else {
+            return(-3);
+        }
+    }
+    int current_entry(0);
+    for (int panel = 0; panel < SYSTEM_PANELS; panel++) {
+        for (int cartridge = 0; cartridge < CARTRIDGES_PER_PANEL; cartridge++) {
+            for (int fin = 0; fin < FINS_PER_CARTRIDGE; fin++) {
+                for (int module = 0; module < MODULES_PER_FIN; module++) {
+                    for (int apd = 0; apd < APDS_PER_MODULE; apd++) {
+                        for (int crystal = 0;
+                                crystal < CRYSTALS_PER_APD;
+                                crystal++)
+                        {
+                            crystal_correction[panel]
+                                              [cartridge]
+                                              [fin]
+                                              [module]
+                                              [apd]
+                                              [crystal] = 
+                                              file_values[current_entry++];
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return(0);
+}
+
+
+int WritePerCrystalCal(
+        std::string filename,
+        float crystal_correction[SYSTEM_PANELS]
+                                [CARTRIDGES_PER_PANEL]
+                                [FINS_PER_CARTRIDGE]
+                                [MODULES_PER_FIN]
+                                [APDS_PER_MODULE]
+                                [CRYSTALS_PER_APD])
+{
+    std::ofstream output;
+    output.open(filename.c_str());
+    if (!output.good()) {
+        return(-1);
+    }
+
+    for (int panel = 0; panel < SYSTEM_PANELS; panel++) {
+        for (int cartridge = 0; cartridge < CARTRIDGES_PER_PANEL; cartridge++) {
+            for (int fin = 0; fin < FINS_PER_CARTRIDGE; fin++) {
+                for (int module = 0; module < MODULES_PER_FIN; module++) {
+                    for (int apd = 0; apd < APDS_PER_MODULE; apd++) {
+                        for (int crystal = 0;
+                                crystal < CRYSTALS_PER_APD;
+                                crystal++)
+                        {
+                            float value(crystal_correction[panel]
+                                                          [cartridge]
+                                                          [fin]
+                                                          [module]
+                                                          [apd]
+                                                          [crystal]);
+                            output << value << "\n";
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return(0);
+}
+
+int WritePerApdAsPerCrystalCal(
+        std::string filename,
+        float apd_correction[SYSTEM_PANELS]
+                            [CARTRIDGES_PER_PANEL]
+                            [FINS_PER_CARTRIDGE]
+                            [MODULES_PER_FIN]
+                            [APDS_PER_MODULE])
+{
+    std::ofstream output;
+    output.open(filename.c_str());
+    if (!output.good()) {
+        return(-1);
+    }
+
+    for (int panel = 0; panel < SYSTEM_PANELS; panel++) {
+        for (int cartridge = 0; cartridge < CARTRIDGES_PER_PANEL; cartridge++) {
+            for (int fin = 0; fin < FINS_PER_CARTRIDGE; fin++) {
+                for (int module = 0; module < MODULES_PER_FIN; module++) {
+                    for (int apd = 0; apd < APDS_PER_MODULE; apd++) {
+                        for (int crystal = 0;
+                                crystal < CRYSTALS_PER_APD;
+                                crystal++)
+                        {
+                            float value(apd_correction[panel]
+                                                      [cartridge]
+                                                      [fin]
+                                                      [module]
+                                                      [apd]);
+                            output << value << "\n";
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return(0);
+}
+
+int AddPerCrystalCal(
+        float augend[SYSTEM_PANELS]
+                    [CARTRIDGES_PER_PANEL]
+                    [FINS_PER_CARTRIDGE]
+                    [MODULES_PER_FIN]
+                    [APDS_PER_MODULE]
+                    [CRYSTALS_PER_APD],
+        float addend[SYSTEM_PANELS]
+                    [CARTRIDGES_PER_PANEL]
+                    [FINS_PER_CARTRIDGE]
+                    [MODULES_PER_FIN]
+                    [APDS_PER_MODULE]
+                    [CRYSTALS_PER_APD],
+        float sum[SYSTEM_PANELS]
+                 [CARTRIDGES_PER_PANEL]
+                 [FINS_PER_CARTRIDGE]
+                 [MODULES_PER_FIN]
+                 [APDS_PER_MODULE]
+                 [CRYSTALS_PER_APD])
+{
+    for (int panel = 0; panel < SYSTEM_PANELS; panel++) {
+        for (int cartridge = 0; cartridge < CARTRIDGES_PER_PANEL; cartridge++) {
+            for (int fin = 0; fin < FINS_PER_CARTRIDGE; fin++) {
+                for (int module = 0; module < MODULES_PER_FIN; module++) {
+                    for (int apd = 0; apd < APDS_PER_MODULE; apd++) {
+                        for (int crystal = 0;
+                                crystal < CRYSTALS_PER_APD;
+                                crystal++)
+                        {
+                            sum[panel][cartridge][fin][module][apd][crystal] = 
+                                augend[panel][cartridge][fin]
+                                      [module][apd][crystal] +
+                                addend[panel][cartridge][fin]
+                                      [module][apd][crystal];
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return(0);
+}
+
+int AddPerApdAsPerCrystalCal(
+        float augend[SYSTEM_PANELS]
+                    [CARTRIDGES_PER_PANEL]
+                    [FINS_PER_CARTRIDGE]
+                    [MODULES_PER_FIN]
+                    [APDS_PER_MODULE]
+                    [CRYSTALS_PER_APD],
+        float addend[SYSTEM_PANELS]
+                    [CARTRIDGES_PER_PANEL]
+                    [FINS_PER_CARTRIDGE]
+                    [MODULES_PER_FIN]
+                    [APDS_PER_MODULE],
+        float sum[SYSTEM_PANELS]
+                 [CARTRIDGES_PER_PANEL]
+                 [FINS_PER_CARTRIDGE]
+                 [MODULES_PER_FIN]
+                 [APDS_PER_MODULE]
+                 [CRYSTALS_PER_APD])
+{
+    for (int panel = 0; panel < SYSTEM_PANELS; panel++) {
+        for (int cartridge = 0; cartridge < CARTRIDGES_PER_PANEL; cartridge++) {
+            for (int fin = 0; fin < FINS_PER_CARTRIDGE; fin++) {
+                for (int module = 0; module < MODULES_PER_FIN; module++) {
+                    for (int apd = 0; apd < APDS_PER_MODULE; apd++) {
+                        for (int crystal = 0;
+                                crystal < CRYSTALS_PER_APD;
+                                crystal++)
+                        {
+                            sum[panel][cartridge][fin][module][apd][crystal] = 
+                                augend[panel][cartridge][fin]
+                                      [module][apd][crystal] +
+                                addend[panel][cartridge][fin]
+                                      [module][apd];
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return(0);
+}
+
+int BoundsCheckEvent(const CoincEvent & event) {
+    if ((event.cartridge1 < 0) || (event.cartridge1 >= CARTRIDGES_PER_PANEL)) {
+        return(-1);
+    } else if ((event.cartridge2 < 0) || (event.cartridge2 >= CARTRIDGES_PER_PANEL)) {
+        return(-2);
+    } else if ((event.fin1 < 0) || (event.fin1 >= FINS_PER_CARTRIDGE)) {
+        return(-3);
+    } else if ((event.fin2 < 0) || (event.fin2 >= FINS_PER_CARTRIDGE)) {
+        return(-4);
+    } else if ((event.m1 < 0) || (event.m1 >= MODULES_PER_FIN)) {
+        return(-5);
+    } else if ((event.m2 < 0) || (event.m2 >= MODULES_PER_FIN)) {
+        return(-6);
+    } else if ((event.apd1 < 0) || (event.apd1 >= APDS_PER_MODULE)) {
+        return(-7);
+    } else if ((event.apd2 < 0) || (event.apd2 >= APDS_PER_MODULE)) {
+        return(-8);
+    } else if ((event.crystal1 < 0) || (event.crystal1 >= CRYSTALS_PER_APD)) {
+        return(-9);
+    } else if ((event.crystal2 < 0) || (event.crystal2 >= CRYSTALS_PER_APD)) {
+        return(-10);
+    } else {
+        return(0);
+    }
+}
+
+int EnergyGateEvent(
+        const CoincEvent & event,
+        float energy_low,
+        float energy_high)
+{
+    if ((event.E1 < energy_low) || (event.E1 > energy_high)) {
+        return(-1);
+    } else if ((event.E2 < energy_low) || (event.E2 > energy_high)) {
+        return(-2);
+    } else {
+        return(0);
+    }
+}
+
