@@ -92,6 +92,7 @@ int main(int argc, Char_t *argv[])
     string input_treename("mdata");
     string output_tree_name("CalTree");
     string output_tree_title("Calibrated Event Data");
+    string output_branch_title("Calibrated Event Data");
     string output_filename;
     bool output_filename_spec(false);
     bool output_tree_name_spec(false);
@@ -180,6 +181,7 @@ int main(int argc, Char_t *argv[])
 
     if (sort_output) {
         output_tree_title = "Time Sorted Calibrated data";
+        output_branch_title = "Time Sorted Data";
         if (!output_tree_name_spec) {
             output_tree_name = "SCalTree";
         }
@@ -315,7 +317,7 @@ int main(int argc, Char_t *argv[])
     TFile * output_rootfile = new TFile(output_filename.c_str(),"RECREATE");
     TTree * output_tree = new TTree(output_tree_name.c_str(), output_tree_title.c_str());
     ModuleCal * output_event = new ModuleCal();
-    output_tree->Branch(output_tree_title.c_str(), &output_event);
+    output_tree->Branch(output_branch_title.c_str(), &output_event);
     // Generate Sorted Dataset
     long dropped_no_valid_peaks(0);
     long dropped_get_crystal_id(0);
