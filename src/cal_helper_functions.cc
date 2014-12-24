@@ -255,7 +255,7 @@ int ReadPerCrystalCal(
     while (getline(input, file_line)) {
         std::stringstream ss(file_line);
         if (ss >> file_values[no_entries_found++]) {
-            if (no_entries_found >= entries) {
+            if (no_entries_found > entries) {
                 return(-2);
             }
         } else {
