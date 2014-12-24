@@ -16,9 +16,6 @@
 #include "Syspardef.h"
 #include <string>
 
-//#define DEBUG2
-#define UNITS 16
-
 #define MINMODENTRIES 200
 
 Float_t calfunc(
@@ -54,7 +51,19 @@ Float_t calfunc(
     }
 }
 
-
+void usage() {
+    cout << "cal_apd_offset [-v -h --help] -f (Filename)\n"
+         << "\n"
+         << "Options:"
+         << "  -n:  do not write out the resulting root file\n"
+         << "  -dp:  do not print out any postscript files\n"
+         << "  -pto:  only write out the time resolution plot\n"
+         << "  -gf:  use a gaussian fit in the calibration\n"
+         << "  -rcal (filename):  read in initial per crystal calibration\n"
+         << "  -wcal (filename):  write out per crystal calibration\n"
+         << "  -ft (limit ns):  use fine timestamp limit for calibration\n"
+         << "      default: use limit +/-400ns\n";
+}
 
 int main(int argc, Char_t *argv[])
 { 
@@ -71,8 +80,13 @@ int main(int argc, Char_t *argv[])
     float energy_gate_low(400);
     float energy_gate_high(600);
 
+    // A hard limit placed on all of the data used for calibration
+    const float course_time_limit(6);
+
     bool read_per_crystal_correction(false);
     bool write_per_crystal_correction(false);
+    string input_crystal_cal_filename;
+    string output_crystal_cal_filename;
 
     // A flag that is true unless a -n option is found in which case only the
     // calibration parameters and the associated plots are generated, but the
@@ -81,6 +95,7 @@ int main(int argc, Char_t *argv[])
     // A flag that disables print outs of postscript files.  Default is on.
     // Flag is disabled by -dp.
     bool write_out_postscript_flag(true);
+    bool write_out_time_res_plot_flag(true);
 
     cout << " Welcome to cal_apd_offset" << endl;
 
@@ -90,17 +105,39 @@ int main(int argc, Char_t *argv[])
             cout << "Verbose Mode " << endl;
             verbose = 1;
         }
+        if(strncmp(argv[ix], "-h", 2) == 0) {
+            usage();
+            return(0);
+        }
+        if(strncmp(argv[ix], "--help", 2) == 0) {
+            usage();
+            return(0);
+        }
         if(strncmp(argv[ix], "-n", 2) == 0) {
             cout << "Calibrated Root File will not be created." << endl;
             write_out_root_file_flag = false;
         }
-        if(strncmp(argv[ix], "-dp", 3) == 0) {
+        if(strcmp(argv[ix], "-dp") == 0) {
             cout << "Postscript Files will not be created." << endl;
             write_out_postscript_flag = false;
+            write_out_time_res_plot_flag = false;
+        }
+        if(strcmp(argv[ix], "-pto") == 0) {
+            cout << "Only time resolution plot will be created." << endl;
+            write_out_postscript_flag = false;
+            write_out_time_res_plot_flag = true;
         }
         if(strncmp(argv[ix], "-gf", 3) == 0) {
             usegausfit=1;
             cout << " Using Gauss Fit "  <<endl;
+        }
+        if(strcmp(argv[ix], "-rcal") == 0) {
+            read_per_crystal_correction = true;
+            input_crystal_cal_filename = string(argv[ix + 1]);
+        }
+        if(strcmp(argv[ix], "-wcal") == 0) {
+            write_per_crystal_correction = true;
+            output_crystal_cal_filename = string(argv[ix + 1]);
         }
         if(strncmp(argv[ix], "-f", 2) == 0) {
             if(strncmp(argv[ix], "-ft", 3) == 0) {
@@ -131,6 +168,7 @@ int main(int argc, Char_t *argv[])
     }
 
 
+
     TCanvas *c1(0);
     c1 = (TCanvas*)gROOT->GetListOfCanvases()->FindObject("c1");
     if (!c1) c1 = new TCanvas("c1","c1",10,10,1000,1000);
@@ -143,14 +181,11 @@ int main(int argc, Char_t *argv[])
     if (coarsetime) {
         DTF_low = -300;
         DTF_hi = 300;
-        FINELIMIT=400;
         cout << " Using Coarse limits: " << FINELIMIT << endl;
     } else {
         DTF_low = -50;
         DTF_hi = 50;
     }
-
-
 
     for (int panel = 0; panel < SYSTEM_PANELS; panel++) {
         for (int cartridge = 0; cartridge < CARTRIDGES_PER_PANEL; cartridge++) {
@@ -170,6 +205,12 @@ int main(int argc, Char_t *argv[])
         }
     }
 
+    if (filename == "") {
+        cerr << "Filename not specified" << endl;
+        cerr << "Exiting..." << endl;
+        usage();
+        return(-2);
+    }
     size_t root_file_ext_pos(filename.rfind(".root"));
     if (root_file_ext_pos == string::npos) {
         cerr << "Unable to find .root extension in: \"" << filename << "\"" << endl;
@@ -182,6 +223,26 @@ int main(int argc, Char_t *argv[])
     if (verbose) cout << " ROOTFILE = " << rootfile << endl;
 
 
+    if (verbose) {
+        cout << "Reading Input crystal calibration file\n";
+    }
+    float crystal_cal[SYSTEM_PANELS]
+            [CARTRIDGES_PER_PANEL]
+            [FINS_PER_CARTRIDGE]
+            [MODULES_PER_FIN]
+            [APDS_PER_MODULE]
+            [CRYSTALS_PER_APD] = {{{{{{0}}}}}};
+
+    if (read_per_crystal_correction) {
+        int cal_read_status(ReadPerCrystalCal(
+                input_crystal_cal_filename,crystal_cal));
+        if (cal_read_status < 0) {
+            cerr << "Error in reading input calibration file: "
+                 << cal_read_status << endl;
+            cerr << "Exiting.." << endl;
+            return(-2);
+        }
+    }
 
     cout << " Opening file " << filename << endl;
     TFile *rtfile = new TFile(filename.c_str(),"OPEN");
@@ -210,11 +271,11 @@ int main(int argc, Char_t *argv[])
 
     // Fill histograms for the left panel with their associated events
     int panel = 0;
-    for (Long64_t ii=0; ii < entries; ii++) {
+    for (Long64_t ii = 0; ii < entries; ii++) {
         mm->GetEntry(ii);
         if (BoundsCheckEvent(*evt) == 0) {
             if (EnergyGateEvent(*evt, energy_gate_low, energy_gate_high) == 0) {
-                if (TMath::Abs(evt->dtc) < 6) {
+                if (TMath::Abs(evt->dtc) < course_time_limit) {
                     if (TMath::Abs(evt->dtf) < FINELIMIT) {
                         checkevts++;
                         apdoffset[panel][evt->cartridge1][evt->fin1][evt->m1][evt->apd1]->Fill(evt->dtf);
@@ -273,7 +334,7 @@ int main(int argc, Char_t *argv[])
         mm->GetEntry(ii);
         if (BoundsCheckEvent(*evt) == 0) {
             if (EnergyGateEvent(*evt, energy_gate_low, energy_gate_high) == 0) {
-                if (TMath::Abs(evt->dtc) < 6) {
+                if (TMath::Abs(evt->dtc) < course_time_limit) {
                     if (TMath::Abs(evt->dtf) < FINELIMIT) {
                         checkevts++;
                         apdoffset[1][evt->cartridge2][evt->fin2][evt->m2][evt->apd2]->Fill(
@@ -317,6 +378,16 @@ int main(int argc, Char_t *argv[])
     if (write_out_postscript_flag) {
         string ps_filename_right_cartridge(filebase + ".panel1_cartridge0.ps");
         drawmod(apdoffset[1][0],c1,ps_filename_right_cartridge.c_str());
+    }
+
+
+    AddPerApdAsPerCrystalCal(crystal_cal, mean_apdoffset, crystal_cal);
+    if (write_per_crystal_correction) {
+        int write_status(WritePerCrystalCal(output_crystal_cal_filename,
+                                            crystal_cal));
+        if (write_status < 0) {
+            cerr << "Write out of crystal calibration failed." << endl;
+        }
     }
 
 
@@ -364,7 +435,7 @@ int main(int argc, Char_t *argv[])
 
     // Fit the fine timestamp histogram
     tres->Fit("gaus","","",-10,10);
-    if (write_out_postscript_flag) {
+    if (write_out_time_res_plot_flag) {
         // Then output the histogram with it's fit to a postscript file
         c1->Clear();
         tres->Draw();
