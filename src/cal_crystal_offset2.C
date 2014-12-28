@@ -123,12 +123,14 @@ int main(int argc, Char_t *argv[])
         if(strcmp(argv[ix], "-ft") == 0) {
             ix++;
             if (ix == argc) {
-                cout << " Please enter finelimit interval: -ft [finelimit]\nExiting. " << endl;
+                cout << " Please enter finelimit interval:"
+                     << " -ft [finelimit]\nExiting. " << endl;
                 return(-20);
             }
             FINELIMIT = atoi(argv[ix]);
             if (FINELIMIT < 1) {
-                cout << " Error. FINELIMIT = " << FINELIMIT << " too small. Please specify -ft [finelimit]. " << endl;
+                cout << " Error. FINELIMIT = " << FINELIMIT
+                     << " too small. Please specify -ft [finelimit]. " << endl;
                 cout << "Exiting." << endl; return -20;
             }
             cout << " Fine time interval = "  << FINELIMIT << endl;
@@ -154,7 +156,8 @@ int main(int argc, Char_t *argv[])
 
     size_t root_file_ext_pos(filename.rfind(".root"));
     if (root_file_ext_pos == string::npos) {
-        cerr << "Unable to find .root extension in: \"" << filename << "\"" << endl;
+        cerr << "Unable to find .root extension in: \""
+             << filename << "\"" << endl;
         cerr << "...Exiting." << endl;
         return(-1);
     }
@@ -194,7 +197,12 @@ int main(int argc, Char_t *argv[])
     mm->SetBranchAddress("Event",&evt);
 
 
-    TH1F *crystaloffset[SYSTEM_PANELS][CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][CRYSTALS_PER_APD];
+    TH1F *crystaloffset[SYSTEM_PANELS]
+            [CARTRIDGES_PER_PANEL]
+            [FINS_PER_CARTRIDGE]
+            [MODULES_PER_FIN]
+            [APDS_PER_MODULE]
+            [CRYSTALS_PER_APD];
 
 
     for (int panel = 0; panel < SYSTEM_PANELS; panel++) {
@@ -233,7 +241,8 @@ int main(int argc, Char_t *argv[])
                 if (TMath::Abs(evt->dtc ) < 6) {
                     if (TMath::Abs(evt->dtf ) < FINELIMIT) {
                         checkevts++;
-                        crystaloffset[0][evt->cartridge1][evt->fin1][evt->m1][evt->apd1][evt->crystal1]->Fill(evt->dtf);
+                        crystaloffset[0][evt->cartridge1][evt->fin1][evt->m1]
+                                [evt->apd1][evt->crystal1]->Fill(evt->dtf);
                     }
                 }
             }
@@ -244,7 +253,12 @@ int main(int argc, Char_t *argv[])
         cout << " Done looping over entries " << endl;
         cout << " I made " << checkevts << " calls to Fill() " << endl;         }
 
-    Float_t mean_crystaloffset[SYSTEM_PANELS][CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][CRYSTALS_PER_APD]={{{{{{0}}}}}};
+    float mean_crystaloffset[SYSTEM_PANELS]
+            [CARTRIDGES_PER_PANEL]
+            [FINS_PER_CARTRIDGE]
+            [MODULES_PER_FIN]
+            [APDS_PER_MODULE]
+            [CRYSTALS_PER_APD]={{{{{{0}}}}}};
 
     for (int cartridge = 0; cartridge < CARTRIDGES_PER_PANEL; cartridge++) {
         for (int fin = 0; fin < FINS_PER_CARTRIDGE; fin++) {
@@ -252,7 +266,8 @@ int main(int argc, Char_t *argv[])
                 for (int apd = 0; apd < APDS_PER_MODULE; apd++) {
                     for (int crystal = 0; crystal < CRYSTALS_PER_APD; crystal++) {
                         mean_crystaloffset[0][cartridge][fin][module][apd][crystal] =
-                            cryscalfunc(crystaloffset[0][cartridge][fin][module][apd][crystal], usegausfit,verbose);
+                            cryscalfunc(crystaloffset[0][cartridge][fin][module]
+                                        [apd][crystal], usegausfit,verbose);
                     }
                 }
             }
