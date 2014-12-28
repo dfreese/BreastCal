@@ -36,7 +36,9 @@ Float_t calfunc(
                 fitfun->SetParameter(2,90);
                 fitfun->SetParameter(4,100); 
                 hist->Fit(fitfun,"RQ");
-                return(fitfun->GetParameter(1)); 
+                float offset(fitfun->GetParameter(1));
+                delete fitfun;
+                return(offset);
             } else {
                 fitfun = fitgaus_peak(hist,1) ;
                 return(fitfun->GetParameter(1));
@@ -44,11 +46,12 @@ Float_t calfunc(
         }
     } 
     npeaks = s->Search(hist,3,"",0.2);
+    float offset(0);
     if (npeaks) {
-        return getmax(s, npeaks, verbose);
-    } else {
-        return(0);
+        offset = getmax(s, npeaks, verbose);
     }
+    delete s;
+    return(offset);
 }
 
 void usage() {
@@ -209,13 +212,13 @@ int main(int argc, Char_t *argv[])
         cerr << "Filename not specified" << endl;
         cerr << "Exiting..." << endl;
         usage();
-        return(-2);
+        return(-1);
     }
     size_t root_file_ext_pos(filename.rfind(".root"));
     if (root_file_ext_pos == string::npos) {
         cerr << "Unable to find .root extension in: \"" << filename << "\"" << endl;
         cerr << "...Exiting." << endl;
-        return(-1);
+        return(-2);
     }
     string filebase(filename, 0, root_file_ext_pos);
     if (verbose) cout << "filebase: " << filebase << endl;
@@ -240,7 +243,7 @@ int main(int argc, Char_t *argv[])
             cerr << "Error in reading input calibration file: "
                  << cal_read_status << endl;
             cerr << "Exiting.." << endl;
-            return(-2);
+            return(-3);
         }
     }
 
@@ -249,14 +252,18 @@ int main(int argc, Char_t *argv[])
     TTree *mm  = (TTree *) rtfile->Get("merged");
 
     if (!mm) {
-        if (verbose) cout << " Problem reading Tree merged "   << " from file " << filename << ". Trying tree mana." << endl;
+        if (verbose) {
+            cout << " Problem reading Tree \"merged\" from file \""
+                 << filename << "\". Trying tree mana." << endl;
+        }
         mm  = (TTree *) rtfile->Get("mana");
     }
 
     if (!mm) {
-        cout << " Problem reading Tree mana "   << " from file " << filename << endl;
+        cout << " Problem reading Tree \"mana\" from file \""
+             << filename << "\"." << endl;
         cout << " Exiting " << endl;
-        return -10;
+        return(-4);
     }
 
     CoincEvent *evt = new CoincEvent();
