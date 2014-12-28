@@ -90,6 +90,21 @@ int AddPerApdAsPerCrystalCal(
                  [APDS_PER_MODULE]
                  [CRYSTALS_PER_APD]);
 
+int AddPerCrystalLocationAsPerCrystalCal (
+        float augend[SYSTEM_PANELS]
+                    [CARTRIDGES_PER_PANEL]
+                    [FINS_PER_CARTRIDGE]
+                    [MODULES_PER_FIN]
+                    [APDS_PER_MODULE]
+                    [CRYSTALS_PER_APD],
+        float addend[CRYSTALS_PER_APD],
+        float sum[SYSTEM_PANELS]
+                 [CARTRIDGES_PER_PANEL]
+                 [FINS_PER_CARTRIDGE]
+                 [MODULES_PER_FIN]
+                 [APDS_PER_MODULE]
+                 [CRYSTALS_PER_APD]);
+
 int BoundsCheckEvent(const CoincEvent & event);
 int EnergyGateEvent(
         const CoincEvent & event,

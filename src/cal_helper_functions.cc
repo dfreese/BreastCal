@@ -452,6 +452,44 @@ int AddPerApdAsPerCrystalCal(
     return(0);
 }
 
+int AddPerCrystalLocationAsPerCrystalCal (
+        float augend[SYSTEM_PANELS]
+                    [CARTRIDGES_PER_PANEL]
+                    [FINS_PER_CARTRIDGE]
+                    [MODULES_PER_FIN]
+                    [APDS_PER_MODULE]
+                    [CRYSTALS_PER_APD],
+        float addend[CRYSTALS_PER_APD],
+        float sum[SYSTEM_PANELS]
+                 [CARTRIDGES_PER_PANEL]
+                 [FINS_PER_CARTRIDGE]
+                 [MODULES_PER_FIN]
+                 [APDS_PER_MODULE]
+                 [CRYSTALS_PER_APD])
+{
+    for (int panel = 0; panel < SYSTEM_PANELS; panel++) {
+        for (int cartridge = 0; cartridge < CARTRIDGES_PER_PANEL; cartridge++) {
+            for (int fin = 0; fin < FINS_PER_CARTRIDGE; fin++) {
+                for (int module = 0; module < MODULES_PER_FIN; module++) {
+                    for (int apd = 0; apd < APDS_PER_MODULE; apd++) {
+                        for (int crystal = 0;
+                                crystal < CRYSTALS_PER_APD;
+                                crystal++)
+                        {
+                            sum[panel][cartridge][fin][module][apd][crystal] =
+                                augend[panel][cartridge][fin]
+                                      [module][apd][crystal] +
+                                addend[crystal];
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return(0);
+}
+
+
 int BoundsCheckEvent(const CoincEvent & event) {
     if ((event.cartridge1 < 0) || (event.cartridge1 >= CARTRIDGES_PER_PANEL)) {
         return(-1);
