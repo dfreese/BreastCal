@@ -311,7 +311,7 @@ int main(int argc, Char_t *argv[])
                                                   verbose);
     }
 
-    string calpar_filename(filebase + "_calpar.txt");
+    string calpar_filename(filebase + ".calpar.txt");
     write_crystal_cal_val(mean_crystaloffset, calpar_filename);
 
 
@@ -365,8 +365,10 @@ int main(int argc, Char_t *argv[])
         if (BoundsCheckEvent(*evt) == 0) {
             calevt->dtf -= mean_crystaloffset[evt->crystal1];
             calevt->dtf += mean_crystaloffset[evt->crystal2];
-            if (EnergyGateEvent(*evt, energy_gate_low, energy_gate_high) == 0) {
-                tres->Fill(calevt->dtf);
+            if (write_out_time_res_plot_flag) {
+                if (EnergyGateEvent(*evt, energy_gate_low, energy_gate_high) == 0) {
+                    tres->Fill(calevt->dtf);
+                }
             }
         }
         if (write_out_root_file_flag) {
