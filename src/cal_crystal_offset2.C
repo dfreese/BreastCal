@@ -27,10 +27,10 @@ Float_t cryscalfunc(
         Int_t verbose)
 {
     if (gausfit) {
-        if ( hist->GetEntries() > 70 ) {     
+        if (hist->GetEntries() > 70) {
             TF1 * fitfun = fitgaus(hist,0);
             return(fitfun->GetParameter(1));
-        } else if ( hist->GetEntries() > 50 ) {
+        } else if (hist->GetEntries() > 50) {
                 return hist->GetMean();
         } else {
             return(0.0);
@@ -39,48 +39,39 @@ Float_t cryscalfunc(
         // just peak search 
         TSpectrum *s = new TSpectrum();
         Int_t npeaks = s->Search(hist,3,"",0.2);
+        float offset(0);
         if (npeaks) {
-            return getmax(s,npeaks,verbose);
-        } else {
-            return(0.0);
+            offset = getmax(s,npeaks,verbose);
         }
+        delete s;
+        return(offset);
     }
 }
 
 int main(int argc, Char_t *argv[])
-{ 
-    Int_t MOD1=6; // Has a flag in the input part, but is not used
-    Int_t MOD2=1; // Has a flag in the input part, but is not used
-    Int_t APD1=0; // Has a flag in the input part, but is not used
-    Int_t APD2=0; // Has a flag in the input part, but is not used
+{
     // A flag that is used by the crystal calibration function to determine
     // wether a fit algorithm or a peak searching algorithm should be used
     // in determining the calibration parameter for that crystal
     Bool_t usegausfit=0;
-    // A flag for whether course timestamp limits should be used. They are
-    // only used if a fine timestamp limit is not specified
-    Int_t coarsetime=1; 
-    Int_t crystalmean=0; // Has a flag in the input part, but is not used
-    Char_t histtitle[40];
 
-    // DTF high and low set the upper and lower limits of the histograms for
-    // each of the crystals.
-    Int_t DTF_low;
-    Int_t DTF_hi;
     // The fine timestamp limit does not eliminate any events from the root
     // file that is generated as a result of this program.  This sets the limit
     // for the fine timestamp difference that can be use
-    Int_t FINELIMIT;
-    Int_t DTFLIMIT; // Unused
-
-    cout << " Welcome to cal_crystal_ofset2 " << endl;
+    Int_t FINELIMIT(100);
 
     string filename;
+
+    bool read_per_crystal_correction(false);
+    bool write_per_crystal_correction(false);
+    string input_crystal_cal_filename;
+    string output_crystal_cal_filename;
+
     Int_t verbose = 0;
     // Parameter for determining if the fine time stamp histogram generated
     // after calibration should be plotted in a log scale or not.  Default
     // is to not use a log scale
-    Int_t logscale = 0; 
+    Int_t logscale = 0;
 
     // A flag that is true unless a -n option is found in which case only the
     // calibration parameters and the associated plots are generated, but the
@@ -89,70 +80,47 @@ int main(int argc, Char_t *argv[])
     // A flag that disables print outs of postscript files.  Default is on.
     // Flag is disabled by -dp.
     bool write_out_postscript_flag(true);
+    bool write_out_time_res_plot_flag(true);
 
+    float energy_gate_low(400);
+    float energy_gate_high(600);
 
     for(int ix = 1; ix < argc; ix++) {
-
-        /*
-         * Verbose '-v'
-         */
-        if(strncmp(argv[ix], "-v", 2) == 0) {
+        if(strcmp(argv[ix], "-v") == 0) {
             cout << "Verbose Mode " << endl;
             verbose = 1;
         }
-
         if(strncmp(argv[ix], "-n", 2) == 0) {
             cout << "Calibrated Root File will not be created." << endl;
             write_out_root_file_flag = false;
         }
-
-        if(strncmp(argv[ix], "-dp", 3) == 0) {
+        if(strcmp(argv[ix], "-dp") == 0) {
             cout << "Postscript Files will not be created." << endl;
             write_out_postscript_flag = false;
+            write_out_time_res_plot_flag = false;
         }
-
-        // Plot in log scale
-        if(strncmp(argv[ix], "-log", 4) == 0) {
+        if(strcmp(argv[ix], "-pto") == 0) {
+            cout << "Only time resolution plot will be created." << endl;
+            write_out_postscript_flag = false;
+            write_out_time_res_plot_flag = true;
+        }
+        if(strcmp(argv[ix], "-log") == 0) {
             cout << "Output Graph in Log Scale " << endl;
             logscale = 1;
         }
-
-        if(strncmp(argv[ix], "-apd1", 5) == 0) {
-            APD1 = atoi( argv[ix+1]);
-            cout << "APD1 =  " << APD1 <<endl;
-            ix++;
-        }
-
-        if(strncmp(argv[ix], "-apd2", 5) == 0) {
-            APD2 = atoi( argv[ix+1]);
-            cout << "APD2 =  " << APD2 <<endl;
-            ix++;
-        }
-
-        if(strncmp(argv[ix], "-mod1", 5) == 0) {
-            MOD1 = atoi( argv[ix+1]);
-            cout << "MOD1 =  " << MOD1 <<endl;
-            ix++;
-        }
-
-        if(strncmp(argv[ix], "-mod2", 5) == 0) {
-            MOD2 = atoi( argv[ix+1]);
-            cout << "MOD2 =  " << MOD2 <<endl;
-            ix++;
-        }
-
-        if(strncmp(argv[ix], "-cm", 3) == 0) {
-            crystalmean=1;
-            cout << "Crystal calibration "  <<endl;
-        }
-
-        if(strncmp(argv[ix], "-gf", 3) == 0) {
+        if(strcmp(argv[ix], "-gf") == 0) {
             usegausfit=1;
             cout << " Using Gauss Fit "  <<endl;
         }
-
-        if(strncmp(argv[ix], "-ft", 3) == 0) {
-            coarsetime=0;
+        if(strcmp(argv[ix], "-rcal") == 0) {
+            read_per_crystal_correction = true;
+            input_crystal_cal_filename = string(argv[ix + 1]);
+        }
+        if(strcmp(argv[ix], "-wcal") == 0) {
+            write_per_crystal_correction = true;
+            output_crystal_cal_filename = string(argv[ix + 1]);
+        }
+        if(strcmp(argv[ix], "-ft") == 0) {
             ix++;
             if (ix == argc) {
                 cout << " Please enter finelimit interval: -ft [finelimit]\nExiting. " << endl;
@@ -166,7 +134,7 @@ int main(int argc, Char_t *argv[])
             cout << " Fine time interval = "  << FINELIMIT << endl;
         }
         /* filename '-f' */
-        if(strncmp(argv[ix], "-f", 3) == 0) {
+        if(strcmp(argv[ix], "-f") == 0) {
             filename = string(argv[ix + 1]);
         }
     }
@@ -207,19 +175,6 @@ int main(int argc, Char_t *argv[])
 
     TH1F *crystaloffset[SYSTEM_PANELS][CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE][CRYSTALS_PER_APD];
 
-    if (coarsetime) {
-        DTF_low = -100;
-        DTF_hi = 100;
-        FINELIMIT=100;
-        DTFLIMIT=50;
-        cout << " Using Coarse limits: " << FINELIMIT << endl;
-    } else {
-        DTF_low = -FINELIMIT;
-        DTF_hi = FINELIMIT;
-        DTFLIMIT=5;
-    }
-
-
 
     for (int panel = 0; panel < SYSTEM_PANELS; panel++) {
         for (int cartridge = 0; cartridge < CARTRIDGES_PER_PANEL; cartridge++) {
@@ -227,10 +182,11 @@ int main(int argc, Char_t *argv[])
                 for (int module = 0; module < MODULES_PER_FIN; module++) {
                     for (int apd = 0; apd < APDS_PER_MODULE; apd++) {
                         for (int crystal = 0; crystal < CRYSTALS_PER_APD; crystal++) {
+                            Char_t histtitle[40];
                             sprintf(histtitle,"crystaloffset[%d][%d][%d][%d][%d][%d]",
                                     panel, cartridge, fin, module, apd, crystal);
                             crystaloffset[panel][cartridge][fin][module][apd][crystal] = 
-                                new TH1F(histtitle,histtitle,50,DTF_low,DTF_hi);
+                                new TH1F(histtitle,histtitle,50, -FINELIMIT, FINELIMIT);
                         }
                     }
                 }
@@ -251,12 +207,8 @@ int main(int argc, Char_t *argv[])
 
     for (Long64_t ii = 0; ii<entries; ii++) {
         mm->GetEntry(ii);
-        if (evt->fin1>FINS_PER_CARTRIDGE) continue;
-        if ((evt->crystal1<65) && 
-                ((evt->apd1==0) || (evt->apd1==1)) && 
-                (evt->m1<MODULES_PER_FIN))
-        {
-            if ((evt->E1>400) && (evt->E1<600)) {
+        if (BoundsCheckEvent(*evt) == 0) {
+            if (EnergyGateEvent(*evt, energy_gate_low, energy_gate_high) == 0) {
                 if (TMath::Abs(evt->dtc ) < 6 ) {
                     if (TMath::Abs(evt->dtf ) < FINELIMIT ) {
                         checkevts++;
@@ -265,7 +217,7 @@ int main(int argc, Char_t *argv[])
                 }
             }
         }
-    } // loop over entries
+    }
 
     if (verbose){
         cout << " Done looping over entries " << endl;
@@ -310,19 +262,13 @@ int main(int argc, Char_t *argv[])
 
     for (Long64_t ii = 0; ii < entries; ii++) {
         mm->GetEntry(ii);
-        if (evt->fin1>FINS_PER_CARTRIDGE) continue;
-        if (evt->fin2>FINS_PER_CARTRIDGE) continue;
-        if ((evt->crystal1<65)&&((evt->apd1==0)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
-            if ((evt->crystal2<65)&&((evt->apd2==0)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
-                if  ((evt->E2>400)&&(evt->E2<600)) {
-                    if  ((evt->E1>400)&&(evt->E1<600)) {
-                        if (TMath::Abs(evt->dtc ) < 6 ) {
-                            if (TMath::Abs(evt->dtf ) < FINELIMIT ) {
-                                checkevts++;
-                                crystaloffset[1][evt->cartridge2][evt->fin2][evt->m2][evt->apd2][evt->crystal2]->Fill(
-                                        evt->dtf - mean_crystaloffset[0][evt->cartridge1][evt->fin1][evt->m1][evt->apd1][evt->crystal1]);
-                            }
-                        }
+        if (BoundsCheckEvent(*evt) == 0) {
+            if (EnergyGateEvent(*evt, energy_gate_low, energy_gate_high) == 0) {
+                if (TMath::Abs(evt->dtc ) < 6) {
+                    if (TMath::Abs(evt->dtf) < FINELIMIT) {
+                        checkevts++;
+                        crystaloffset[1][evt->cartridge2][evt->fin2][evt->m2][evt->apd2][evt->crystal2]->Fill(
+                                evt->dtf - mean_crystaloffset[0][evt->cartridge1][evt->fin1][evt->m1][evt->apd1][evt->crystal1]);
                     }
                 }
             }
@@ -368,14 +314,11 @@ int main(int argc, Char_t *argv[])
         for (Long64_t ii=0; ii<entries; ii++) {
             mm->GetEntry(ii);
             calevt = evt;
-            if (evt->fin1>FINS_PER_CARTRIDGE) continue;
-            if (evt->fin2>FINS_PER_CARTRIDGE) continue;
-            if ((evt->crystal1<65)&&((evt->apd1==0)||(evt->apd1==1))&&(evt->m1<MODULES_PER_FIN)) {
-                if ((evt->crystal2<65)&&((evt->apd2==0)||(evt->apd2==1))&&(evt->m2<MODULES_PER_FIN)) {
-                    calevt->dtf -= mean_crystaloffset[0][evt->cartridge1][evt->fin1][evt->m1][evt->apd1][evt->crystal1];
-                    calevt->dtf -= mean_crystaloffset[1][evt->cartridge2][evt->fin2][evt->m2][evt->apd2][evt->crystal2]; 
-                    if (evt->E1>400&&evt->E1<600&&evt->E2>400&&evt->E2<600) {
-                        tres->Fill(calevt->dtf);}
+            if (BoundsCheckEvent(*evt) == 0) {
+                calevt->dtf -= mean_crystaloffset[0][evt->cartridge1][evt->fin1][evt->m1][evt->apd1][evt->crystal1];
+                calevt->dtf -= mean_crystaloffset[1][evt->cartridge2][evt->fin2][evt->m2][evt->apd2][evt->crystal2];
+                if (EnergyGateEvent(*evt, energy_gate_low, energy_gate_high) == 0) {
+                    tres->Fill(calevt->dtf);
                 }
             }
             merged->Fill();
@@ -396,7 +339,6 @@ int main(int argc, Char_t *argv[])
             }
             c1->Print(ps_tres_filename.c_str());
 
-            // below section added by David
             if (logscale == 1) {
                 c1->SetLogy();
                 string ps_tres_log_filename(filebase + ".tres_log.crysoffset.ps");
