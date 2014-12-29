@@ -481,7 +481,7 @@ int main(int argc, char *argv[])
                                                 [processed_event.module]
                                                 [processed_event.apd];
                                 (*vv_c[processed_event.cartridge][processed_event.fin])[processed_event.module*2+processed_event.apd] +=
-                                        (Float_t)(vh - (*uu_c[processed_event.cartridge][processed_event.fin])[processed_event.module*2+processed_event.apd]) /
+                                        (Float_t)(vh - (*vv_c[processed_event.cartridge][processed_event.fin])[processed_event.module*2+processed_event.apd]) /
                                         uventries[processed_event.cartridge]
                                                 [processed_event.fin]
                                                 [processed_event.module]
