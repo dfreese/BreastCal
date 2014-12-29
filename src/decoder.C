@@ -41,6 +41,8 @@ void usage(void)
     cout << " -uvt: UV circle centers threshold ( for pulser applications, NEGATIVE value ) " << endl;
     cout << " -pedfile [pedfilename] : pedestal file name " << endl;
     cout << " -p : calculate pedestals " << endl;
+    cout << " -up [panel_id]: calculate uv centers from pedestals (sine wave must be off)" << endl;
+    cout << " -uvo : calculate uv centers only" << endl;
     cout << " -o : optional outputfilename " <<endl;
     cout << " -cmap [DAQBOARD_FILE] : specify which DAQ BOARD nfo file to use rather than the default in $ANADIR/nfo" << endl;
     return;
@@ -73,7 +75,11 @@ int main(int argc, char *argv[])
     float pedestals[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][CHANNELS_PER_MODULE]= {{{{0}}}};
     bool calculate_pedestal_values_flag(false);
     bool calculate_uv_centers_flag(false);
+    bool calculate_uv_pedestals_flag(false);
+    int calculate_uv_panel_id(0);
     int uvthreshold = -1000;
+
+    bool calculate_uv_centers_only_flag(true);
 
     Int_t verbose = 0;
     string filename;
@@ -94,72 +100,77 @@ int main(int argc, char *argv[])
     bool cmapspec = false;
     string nfofile;
 
-    for (int ix=1; ix< argc; ix++) {
-        if (strncmp(argv[ix], "-v", 2) == 0) {
+    // Arguments not requiring input
+    for (int ix = 1; ix < argc; ix++) {
+        if (strcmp(argv[ix], "-v") == 0) {
             verbose = 1;
             cout << " Running verbose mode " << endl;
         }
-
-        if (strncmp(argv[ix], "-d", 2) == 0) {
+        if (strcmp(argv[ix], "-d") == 0) {
             debugmode = 1;
         }
-
-        if (strncmp(argv[ix], "-uv", 3) == 0) {
-            if (strncmp(argv[ix], "-uvt", 4) == 0) {
-                uvthreshold = atoi(argv[ix+1]);
-                ix++;
-            } else {
-                calculate_uv_centers_flag = true;
-            }
+        if (strcmp(argv[ix], "-uv") == 0) {
+            calculate_uv_centers_flag = true;
         }
-
-        if (strncmp(argv[ix], "-t", 2) == 0) {
+        if (strcmp(argv[ix], "-uvo") == 0) {
+            calculate_uv_centers_flag = true;
+            calculate_uv_centers_only_flag = true;
+        }
+        if (strcmp(argv[ix], "-t") == 0) {
             threshold = atoi(argv[ix+1]);
             ix++;
         }
-
-        if (strncmp(argv[ix], "-e", 2) == 0) {
-            no_events_exclude_beginning = atoi(argv[ix+1]);
-            ix++;
+        if (strcmp(argv[ix], "-p") == 0) {
+            calculate_pedestal_values_flag = true;
         }
-
-        if (strncmp(argv[ix], "-n", 2) == 0) {
+    }
+    // Arguments requiring input
+    for (int ix = 1; ix < (argc - 1); ix++) {
+        if (strcmp(argv[ix], "-uvt") == 0) {
+            uvthreshold = atoi(argv[ix + 1]);
+        }
+        if (strcmp(argv[ix], "-t") == 0) {
+            threshold = atoi(argv[ix + 1]);
+        }
+        if (strcmp(argv[ix], "-e") == 0) {
+            no_events_exclude_beginning = atoi(argv[ix + 1]);
+        }
+        if (strcmp(argv[ix], "-n") == 0) {
             nohit_threshold = atoi(argv[ix+1]);
-            ix++;
         }
-
-        if (strncmp(argv[ix], "-p", 2) == 0) {
-            if (strncmp(argv[ix], "-pedfile", 8) == 0) {
-                pedfilenamespec=1;
-                pedvaluefilename = string(argv[ix + 1]);
-                ix++;
-            } else if (strncmp(argv[ix],"-pos",4) == 0) {
-                sourcepos=atoi(argv[ix+1]);
-                ix++;
-            } else {
-                calculate_pedestal_values_flag = true;
-            }
+        if (strcmp(argv[ix], "-pedfile") == 0) {
+            pedfilenamespec = 1;
+            pedvaluefilename = string(argv[ix + 1]);
         }
-
-        if (strncmp(argv[ix], "-cmap", 5) == 0) {
+        if (strcmp(argv[ix], "-pos") == 0) {
+            sourcepos = atoi(argv[ix + 1]);
+        }
+        if (strcmp(argv[ix], "-cmap") == 0) {
             cmapspec = true;
-            nfofile = string(argv[ix+1]);
+            nfofile = string(argv[ix + 1]);
         }
-
-        if (strncmp(argv[ix], "-f", 2) == 0) {
-            filename = string(argv[ix+1]);
+        if (strcmp(argv[ix], "-f") == 0) {
+            filename = string(argv[ix + 1]);
             filenamespec = 1;
         }
-
-        if (strncmp(argv[ix], "-o", 2) == 0) {
+        if (strcmp(argv[ix], "-o") == 0) {
             outfileset = 1;
-            outfilename = string(argv[ix+1]);
-            pedfilename = string(argv[ix+1]) + ".ped";
+            outfilename = string(argv[ix + 1]);
+            pedfilename = string(argv[ix + 1]) + ".ped";
+        }
+        if (strcmp(argv[ix], "-up") == 0) {
+            calculate_uv_panel_id = atoi(argv[ix + 1]);
+            calculate_pedestal_values_flag = true;
+            calculate_uv_pedestals_flag = true;
         }
     }
 
     if (calculate_pedestal_values_flag) {
-        calculate_uv_centers_flag = 0;
+        calculate_uv_centers_flag = false;
+    }
+    if (!pedfilenamespec) {
+        calculate_uv_centers_flag = false;
+        calculate_uv_centers_only_flag = false;
     }
 
     if (!(filenamespec)) {
@@ -234,6 +245,10 @@ int main(int argc, char *argv[])
 
     TTree *mdata=0;
 
+    TVector *uu_c[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE];
+    TVector *vv_c[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE];
+    Long64_t uventries[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][2]={{{{0}}}};
+
     for (int c=0; c<CARTRIDGES_PER_PANEL; c++) {
         for (int f=0; f<FINS_PER_CARTRIDGE; f++) {
             uu_c[c][f] = new TVector(APDS_PER_MODULE*MODULES_PER_FIN);
@@ -242,7 +257,7 @@ int main(int argc, char *argv[])
     }
 
 
-    if (pedfilenamespec) {
+    if (pedfilenamespec || calculate_uv_pedestals_flag) {
         if (verbose) {
             cout << " Creating energy histograms " << endl;
         }
@@ -280,7 +295,7 @@ int main(int argc, char *argv[])
     }
 
     TFile * hfile;
-    if (pedfilenamespec || debugmode) {
+    if (pedfilenamespec || debugmode || calculate_uv_pedestals_flag) {
         hfile = new TFile(outfilename.c_str(),"RECREATE");
     }
 
@@ -334,6 +349,10 @@ int main(int argc, char *argv[])
     double pedestal_mean[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][CHANNELS_PER_MODULE]= {{{{0}}}};
     double pedestal_rms[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][CHANNELS_PER_MODULE]= {{{{0}}}};
     int pedestal_events[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]= {{{0}}};
+
+    double uv_pedestal_mean[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][4]= {{{{0}}}};
+    double uv_pedestal_rms[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][4]= {{{{0}}}};
+    int uv_pedestal_events[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]= {{{0}}};
 
     char cc;
     while (dataFile.get(cc)) {
@@ -426,6 +445,16 @@ int main(int argc, char *argv[])
                         pedana(mean[5], rms[5], pedestal_events[cartridge][chip][module], raw_events.at(ii).com1h );
                         pedana(mean[6], rms[6], pedestal_events[cartridge][chip][module], raw_events.at(ii).com2 );
                         pedana(mean[7], rms[7], pedestal_events[cartridge][chip][module], raw_events.at(ii).com2h );
+
+                        if (calculate_uv_pedestals_flag) {
+                            mean = uv_pedestal_mean[cartridge][chip][module];
+                            rms = uv_pedestal_rms[cartridge][chip][module];
+                            uv_pedestal_events[cartridge][chip][module]++;
+                            pedana(mean[0], rms[0], uv_pedestal_events[cartridge][chip][module], raw_events.at(ii).u1h);
+                            pedana(mean[1], rms[1], uv_pedestal_events[cartridge][chip][module], raw_events.at(ii).v1h);
+                            pedana(mean[2], rms[2], uv_pedestal_events[cartridge][chip][module], raw_events.at(ii).u2h);
+                            pedana(mean[3], rms[3], uv_pedestal_events[cartridge][chip][module], raw_events.at(ii).v2h);
+                        }
                     }
                 }
 
@@ -446,23 +475,24 @@ int main(int argc, char *argv[])
                     if (process_status == 0) {
                         // Add the event to the root tree
                         event = &processed_event;
-                        mdata->Fill();
 
-                        totaltriggers[raw_events.at(ii).cartridge]
-                                [raw_events.at(ii).chip]
-                                [raw_events.at(ii).module]
-                                [processed_event.apd]++;
+                        if (!calculate_uv_centers_only_flag) {
+                            mdata->Fill();
+                            totaltriggers[raw_events.at(ii).cartridge]
+                                    [raw_events.at(ii).chip]
+                                    [raw_events.at(ii).module]
+                                    [processed_event.apd]++;
 
-                        E[raw_events.at(ii).cartridge]
-                                [processed_event.fin]
-                                [processed_event.module]
-                                [processed_event.apd]->Fill(processed_event.E);
+                            E[raw_events.at(ii).cartridge]
+                                    [processed_event.fin]
+                                    [processed_event.module]
+                                    [processed_event.apd]->Fill(processed_event.E);
 
-                        E_com[raw_events.at(ii).cartridge]
-                                [processed_event.fin]
-                                [processed_event.module]
-                                [processed_event.apd]->Fill(-processed_event.Ec);
-
+                            E_com[raw_events.at(ii).cartridge]
+                                    [processed_event.fin]
+                                    [processed_event.module]
+                                    [processed_event.apd]->Fill(-processed_event.Ec);
+                        }
 
                         if (calculate_uv_centers_flag) {
                             if (processed_event.Ech < uvthreshold) {
@@ -526,10 +556,6 @@ int main(int argc, char *argv[])
 
     if (calculate_uv_centers_flag) {
         if (verbose) {
-            cout <<  " Averaging the circle Centers " << endl;
-        }
-
-        if (verbose) {
             for (int c=0; c<CARTRIDGES_PER_PANEL; c++) {
                 for (int f=0; f<FINS_PER_CARTRIDGE; f++) {
                     for (int i=0; i<MODULES_PER_FIN; i++) {
@@ -562,7 +588,7 @@ int main(int argc, char *argv[])
 
     // need to write histograms to disk ::
     // FIXME :: in principle we could fill histograms even without pedestal subtraction
-    if (pedfilenamespec) {
+    if (pedfilenamespec || calculate_uv_pedestals_flag) {
 
         Int_t totaldoubletriggers=0;
         Int_t totalbelowthreshold=0;
@@ -626,10 +652,36 @@ int main(int argc, char *argv[])
         mdata->Write();
     }
 
-    if (calculate_uv_centers_flag) {
+    if (calculate_uv_centers_flag || calculate_uv_pedestals_flag) {
         hfile->cd();
         TDirectory *timing =  hfile->mkdir("timing");
         timing->cd();
+        if (calculate_uv_pedestals_flag) {
+            for (int cartridge = 0;
+                 cartridge < CARTRIDGES_PER_PANEL;
+                 cartridge++)
+            {
+                for (int rena = 0; rena < RENAS_PER_CARTRIDGE; rena++) {
+                    for (int local_module = 0;
+                         local_module < MODULES_PER_RENA;
+                         local_module++)
+                    {
+                        short fin(0);
+                        short module(0);
+                        getfinmodule(calculate_uv_panel_id,
+                                     rena, local_module,
+                                     module, fin);
+                        double * mean(uv_pedestal_mean[cartridge]
+                                                      [rena]
+                                                      [local_module]);
+                        (*uu_c[cartridge][fin])[module*2+0] = mean[0];
+                        (*vv_c[cartridge][fin])[module*2+0] = mean[1];
+                        (*uu_c[cartridge][fin])[module*2+1] = mean[2];
+                        (*vv_c[cartridge][fin])[module*2+1] = mean[3];
+                    }
+                }
+            }
+        }
         // store uvcenters
         for (int c=0; c<CARTRIDGES_PER_PANEL; c++) {
             for (int f=0; f<FINS_PER_CARTRIDGE; f++) {
@@ -646,7 +698,7 @@ int main(int argc, char *argv[])
         hfile->cd();
         rawdata->Write();
     }
-    if (pedfilenamespec || debugmode) {
+    if (pedfilenamespec || debugmode || calculate_uv_pedestals_flag) {
         hfile->Close();
     }
 

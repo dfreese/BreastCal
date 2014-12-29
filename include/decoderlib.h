@@ -9,6 +9,13 @@ class ModuleDat;
 #include <string>
 #include "Syspardef.h"
 
+void getfinmodule(
+        short panel,
+        short chip,
+        short local_module,
+        short & module,
+        short & fin);
+
 int DecodePacketByteStream(const std::vector<char> & packet_byte_stream,
                            DaqPacket & packet_info);
 
