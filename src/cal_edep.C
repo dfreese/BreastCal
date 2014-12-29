@@ -14,33 +14,19 @@
 #include "decoder.h"
 #include "CoincEvent.h"
 #include "string.h"
-#define MINMODENTRIES 1000
+#include "cal_helper_functions.h"
 
-int main(int argc, Char_t *argv[])
-{ 
-    Int_t MOD1 = 6; // Unused
-    Int_t MOD2 = 1; // Unused
-    Int_t APD1 = 0; // Unused
-    Int_t APD2 = 0; // Unused
-    Int_t uvcal = 0; // Unused
-    Int_t energycal = 0; // Unused
-    Int_t coarsetime = 1;  // Not really used
-    Int_t crystalmean = 0; // Unused
-    Int_t energyspatial = 0; // Unused
+
+int main(int argc, Char_t *argv[]) {
     Int_t verbose = 0;
-    Int_t ascii = 0; // Unused
 
-    Int_t DTF_low; // Not really used
-    Int_t DTF_hi; // Not really used
     // The limit that is put on events before they are placed into histograms.
     // This does not effect what events are passed to the resulting root file.
-    Int_t FINELIMIT;
+    int dtf_difference_limit(40);
     // A flag to indicate that the common channel energy spectrum should be
     // used for the energy dependence calibration.  The default is to use the
     // spatial energy spectrum
-    Bool_t common = 0;
-    Int_t fin1 = 99; // Unused
-    Int_t fin2 = 99; // Unused
+    bool use_common_channel_energy_flag(false);
 
     // A flag that is true unless a -n option is found in which case only the
     // calibration parameters and the associated plots are generated, but the
@@ -49,106 +35,61 @@ int main(int argc, Char_t *argv[])
     // A flag that disables print outs of postscript files.  Default is on.
     // Flag is disabled by -dp.
     bool write_out_postscript_flag(true);
+    bool write_out_time_res_plot_flag(true);
+
+    float energy_gate_low(400);
+    float energy_gate_high(600);
 
 
-    cout << " Welcome to cal_edep " << endl;
+    bool read_per_crystal_correction(false);
+    string input_crystal_cal_filename;
 
     string filename;
 
-    for(int ix = 1; ix < argc; ix++) {
-        if(strncmp(argv[ix], "-v", 2) == 0) {
+    // Flags not requiring input
+    for (int ix = 1; ix < argc; ix++) {
+        if (strncmp(argv[ix], "-v", 2) == 0) {
             cout << "Verbose Mode " << endl;
             verbose = 1;
         }
-
-        if(strncmp(argv[ix], "-n", 2) == 0) {
+        if (strncmp(argv[ix], "-n", 2) == 0) {
             cout << "Calibrated Root File will not be created." << endl;
             write_out_root_file_flag = false;
         }
-
-        if(strncmp(argv[ix], "-dp", 3) == 0) {
+        if(strcmp(argv[ix], "-dp") == 0) {
             cout << "Postscript Files will not be created." << endl;
             write_out_postscript_flag = false;
+            write_out_time_res_plot_flag = false;
         }
-
-        if((strncmp(argv[ix], "-a", 2) == 0)&& (strncmp(argv[ix], "-apd",4) != 0 )) {
-            cout << "Ascii output file generated" << endl;
-            ascii = 1;
+        if(strcmp(argv[ix], "-pto") == 0) {
+            cout << "Only time resolution plot will be created." << endl;
+            write_out_postscript_flag = false;
+            write_out_time_res_plot_flag = true;
         }
-
-        if(strncmp(argv[ix],"-c",2) ==0 ) { 
+        if(strcmp(argv[ix], "-c") ==0 ) {
             cout << " Using common for energy dependence " << endl ;
-            common = 1;
+            use_common_channel_energy_flag = true;
         }
+    }
 
-        if(strncmp(argv[ix], "-apd1", 5) == 0) {
-            APD1 = atoi( argv[ix+1]);
-            cout << "APD1 =  " << APD1 <<endl;
-            ix++;
+    // Flags requiring input
+    for (int ix = 1; ix < (argc - 1); ix++) {
+        if(strcmp(argv[ix], "-rcal") == 0) {
+            read_per_crystal_correction = true;
+            input_crystal_cal_filename = string(argv[ix + 1]);
         }
-
-        if(strncmp(argv[ix], "-apd2", 5) == 0) {
-            APD2 = atoi( argv[ix+1]);
-            cout << "APD2 =  " << APD2 <<endl;
-            ix++;
+        if(strcmp(argv[ix], "-f") == 0) {
+            filename = string(argv[ix + 1]);
         }
-
-        if(strncmp(argv[ix], "-mod1", 5) == 0) {
-            MOD1 = atoi( argv[ix+1]);
-            cout << "MOD1 =  " << MOD1 <<endl;
-            ix++;
-        }
-
-        if(strncmp(argv[ix], "-mod2", 5) == 0) {
-            MOD2 = atoi( argv[ix+1]);
-            cout << "MOD2 =  " << MOD2 <<endl;
-            ix++;
-        }
-
-        if(strncmp(argv[ix], "-cm", 3) == 0) {
-            crystalmean = 1;
-            cout << "Crystal calibration "  <<endl;
-        }
-
-        if(strncmp(argv[ix], "-uv", 3) == 0) {
-            uvcal = 1;
-            cout << " UV calibration "  <<endl;
-        }
-
-        if(strncmp(argv[ix], "-ec", 3) == 0) {
-            energycal=1;
-            cout << " Energy calibration "  <<endl;
-        }
-
-        if(strncmp(argv[ix], "-esp", 4) == 0) {
-            energyspatial = 1;
-            cout << " Using spatials for energy calibration "  <<endl;
-        }
-
-        if(strncmp(argv[ix], "-f", 2) == 0) {
-            if(strncmp(argv[ix], "-ft", 3) == 0) {
-                coarsetime = 0;
-                ix++;
-                if (ix == argc) {
-                    cout << " Please enter finelimit interval: -ft [finelimit]\nExiting. " << endl;
-                    return(-20);
-                }
-                FINELIMIT = atoi(argv[ix]);
-                if (FINELIMIT < 1) {
-                    cout << " Error. FINELIMIT = " << FINELIMIT << " too small. Please specify -ft [finelimit]. " << endl;
-                    cout << "Exiting." << endl;
-                    return(-20);
-                }
-                cout << " Fine time interval = "  << FINELIMIT << endl;
-            } else if(strncmp(argv[ix], "-f1", 3) == 0) {
-                fin1=atoi ( argv[ix+1]); ix++;
-                cout << " Fin 1 :: "  <<fin1<< endl;
-            } else if(strncmp(argv[ix], "-f1", 3) == 0) {
-                fin2=atoi ( argv[ix+1]) ; ix++;
-                cout << " Fin 2 :: " << fin2 <<endl;
-            } else {
-                filename = string(argv[ix + 1]);
+        if(strcmp(argv[ix], "-ft") == 0) {
+            dtf_difference_limit = atoi(argv[ix + 1]);
+            if (dtf_difference_limit < 1) {
+                cout << " Error. FINELIMIT = " << dtf_difference_limit
+                     << " too small. Please specify -ft [finelimit]. " << endl;
+                cout << "Exiting." << endl;
+                return(-20);
             }
+            cout << " Fine time interval = "  << dtf_difference_limit << endl;
         }
     }
     rootlogon(verbose);
@@ -174,28 +115,42 @@ int main(int argc, Char_t *argv[])
     if (verbose) cout << "ROOTFILE = " << rootfile << endl;
 
 
+    if (verbose) {
+        cout << "Reading input crystal calibration file\n";
+    }
+    float crystal_cal[SYSTEM_PANELS]
+            [CARTRIDGES_PER_PANEL]
+            [FINS_PER_CARTRIDGE]
+            [MODULES_PER_FIN]
+            [APDS_PER_MODULE]
+            [CRYSTALS_PER_APD] = {{{{{{0}}}}}};
+
+    if (read_per_crystal_correction) {
+        int cal_read_status(ReadPerCrystalCal(
+                input_crystal_cal_filename,crystal_cal));
+        if (cal_read_status < 0) {
+            cerr << "Error in reading input calibration file: "
+                 << cal_read_status << endl;
+            cerr << "Exiting.." << endl;
+            return(-3);
+        }
+    }
+    if (verbose) {
+        cout << "Finished reading input crystal calibration file\n";
+    }
+
+
     cout << " Opening file " << filename << endl;
     TFile *rtfile = new TFile(filename.c_str(),"OPEN");
     TTree *mm  = (TTree *) rtfile->Get("merged");
     CoincEvent * evt = new CoincEvent();     
     mm->SetBranchAddress("Event",&evt);
 
-    coarsetime = 0;
-    if (coarsetime) {
-        DTF_low = -300;
-        DTF_hi = 300;
-        FINELIMIT = 300;
-        cout << " Using Coarse limits: " << FINELIMIT << endl;
-    } else {
-        DTF_low = -FINELIMIT/2;
-        DTF_hi = FINELIMIT/2;
-    }
-
     TH2F *energydependence[2][CARTRIDGES_PER_PANEL];
-    energydependence[0][0] = new TH2F("energydependence[0][0]","Edep Panel 0 C0",100,400,600,100,-50,50);
-    energydependence[0][1] = new TH2F("energydependence[0][1]","Edep Panel 0 C1",100,400,600,100,-50,50);
-    energydependence[1][0] = new TH2F("energydependence[1][0]","Edep Panel 1 C0",100,400,600,100,-50,50);
-    energydependence[1][1] = new TH2F("energydependence[1][1]","Edep Panel 1 C1",100,400,600,100,-50,50);
+    energydependence[0][0] = new TH2F("energydependence[0][0]","Edep Panel 0 C0",100,energy_gate_low,energy_gate_high,100,-50,50);
+    energydependence[0][1] = new TH2F("energydependence[0][1]","Edep Panel 0 C1",100,energy_gate_low,energy_gate_high,100,-50,50);
+    energydependence[1][0] = new TH2F("energydependence[1][0]","Edep Panel 1 C0",100,energy_gate_low,energy_gate_high,100,-50,50);
+    energydependence[1][1] = new TH2F("energydependence[1][1]","Edep Panel 1 C1",100,energy_gate_low,energy_gate_high,100,-50,50);
 
     Long64_t entries = mm->GetEntries();
     cout << " Total  entries: " << entries << endl; 
@@ -208,21 +163,18 @@ int main(int argc, Char_t *argv[])
     Long64_t checkevts = 0;
     for (Long64_t ii = 0; ii < entries; ii++) {
         mm->GetEntry(ii);
-        if (evt->cartridge1 > CARTRIDGES_PER_PANEL) continue;
-        if (evt->fin1 > FINS_PER_CARTRIDGE) continue;
-        if ((evt->crystal1 < 65) &&
-                ((evt->apd1 == 0) || (evt->apd1 == 1)) &&
-                (evt->m1 < MODULES_PER_FIN))
-        {
-            if ((evt->E1 > 400) && (evt->E1 < 600)) {
+        if (BoundsCheckEvent(*evt) == 0) {
+            if (EnergyGateEvent(*evt, energy_gate_low, energy_gate_high) == 0) {
                 if (TMath::Abs(evt->dtc) < 6) {
-                    if (TMath::Abs(evt->dtf ) < FINELIMIT ) {
+                    if (TMath::Abs(evt->dtf ) < dtf_difference_limit ) {
                         checkevts++;
-                        if (common) {
-                            energydependence[0][evt->cartridge1]->Fill(evt->Ec1,evt->dtf);
-                        } else {
-                            energydependence[0][evt->cartridge2]->Fill(evt->E1,evt->dtf);
+                        float energy(evt->E1);
+                        if (use_common_channel_energy_flag) {
+                            energy = evt->Ec1;
                         }
+                        energydependence[0][evt->cartridge1]->Fill(
+                                    energy,
+                                    evt->dtf - GetEventOffset(*evt, crystal_cal));
                     }
                 }
             }
@@ -274,7 +226,6 @@ int main(int argc, Char_t *argv[])
         profehist[0][1]->Draw();
         ps_left_filename = filebase + ".edep_panel0C1.ps";
         c1->Print(ps_left_filename.c_str());
-
     }
 
 
@@ -284,33 +235,20 @@ int main(int argc, Char_t *argv[])
     checkevts = 0;
     for (Long64_t ii = 0; ii < entries; ii++) {
         mm->GetEntry(ii);
-        if (evt->cartridge1 > CARTRIDGES_PER_PANEL) continue;
-        if (evt->cartridge2 > CARTRIDGES_PER_PANEL) continue;
-        if (evt->fin1 > FINS_PER_CARTRIDGE) continue;
-        if (evt->fin2 > FINS_PER_CARTRIDGE) continue;
-        if ((evt->crystal1 < 65) &&
-                ((evt->apd1 == 0) || (evt->apd1 == 1)) &&
-                (evt->m1 < MODULES_PER_FIN))
-        {
-            if ((evt->crystal2 < 65) &&
-                    ((evt->apd2 == 0) || (evt->apd2 == 1)) &&
-                    (evt->m2 < MODULES_PER_FIN))
-            {
-                if  ((evt->E2 > 400) && (evt->E2 < 600)) {
-                    if  ((evt->E1 > 400) && (evt->E1 < 600)) {
-                        if (TMath::Abs(evt->dtc ) < 6) {
-                            if (TMath::Abs(evt->dtf) < FINELIMIT) {
-                                checkevts++;
-				if (common) 
-				  {
-				    energydependence[1][evt->cartridge2]->Fill(evt->Ec2,evt->dtf-profehistfit[0][evt->cartridge1]->Eval(evt->Ec1));
-				  }
-				else
-				  {
-				    energydependence[1][evt->cartridge2]->Fill(evt->E2,evt->dtf-profehistfit[0][evt->cartridge1]->Eval(evt->E1));
-				  }
-                            }
+        if (BoundsCheckEvent(*evt) == 0) {
+            if (EnergyGateEvent(*evt, energy_gate_low, energy_gate_high) == 0) {
+                if (TMath::Abs(evt->dtc ) < 6) {
+                    if (TMath::Abs(evt->dtf) < dtf_difference_limit) {
+                        checkevts++;
+                        float energy(evt->E2);
+                        if (use_common_channel_energy_flag) {
+                            energy = evt->Ec2;
                         }
+                        energydependence[1][evt->cartridge2]->Fill(
+                                    evt->Ec2,
+                                    evt->dtf
+                                    - profehistfit[0][evt->cartridge1]->Eval(energy)
+                                    - GetEventOffset(*evt, crystal_cal));
                     }
                 }
             }
@@ -355,73 +293,70 @@ int main(int argc, Char_t *argv[])
 
     }
 
-
+    TH1F * tres(0);
+    if (write_out_time_res_plot_flag) {
+        tres = new TH1F("tres","Time Resolution After Time walk correction",100,-25,25);
+    }
+    if (verbose) {
+        cout << " Opening file " << rootfile << " for writing " << endl;
+    }
+    CoincEvent * calevt = new CoincEvent();
+    TFile *calfile(0);
+    TTree *merged(0);
     if (write_out_root_file_flag) {
-        TH1F *tres = new TH1F("tres","Time Resolution After Time walk correction",100,-25,25);
-
-        if (verbose) {
-            cout << " Opening file " << rootfile << " for writing " << endl;
-        }
-        TFile *calfile = new TFile(rootfile.c_str(),"RECREATE");
-        TTree *merged = new  TTree("merged","Merged and Calibrated LYSO-PSAPD data ");
-
-        CoincEvent * calevt = new CoincEvent();     
+        calfile = new TFile(rootfile.c_str(),"RECREATE");
+        merged = new  TTree("merged","Merged and Calibrated LYSO-PSAPD data ");
         merged->Branch("Event",&calevt);
+    }
 
-        if (verbose) {
-            cout << "filling new Tree :: " << endl;
-        }
-        checkevts = 0;
-        for (Long64_t ii = 0; ii < entries; ii++) {
-            mm->GetEntry(ii);
+    if (verbose) {
+        cout << "filling new Tree :: " << endl;
+    }
+    checkevts = 0;
+    for (Long64_t ii = 0; ii < entries; ii++) {
+        mm->GetEntry(ii);
+        if (BoundsCheckEvent(*evt) == 0) {
             calevt=evt;
-            if (evt->cartridge1 > CARTRIDGES_PER_PANEL) continue;
-            if (evt->cartridge2 > CARTRIDGES_PER_PANEL) continue;
-            if (evt->fin1 > FINS_PER_CARTRIDGE) continue;
-            if (evt->fin2 > FINS_PER_CARTRIDGE) continue;
-            if ((evt->crystal1<65) && 
-                    ((evt->apd1 == 0) || (evt->apd1 == 1)) && 
-                    (evt->m1<MODULES_PER_FIN))
-            {
-                if ((evt->crystal2<65) &&
-                        ((evt->apd2 == 0) || (evt->apd2 == 1)) &&
-                        (evt->m2 < MODULES_PER_FIN))
-                {
-                    if (common) {
-                        calevt->dtf -= profehistfit[0][evt->cartridge1]->Eval(evt->Ec1);
-                        calevt->dtf -= profehistfit[1][evt->cartridge2]->Eval(evt->Ec2);
-                    } else {
-                        calevt->dtf -= profehistfit[0][evt->cartridge1]->Eval(evt->E1);
-                        calevt->dtf -= profehistfit[1][evt->cartridge2]->Eval(evt->E2);
-                    }
-                    if  ((evt->E2 > 400) && (evt->E2 < 600)) {
-                        if  ((evt->E1 > 400) && (evt->E1 < 600)) {
-                            tres->Fill(calevt->dtf); 
-                        }
-                    }
+            float energy_panel1(evt->E1);
+            float energy_panel2(evt->E2);
+            if (use_common_channel_energy_flag) {
+                energy_panel1 = evt->Ec1;
+                energy_panel2 = evt->Ec2;
+            }
+            calevt->dtf -= profehistfit[0][evt->cartridge1]->Eval(energy_panel1);
+            calevt->dtf -= profehistfit[1][evt->cartridge2]->Eval(energy_panel2);
+            calevt->dtf -= GetEventOffset(*calevt, crystal_cal);
+
+            if (write_out_time_res_plot_flag) {
+                if (EnergyGateEvent(*evt, energy_gate_low, energy_gate_high) == 0) {
+                    tres->Fill(calevt->dtf);
                 }
             }
-            checkevts++;
+        }
+        checkevts++;
+        if (write_out_root_file_flag) {
             merged->Fill();
         }
+    }
+    if (write_out_root_file_flag) {
         merged->Write();
         calfile->Close();
+    }
+
+    if (verbose) {
+        cout << " Done looping over entries " << endl;
+        cout << " I made " << checkevts << " calls to Fill() " << endl;
+    }
+
+    if (write_out_time_res_plot_flag) {
+        tres->Fit("gaus","","",-10,10);
+        c1->Clear();
+        tres->Draw();
+        string ps_tres_filename(filename + ".edepcal.tres.ps");
+        c1->Print(ps_tres_filename.c_str());
 
         if (verbose) {
-            cout << " Done looping over entries " << endl;
-            cout << " I made " << checkevts << " calls to Fill() " << endl;
-        }
-        tres->Fit("gaus","","",-10,10);
-
-        if (write_out_postscript_flag) {
-            c1->Clear();
-            tres->Draw();
-            string ps_tres_filename(filebase + ".edep_panel1.ps");
-            c1->Print(ps_tres_filename.c_str());
-
-            if (verbose) {
-                cout << tres->GetEntries() << " Entries in tres." << endl;
-            }
+            cout << tres->GetEntries() << " Entries in tres." << endl;
         }
     }
 

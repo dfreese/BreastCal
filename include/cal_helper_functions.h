@@ -110,3 +110,12 @@ int EnergyGateEvent(
         const CoincEvent & event,
         float energy_low,
         float energy_high);
+
+float GetEventOffset(
+        const CoincEvent & event,
+        float crystal_cal[SYSTEM_PANELS]
+                         [CARTRIDGES_PER_PANEL]
+                         [FINS_PER_CARTRIDGE]
+                         [MODULES_PER_FIN]
+                         [APDS_PER_MODULE]
+                         [CRYSTALS_PER_APD]);

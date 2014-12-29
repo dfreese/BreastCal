@@ -476,10 +476,19 @@ int AddPerCrystalLocationAsPerCrystalCal (
                                 crystal < CRYSTALS_PER_APD;
                                 crystal++)
                         {
+                            // The offsets for crystals on panel 1 need to be
+                            // negated because values are calculated for
+                            // dtf = p1-p2;
+                            float crystal_offset(0);
+                            if (panel == 0) {
+                                crystal_offset = addend[crystal];
+                            } else if (panel == 1) {
+                                crystal_offset = -addend[crystal];
+                            }
                             sum[panel][cartridge][fin][module][apd][crystal] =
                                 augend[panel][cartridge][fin]
                                       [module][apd][crystal] +
-                                addend[crystal];
+                                crystal_offset;
                         }
                     }
                 }
@@ -527,6 +536,26 @@ int EnergyGateEvent(
         return(-2);
     } else {
         return(0);
+    }
+}
+
+float GetEventOffset(
+        const CoincEvent & event,
+        float crystal_cal[SYSTEM_PANELS]
+                         [CARTRIDGES_PER_PANEL]
+                         [FINS_PER_CARTRIDGE]
+                         [MODULES_PER_FIN]
+                         [APDS_PER_MODULE]
+                         [CRYSTALS_PER_APD])
+{
+    if (BoundsCheckEvent(event) < 0) {
+        return(0);
+    } else {
+        float offset(crystal_cal[0][event.cartridge1][event.fin1]
+                                [event.m1][event.apd1][event.crystal1]
+                     + crystal_cal[1][event.cartridge2][event.fin2]
+                                  [event.m2][event.apd2][event.crystal2]);
+        return(offset);
     }
 }
 
