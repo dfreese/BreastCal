@@ -290,8 +290,12 @@ int main(int argc, Char_t *argv[])
                 if (TMath::Abs(evt->dtc ) < 6 ) {
                     if (TMath::Abs(evt->dtf ) < dtf_difference_limit ) {
                         checkevts++;
-                        crystaloffset[evt->crystal1]->Fill(evt->dtf);
-                        crystaloffset[evt->crystal2]->Fill(0 - evt->dtf);
+                        crystaloffset[evt->crystal1]->Fill(
+                                    evt->dtf
+                                    - GetEventOffset(*evt, crystal_cal));
+                        crystaloffset[evt->crystal2]->Fill(
+                                    0 - (evt->dtf
+                                         - GetEventOffset(*evt, crystal_cal)));
                     }
                 }
             }
@@ -365,6 +369,7 @@ int main(int argc, Char_t *argv[])
         if (BoundsCheckEvent(*evt) == 0) {
             calevt->dtf -= mean_crystaloffset[evt->crystal1];
             calevt->dtf += mean_crystaloffset[evt->crystal2];
+            calevt->dtf -= GetEventOffset(*evt, crystal_cal);
             if (write_out_time_res_plot_flag) {
                 if (EnergyGateEvent(*evt, energy_gate_low, energy_gate_high) == 0) {
                     tres->Fill(calevt->dtf);

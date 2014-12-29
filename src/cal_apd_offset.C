@@ -28,7 +28,7 @@ Float_t calfunc(
     Int_t npeaks;
     TSpectrum *s = new TSpectrum();
     if (gausfit) {
-        if ( hist->GetEntries() > MINMODENTRIES ) {
+        if (hist->GetEntries() > MINMODENTRIES) {
             if (coarsetime) { 
                 fitfun = new TF1("fitfun", "gaus+pol0",-75,75);
                 fitfun->SetParameter(0,200);
@@ -285,7 +285,9 @@ int main(int argc, Char_t *argv[])
                 if (TMath::Abs(evt->dtc) < course_time_limit) {
                     if (TMath::Abs(evt->dtf) < FINELIMIT) {
                         checkevts++;
-                        apdoffset[panel][evt->cartridge1][evt->fin1][evt->m1][evt->apd1]->Fill(evt->dtf);
+                        apdoffset[panel][evt->cartridge1][evt->fin1]
+                                [evt->m1][evt->apd1]->Fill(
+                                    evt->dtf - GetEventOffset(*evt, crystal_cal));
                     }
                 }
             }
@@ -345,7 +347,8 @@ int main(int argc, Char_t *argv[])
                     if (TMath::Abs(evt->dtf) < FINELIMIT) {
                         checkevts++;
                         apdoffset[1][evt->cartridge2][evt->fin2][evt->m2][evt->apd2]->Fill(
-                                evt->dtf - mean_apdoffset[0][evt->cartridge1][evt->fin1][evt->m1][evt->apd1]);
+                                evt->dtf - GetEventOffset(*evt, crystal_cal)
+                                - mean_apdoffset[0][evt->cartridge1][evt->fin1][evt->m1][evt->apd1]);
                     }
                 }
             }
@@ -422,6 +425,7 @@ int main(int argc, Char_t *argv[])
             calevt = evt;
             calevt->dtf -= mean_apdoffset[0][evt->cartridge1][evt->fin1][evt->m1][evt->apd1];
             calevt->dtf -= mean_apdoffset[1][evt->cartridge2][evt->fin2][evt->m2][evt->apd2]; 
+            calevt->dtf -= GetEventOffset(*evt, crystal_cal);
             // Energy gate to put only the photopeaks in the fine time
             // stamp histogram for the time calibration calculation
             if (EnergyGateEvent(*evt, energy_gate_low, energy_gate_high) == 0) {

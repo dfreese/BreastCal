@@ -242,7 +242,9 @@ int main(int argc, Char_t *argv[])
                     if (TMath::Abs(evt->dtf ) < FINELIMIT) {
                         checkevts++;
                         crystaloffset[0][evt->cartridge1][evt->fin1][evt->m1]
-                                [evt->apd1][evt->crystal1]->Fill(evt->dtf);
+                                [evt->apd1][evt->crystal1]->Fill(
+                                    evt->dtf
+                                    - GetEventOffset(*evt, crystal_cal));
                     }
                 }
             }
@@ -304,7 +306,10 @@ int main(int argc, Char_t *argv[])
                     if (TMath::Abs(evt->dtf) < FINELIMIT) {
                         checkevts++;
                         crystaloffset[1][evt->cartridge2][evt->fin2][evt->m2][evt->apd2][evt->crystal2]->Fill(
-                                evt->dtf - mean_crystaloffset[0][evt->cartridge1][evt->fin1][evt->m1][evt->apd1][evt->crystal1]);
+                                evt->dtf - GetEventOffset(*evt, crystal_cal)
+                                - mean_crystaloffset[0][evt->cartridge1]
+                                                    [evt->fin1][evt->m1]
+                                                    [evt->apd1][evt->crystal1]);
                     }
                 }
             }
@@ -371,6 +376,7 @@ int main(int argc, Char_t *argv[])
         if (BoundsCheckEvent(*evt) == 0) {
             calevt->dtf -= mean_crystaloffset[0][evt->cartridge1][evt->fin1][evt->m1][evt->apd1][evt->crystal1];
             calevt->dtf -= mean_crystaloffset[1][evt->cartridge2][evt->fin2][evt->m2][evt->apd2][evt->crystal2];
+            calevt->dtf -= GetEventOffset(*evt, crystal_cal);
             if (EnergyGateEvent(*evt, energy_gate_low, energy_gate_high) == 0) {
                 if (write_out_time_res_plot_flag) {
                     tres->Fill(calevt->dtf);
