@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
     int calculate_uv_panel_id(0);
     int uvthreshold = -1000;
 
-    bool calculate_uv_centers_only_flag(true);
+    bool calculate_uv_centers_only_flag(false);
 
     Int_t verbose = 0;
     string filename;
@@ -476,13 +476,15 @@ int main(int argc, char *argv[])
                         // Add the event to the root tree
                         event = &processed_event;
 
+                        totaltriggers[raw_events.at(ii).cartridge]
+                                [raw_events.at(ii).chip]
+                                [raw_events.at(ii).module]
+                                [processed_event.apd]++;
+
+                        // If we're just calculating the uv centers, then skip
+                        // over the fill commands.
                         if (!calculate_uv_centers_only_flag) {
                             mdata->Fill();
-                            totaltriggers[raw_events.at(ii).cartridge]
-                                    [raw_events.at(ii).chip]
-                                    [raw_events.at(ii).module]
-                                    [processed_event.apd]++;
-
                             E[raw_events.at(ii).cartridge]
                                     [processed_event.fin]
                                     [processed_event.module]
