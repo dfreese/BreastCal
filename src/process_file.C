@@ -30,7 +30,8 @@ void usage(void)
          << " -eh: Set Upper Energy Window - enables energy gating\n"
          << "      Default is 650keV\n"
          << " -el: Set Lower Energy Window - enables energy gating\n"
-         << "      Default is 450keV\n";
+         << "      Default is 450keV\n"
+         << " -uv: Read the uv centers from the calibration file\n";
     return;
 }
 
@@ -50,7 +51,7 @@ double FineCalc(double uv, float u_cent, float v_cent) {
     if (tmp < 0.0) {
         tmp+=2*3.141592;
     }
-    return tmp;///(2*3.141592*CIRCLEFREQUENCY);
+    return tmp;
 }
 
 
@@ -100,6 +101,7 @@ int main(int argc, Char_t *argv[])
     float energy_gate_low(450);
     bool energy_gate_output(false);
     bool sort_output(false);
+    bool read_uv_from_calibration_file(false);
 
 
     for(int ix = 1; ix < argc; ix++) {
@@ -154,6 +156,9 @@ int main(int argc, Char_t *argv[])
             ss >> energy_gate_low;
             ix++;
             energy_gate_output = true;
+        }
+        if (strcmp(argv[ix], "-uv") == 0) {
+            read_uv_from_calibration_file = true;
         }
     }
 
@@ -266,11 +271,24 @@ int main(int argc, Char_t *argv[])
     if (verbose) {
         cout << "Reading UV Centers from file" << endl;
     }
+
     TVector *uu_c[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE];
     TVector *vv_c[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE];
-    if (ReadUVCenters(input_file, uu_c, vv_c) < 0) {
-        cerr << "Problem reading uv circle centers from " << filename << endl;
-        cerr << "Exiting...";
+    int read_uv_status(0);
+    if (read_uv_from_calibration_file) {
+        read_uv_status = ReadUVCenters(input_file, uu_c, vv_c);
+    } else {
+        read_uv_status = ReadUVCenters(calibration_file, uu_c, vv_c);
+    }
+    if (read_uv_status < 0) {
+        if (read_uv_from_calibration_file) {
+            cerr << "Problem reading uv circle centers from "
+                 << calibration_filename << endl;
+        } else {
+            cerr << "Problem reading uv circle centers from "
+                 << filename << endl;
+        }
+        cerr << "Exiting..." << endl;
         return(-9);
     }
     if (verbose) {
