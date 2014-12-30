@@ -210,24 +210,33 @@ int main(int argc, char ** argv) {
         cout << "Overwriting old uv circle centers" << endl;
     }
 
+    TDirectory * timing = 0;
+    int root_write_option(TObject::kOverwrite);
     if (output_file_specified_flag) {
+        output_file->cd();
+        if (!output_file->GetListOfKeys()->Contains("timing/uu_c[0][0]")) {
+            root_write_option = 0;
+        }
         // Check to see if the timing directory exists in the output file and
         // create it if it doesn't.
-        output_file->cd();
-        TDirectory * timing = (TDirectory *) output_file->Get("timing");
-        if (!timing) {
+        if (!output_file->GetListOfKeys()->Contains("timing")) {
             timing = output_file->mkdir("timing");
+        } else {
+            timing = (TDirectory *) output_file->Get("timing");
         }
+    } else {
+        timing = (TDirectory *) input_file->Get("timing");
     }
+    timing->cd();
 
     // store uvcenters
     for (int cartridge = 0; cartridge < CARTRIDGES_PER_PANEL; cartridge++) {
         for (int fin = 0; fin < FINS_PER_CARTRIDGE; fin++) {
             char tmpstring[30];
-            sprintf(tmpstring,"timing/uu_c[%d][%d]", cartridge, fin);
-            uu_c[cartridge][fin]->Write(tmpstring, TObject::kOverwrite);
-            sprintf(tmpstring,"timing/vv_c[%d][%d]", cartridge, fin);
-            vv_c[cartridge][fin]->Write(tmpstring, TObject::kOverwrite);
+            sprintf(tmpstring,"uu_c[%d][%d]", cartridge, fin);
+            uu_c[cartridge][fin]->Write(tmpstring, root_write_option);
+            sprintf(tmpstring,"vv_c[%d][%d]", cartridge, fin);
+            vv_c[cartridge][fin]->Write(tmpstring, root_write_option);
         }
     }
     if (verbose) {
