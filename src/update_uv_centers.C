@@ -1,19 +1,13 @@
 #include <stdlib.h>
 #include <iostream>
-#include "TROOT.h"
-#include "TFile.h"
-#include "TObject.h"
-#include "TTree.h"
-#include "Riostream.h"
-#include "TMath.h"
-#include "TVector.h"
-#include "ModuleDat.h"
-#include <fstream>
 #include <string>
-#include "Util.h"
-#include "libInit_avdb.h"
-#include "myrootlib.h"
+#include <TROOT.h>
+#include <TFile.h>
+#include <TObject.h>
+#include <TTree.h>
+#include <TVector.h>
 #include "Syspardef.h"
+#include "ModuleDat.h"
 
 
 using namespace std;
@@ -23,7 +17,9 @@ void usage(void) {
     cout << "    A program to update the uv centers using the whole dataset\n"
          << "    after chain_parsed is run\n"
          << " options:\n"
-         << " -uvt: UV circle centers threshold - default = -700" << endl;
+         << " -uvt: UV circle centers threshold - default = -700\n"
+         << " -o [filename]: file to which the uv centers should be written\n"
+         << endl;
     return;
 }
 
@@ -59,8 +55,10 @@ int main(int argc, char ** argv) {
     int verbose(0);
 
     string filename;
+    string output_filename;
 
     bool filename_specified_flag(false);
+    bool output_file_specified_flag(false);
 
     // Arguments not requiring input
     for (int ix = 1; ix < argc; ix++) {
@@ -84,6 +82,10 @@ int main(int argc, char ** argv) {
             filename = string(argv[ix + 1]);
             filename_specified_flag = true;
         }
+        if (strcmp(argv[ix], "-o") == 0) {
+            output_filename = string(argv[ix + 1]);
+            output_file_specified_flag = true;
+        }
     }
 
     if (!filename_specified_flag) {
@@ -91,6 +93,24 @@ int main(int argc, char ** argv) {
         cerr << "Exiting." << endl;
         return(-2);
     }
+
+    TFile * output_file = 0;
+    if (output_file_specified_flag) {
+        if (verbose) {
+            cout << "Opening output root file: " << output_filename << endl;
+        }
+        output_file = new TFile(output_filename.c_str(),"UPDATE");
+        if (output_file->IsZombie()) {
+            cerr << "Error opening file : " << output_filename << endl;
+            cerr << "Exiting..." << endl;
+            return(-5);
+        }
+        if (verbose) {
+            cout << "Finished opening output root file: "
+                 << output_filename << endl;
+        }
+    }
+
 
     if (verbose) {
         cout << "Opening root file: " << filename << endl;
@@ -189,6 +209,17 @@ int main(int argc, char ** argv) {
     if (verbose) {
         cout << "Overwriting old uv circle centers" << endl;
     }
+
+    if (output_file_specified_flag) {
+        // Check to see if the timing directory exists in the output file and
+        // create it if it doesn't.
+        output_file->cd();
+        TDirectory * timing = (TDirectory *) output_file->Get("timing");
+        if (!timing) {
+            timing = output_file->mkdir("timing");
+        }
+    }
+
     // store uvcenters
     for (int cartridge = 0; cartridge < CARTRIDGES_PER_PANEL; cartridge++) {
         for (int fin = 0; fin < FINS_PER_CARTRIDGE; fin++) {
