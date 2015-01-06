@@ -1,5 +1,6 @@
 #include "format_recon.h"
 #include <string>
+#include <cal_helper_functions.h>
 
 #define INCHTOMM 25.4
 #define XCRYSTALPITCH 1
@@ -16,7 +17,10 @@ void usage(void){
     cout << " -a : ascii  " << endl;
     cout << " -mt :: only give the first maxtime minutes " << endl;
     cout << " -eh: Set Upper Energy Window - Default is 700keV\n"
-         << " -el: Set Lower Energy Window - Default is 400keV\n";
+         << " -el: Set Lower Energy Window - Default is 400keV\n"
+         << " -dtc: Enable Course Timestamp Windowing\n"
+         << " -dtcl: Set Lower Course Timestamp Window - Default 0\n"
+         << " -dtcl: Set Lower Course Timestamp Window - Default 4\n";
     return;
 }
 
@@ -35,6 +39,9 @@ int main(int argc, char ** argv)
     Int_t MAXTIME(999999999);
     float energy_gate_high(700);
     float energy_gate_low(400);
+    int dtc_gate_low(0);
+    int dtc_gate_high(4);
+    bool use_dtc_gating_flag(false);
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     for(int ix = 1; ix < argc; ix++) {
@@ -103,13 +110,30 @@ int main(int argc, char ** argv)
             ss >> energy_gate_low;
             ix++;
         }
-
+        if(strcmp(argv[ix], "-dtcl") == 0) {
+            stringstream ss;
+            ss << argv[ix + 1];
+            ss >> dtc_gate_low;
+            ix++;
+            use_dtc_gating_flag = true;
+        }
+        if(strcmp(argv[ix], "-dtch") == 0) {
+            stringstream ss;
+            ss << argv[ix + 1];
+            ss >> dtc_gate_high;
+            ix++;
+            use_dtc_gating_flag = true;
+        }
+        if(strcmp(argv[ix], "-dtc") == 0) {
+            use_dtc_gating_flag = true;
+        }
     } // loop over arguments
 
     rootlogon(verbose);
 
     if (PANELDISTANCE<0) {
-        usage();
+        cerr << "Panel Distance not specified or invalid" << endl;
+        cerr << "Exiting" << endl;
         return(-2);
     }
 
@@ -198,66 +222,61 @@ int main(int argc, char ** argv)
 
         // The different constraint here compared to merged_ana, is that we assume that merged_ana already did a valid random selection on dtc,
         // the selection is only converted to CUDA readable format. 
-        if ((RANDOMS) || ( TMath::Abs(data->dtf)<FINETIMEWINDOW)) {
-            if ((data->E1 < energy_gate_high) && (data->E1 > energy_gate_low)) {
-                if ((data->E2 < energy_gate_high) && (data->E2 > energy_gate_low)) {
-                    if ((data->crystal1 >= 0) && (data->crystal1 < CRYSTALS_PER_APD)) {
-                        if ((data->crystal2 >= 0) && (data->crystal2 < CRYSTALS_PER_APD)) {
-                            if (!firsteventtimeset){ 
-                                firsteventtime=data->ct;
-                                firsteventtimeset=kTRUE;
-                                cout << "firsteventtime : " << firsteventtime/(60*COARSECLOCKFREQUENCY) << " min" << endl;
-                            }
-
-                            Double_t x1 = (XMODULEPITCH-8*XCRYSTALPITCH)/2+(data->m1-8)*XMODULEPITCH;  
-                            Double_t x2 = (XMODULEPITCH-8*XCRYSTALPITCH)/2+(data->m2-8)*XMODULEPITCH;
-
-                            x1 +=  ( TMath::Floor(data->crystal1/8)  + 0.5  )*XCRYSTALPITCH;
-                            x2 +=  ( 7-TMath::Floor(data->crystal2/8)  + 0.5  )*XCRYSTALPITCH;
-
-                            Double_t y1 = -TOTALPANELDISTANCE/2;
-                            Double_t y2 = TOTALPANELDISTANCE/2;
-                            y1 -= data->apd1*YDISTANCEBETWEENAPDS;
-                            y2 += data->apd2*YDISTANCEBETWEENAPDS;
-                            y1 -= (( 7-TMath::Floor(data->crystal1%8) * YCRYSTALPITCH ) + 0.5  );
-                            y2 += (( 7-TMath::Floor(data->crystal2%8) * YCRYSTALPITCH ) + 0.5  );                              
-
-                            Double_t z1 = (((data->cartridge1 - CARTRIDGES_PER_PANEL/2.0) * FINS_PER_CARTRIDGE) + data->fin1 + 0.5) * ZPITCH;
-                            Double_t z2 = (((data->cartridge2 - CARTRIDGES_PER_PANEL/2.0) * FINS_PER_CARTRIDGE) + data->fin2 + 0.5) * ZPITCH;
-
-                            buf buffer; 
-                            buffer.x1 = x1;
-                            buffer.x2 = x2;
-                            buffer.y1 = y1;
-                            buffer.y2 = y2;
-                            buffer.z1 = z1;
-                            buffer.z2 = z2;
-                            buffer.cdt = 0;
-                            buffer.ri = 0;
-                            buffer.si = 0;
-                            buffer.Si = 0;
-
-                            lines++;
-
-                            if (ascii) {
-                                asciiout << x1 << " " <<y1 << " " << z1 << " " << x2 << " " << y2 << " " << z2 << endl;
-                            }
-
-                            outputfile.write( (char *) &buffer, sizeof(buffer));
-                        } else {
-                            events_dropped_invalid_index++;
-                        }
-                    } else {
-                        events_dropped_invalid_index++;
+        if (BoundsCheckEvent(*data) == 0) {
+            if (EnergyGateEvent(*data, energy_gate_low, energy_gate_high) == 0) {
+                if (((TMath::Abs(data->dtf)<FINETIMEWINDOW) && (!use_dtc_gating_flag))
+                        || ((data->dtc >= dtc_gate_low) && (data->dtc <= dtc_gate_high) && (use_dtc_gating_flag))
+                        || (RANDOMS)) 
+                {
+                    if (!firsteventtimeset){ 
+                        firsteventtime=data->ct;
+                        firsteventtimeset=kTRUE;
+                        cout << "firsteventtime : " << firsteventtime/(60*COARSECLOCKFREQUENCY) << " min" << endl;
                     }
+
+                    Double_t x1 = (XMODULEPITCH-8*XCRYSTALPITCH)/2+(data->m1-8)*XMODULEPITCH;  
+                    Double_t x2 = (XMODULEPITCH-8*XCRYSTALPITCH)/2+(data->m2-8)*XMODULEPITCH;
+
+                    x1 +=  ( TMath::Floor(data->crystal1/8)  + 0.5  )*XCRYSTALPITCH;
+                    x2 +=  ( 7-TMath::Floor(data->crystal2/8)  + 0.5  )*XCRYSTALPITCH;
+
+                    Double_t y1 = -TOTALPANELDISTANCE/2;
+                    Double_t y2 = TOTALPANELDISTANCE/2;
+                    y1 -= data->apd1*YDISTANCEBETWEENAPDS;
+                    y2 += data->apd2*YDISTANCEBETWEENAPDS;
+                    y1 -= (( 7-TMath::Floor(data->crystal1%8) * YCRYSTALPITCH ) + 0.5  );
+                    y2 += (( 7-TMath::Floor(data->crystal2%8) * YCRYSTALPITCH ) + 0.5  );                              
+
+                    Double_t z1 = (((data->cartridge1 - CARTRIDGES_PER_PANEL/2.0) * FINS_PER_CARTRIDGE) + data->fin1 + 0.5) * ZPITCH;
+                    Double_t z2 = (((data->cartridge2 - CARTRIDGES_PER_PANEL/2.0) * FINS_PER_CARTRIDGE) + data->fin2 + 0.5) * ZPITCH;
+
+                    buf buffer; 
+                    buffer.x1 = x1;
+                    buffer.x2 = x2;
+                    buffer.y1 = y1;
+                    buffer.y2 = y2;
+                    buffer.z1 = z1;
+                    buffer.z2 = z2;
+                    buffer.cdt = 0;
+                    buffer.ri = 0;
+                    buffer.si = 0;
+                    buffer.Si = 0;
+
+                    lines++;
+
+                    if (ascii) {
+                        asciiout << x1 << " " <<y1 << " " << z1 << " " << x2 << " " << y2 << " " << z2 << endl;
+                    }
+
+                    outputfile.write( (char *) &buffer, sizeof(buffer));
                 } else {
-                    events_dropped_energy_gating++;
+                    events_dropped_fine_time_window++;
                 }
             } else {
                 events_dropped_energy_gating++;
             }
         } else {
-            events_dropped_fine_time_window++;
+            events_dropped_invalid_index++;
         }
     }
     // loop over entries
