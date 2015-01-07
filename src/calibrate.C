@@ -129,7 +129,7 @@ int main(int argc, Char_t *argv[])
 	    cout << "  ---- Error ----  " << endl;
 	    cout << " You can only specify globfitfin if globfitcart is defined ! " << endl;
 	    cout << " ----------------  " << endl;
-	    cout << " USAGE :: " 
+	    cout << " USAGE :: " << endl;
 	    usage();
 	    return -9;
 	  }
