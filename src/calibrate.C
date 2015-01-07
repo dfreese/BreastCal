@@ -16,11 +16,13 @@
 */
 
 void usage(void){
-  cout << "calibrate -f filename [ -v -P -c [calibrationfile] -noplots -q ]" << endl;
-  cout << "  -P     :: use PROOF ( results in unsorted events ) " << endl;
-  cout << "  -c [ ] :: use calibrationfile [] " << endl;
-  cout << "  -noplots :: Don't fit the global E-spectra " << endl;
-  cout << "  -q :: Quiet mode" << endl;
+  cout << " calibrate -f filename [ -v -P -c [calibrationfile] -noplots -q ]" << endl;
+  cout << "   -P     :: use PROOF ( results in unsorted events ) " << endl;
+  cout << "   -c [ ] :: use calibrationfile [] " << endl;
+  cout << "   -noplots :: Don't fit the global E-spectra " << endl;
+  cout << "   -q :: Quiet mode" << endl;
+  cout << "   -globfitcart C :: only fit globals for cartridge C" << endl;
+  cout << "   -globfitfin F :: only fit globals for fin F" << endl;
 }
 
 int main(int argc, Char_t *argv[])
@@ -38,6 +40,10 @@ int main(int argc, Char_t *argv[])
          TString calparfile;
 	 Bool_t calparspec=kFALSE;
 	 Bool_t quietmode=kFALSE;
+	 Bool_t globfitcartspec=kFALSE;
+	 Bool_t globfitfinspec=kFALSE;
+	 Int_t globcartfit = 0;
+	 Int_t globfinfit = 0; 
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 	//see eg http://root.cern.ch/phpBB3/viewtopic.php?f=14&t=3498
@@ -45,6 +51,23 @@ int main(int argc, Char_t *argv[])
 	gErrorIgnoreLevel=kError;
 
 	for(ix = 1; ix < argc; ix++) {
+
+	  if ( strncmp(argv[ix],"-globfitcart",12) == 0 ) 
+	    {
+	      globfitcartspec=kTRUE;
+	      globcartfit = atoi(argv[ix+1]);
+	      ix++;
+	      cout << " Only Performing Fits to global Espec for cartridge " << globcartfit << endl;
+	    }
+
+	  if ( strncmp(argv[ix],"-globfitfin",11) == 0 ) 
+	    {
+	      globfitfinspec=kTRUE;
+	      globfinfit = atoi(argv[ix+1]);
+	      ix++;
+	      cout << " Only Performing Fits to global Espec for fin " << globfinfit << endl;
+	    }
+
 
 	  if ( strncmp(argv[ix],"-h",2) == 0 ) {
 	    usage();
@@ -81,7 +104,7 @@ int main(int argc, Char_t *argv[])
 		if(strncmp(argv[ix], "-noplots", 8) == 0) {
 
 		  if (!quietmode) cout << " Not Generating plots. " ;
- 		genplots=kFALSE;
+		  genplots=kFALSE;
 
 		}
 
@@ -99,7 +122,20 @@ int main(int argc, Char_t *argv[])
 		}
 	}
 
+
+	// sanity check::
+	if ((globfitfinspec)&&(!globfitcartspec))
+	  {
+	    cout << "  ---- Error ----  " << endl;
+	    cout << " You can only specify globfitfin if globfitcart is defined ! " << endl;
+	    cout << " ----------------  " << endl;
+	    cout << " USAGE :: " 
+	    usage();
+	    return -9;
+	  }
+
         cout <<  " Input file :: " << filename << "." << endl ;
+
 
 
         rootlogon(verbose);
@@ -125,43 +161,22 @@ int main(int argc, Char_t *argv[])
          return -11;}
 
 
-	/*
-        TVector* ppVals = (TVector *) enefile->Get("pp_spat");
-        TVector* ppVals_com = (TVector *) enefile->Get("pp_com");
-	*/
 
-
-	//	enefile->ls() ;
-
-
-	//        for (m=0;m<RENACHIPS;m++){
- 
-	if (verbose) {
+	if (verbose) 
+	  {
 	  cout <<  " File content :: " << endl;
 	  //          enefile->ls();
-} //verbose
+	  } //verbose
 	
 
  
-
-
-
-  
-	TCanvas *c1;
-     c1  = (TCanvas*)gROOT->GetListOfCanvases()->FindObject("c1");
-    if (!c1) c1 = new TCanvas("c1","c1",10,10,1000,1000);
-  
-    c1->SetCanvasSize(1754,1240);
-	  // plot histograms
  
-
-	//        TFile *calfile = new TFile(rootfile,"RECREATE");
-	//	if (verbose) cout << " Creating file " << rootfile << endl;
-             
-          // Create Tree //
-
-	//        TTree *cal;
-
+	TCanvas *c1;
+	c1  = (TCanvas*)gROOT->GetListOfCanvases()->FindObject("c1");
+	if (!c1) c1 = new TCanvas("c1","c1",10,10,1000,1000);
+  
+	c1->SetCanvasSize(1754,1240);
+	
 	Char_t treename[20];
 
 	/*
@@ -175,7 +190,7 @@ int main(int argc, Char_t *argv[])
 
 
 	*/
-   strncpy(filebase,filename,strlen(filename)-5);
+	strncpy(filebase,filename,strlen(filename)-5);
         filebase[strlen(filename)-5]='\0';
         if (verbose) cout << " filebase = " << filebase << endl;
 
@@ -222,101 +237,123 @@ int main(int argc, Char_t *argv[])
        //       m_getEhis->SetFileBase(filebase);
  
 
-       //    TFile *rfi;
-
-       //  if (!fitonly){
-
 //#define USEPROOF
 
 //#ifdef USEPROOF      
-	   if (UseProof){
+   if (UseProof)
+     {
        //  TProof *proof = new TProof("proof");
        //   proof->Open("");
              	 TProof *p = TProof::Open("workers=2");
        //	 	 TProof *p = TProof::Open("");
        //       gProof->UploadPackage("/home/miil/MODULE_ANA/ANA_V5/SpeedUp/PAR/ModuleDatDict.par");
        //       gProof->EnablePackage("ModuleDatDict");
-
-		 if (!quietmode){
-         cout << " Proof open :: " << time(NULL)-starttime << endl;
-		 }
+		 
+	if (!quietmode)
+	  {
+	     cout << " Proof open :: " << time(NULL)-starttime << endl;
+	  }
 
 	 //#define USEPAR
 
-             char *libpath = getenv("ANADIR");
-             if (!quietmode){
+        char *libpath = getenv("ANADIR");
+        if (!quietmode)
+	  {
 	     cout << " Loading Shared Library from " << libpath << endl;
 	     cout << " (note ANADIR = " << getenv("ANADIR") << " )" << endl;
-	     }
-	     TString exestring;
+	   }
+	 TString exestring;
      
 #ifdef USEPAR
 
        /* This is an example of the method to use PAR files  -- will need to use an environment var here to make it location independent */
 
-
-	     //	     exestring.Form("gSystem->Load(\"%slibModuleAna.so\")","/home/miil/MODULE_ANA/ANA_V5/SpeedUp/lib/");
-	     exestring.Form("%s/PAR/Sel_Calibrator.par",libpath);
-             p->UploadPackage(exestring.Data());
-             p->EnablePackage("Sel_Calibrator");
+     //	     exestring.Form("gSystem->Load(\"%slibModuleAna.so\")","/home/miil/MODULE_ANA/ANA_V5/SpeedUp/lib/");
+	 exestring.Form("%s/PAR/Sel_Calibrator.par",libpath);
+         p->UploadPackage(exestring.Data());
+         p->EnablePackage("Sel_Calibrator");
 
 #else
        /* Loading the shared library */
-             exestring.Form("gSystem->Load(\"%s/lib/libModuleAna.so\")",libpath);
-	     p->Exec(exestring.Data());
+         exestring.Form("gSystem->Load(\"%s/lib/libModuleAna.so\")",libpath);
+	 p->Exec(exestring.Data());
 
 	     //   return -1;
 
 #endif
-       m_cal->ReadUVCenters(rfile);
-       m_cal->fUseProof = kTRUE;
-       p->AddInput(CrysCal);
+	 m_cal->ReadUVCenters(rfile);
+	 m_cal->fUseProof = kTRUE;
+	 p->AddInput(CrysCal);
 
-       block->SetProof();
+	 block->SetProof();
        /*
        TProofOutputFile outf = TProofOutputFile("mycalout.root");
        p->GetOutputList()->Add(outf);
        */
-       if (!quietmode){
-        cout << " Proof ready to process :: " << time(NULL)-starttime << endl;
-       }
+	 if (!quietmode)
+	   {
+	     cout << " Proof ready to process :: " << time(NULL)-starttime << endl;
+	   }
 
         block->Process(m_cal);
 
-	if (!quietmode){
-        cout << " Proof processed :: " << time(NULL)-starttime << endl;
-	}
+	if (!quietmode)
+	  {
+	    cout << " Proof processed :: " << time(NULL)-starttime << endl;
+	  }
 
-       m_cal->SetPixelCal(CrysCal);
-	   } else {
+	m_cal->SetPixelCal(CrysCal);
+     } 
+   else 
+     {
 //#else
        //      block->Process("Sel_GetFloods.cc+");
        m_cal->fUseProof=kFALSE;
        m_cal->ReadUVCenters(rfile);
        m_cal->SetPixelCal(CrysCal);
-       if (!quietmode){
-       cout << " Ready to process :: " << endl;
-       }
+       if (!quietmode)
+	 {
+	 cout << " Ready to process :: " << endl;
+	 }
        block->Process(m_cal);
 
-	   }
+     }
 //#endif
 
-  
-	   if (genplots){
-
-	     if (!quietmode){
-      cout << " Fitting Global spectra @ " <<time(NULL)-starttime << endl;
-	     }
+   if (genplots)
+     {
+     if (!quietmode)
+       {
+	 cout << " Fitting Global spectra @ " <<time(NULL)-starttime << endl;
+       }
       loctime=time(NULL);
-      m_cal->FitAllGlobal();
 
-      if (!quietmode){
-      cout << " Fitting time  :: " << time(NULL) -loctime << endl;
-      cout << " Writing glob hists to file :: " <<time(NULL)-starttime << endl;
-      }
+      // use overloading depending on cartridge / fin specified 
+
+      if (globfitcartspec)
+	{
+	  if (globfitfinspec)
+	    {
+	      m_cal->FitAllGlobal(globcartfit,globfinfit);	      
+	    }
+	  else
+	    {
+	      m_cal->FitAllGlobal(globcartfit);
+	    }
+	}
+      else
+	{	      
+            m_cal->FitAllGlobal();
+	}
+
+
+       if (!quietmode)
+	 {
+	   cout << " Fitting time  :: " << time(NULL) -loctime << endl;
+	   cout << " Writing glob hists to file :: " <<time(NULL)-starttime << endl;
+	 }
       m_cal->WriteGlobHist(".glob.root");
-	   }
+   }
 
     /*
          PPeaks *thesePPeaks = (PPeaks *) rfile->Get("PhotoPeaks");

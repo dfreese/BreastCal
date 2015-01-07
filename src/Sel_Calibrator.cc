@@ -415,10 +415,13 @@ Int_t Sel_Calibrator::WriteTree(TFile *rfile){
 
 
 
-Int_t Sel_Calibrator::FitAllGlobal(){
+Int_t Sel_Calibrator::FitAllGlobal(Int_t C /* = -1 */ , Int_t F /* = -1 */)
+{
+  /* Note: By Default C and F are -1, if they are anything else we will only fit a certain cartridge and/or fin */
 
-  TCanvas *c1;
-  c1 = (TCanvas*)gROOT->GetListOfCanvases()->FindObject("c1");
+  
+   TCanvas *c1;
+   c1 = (TCanvas*)gROOT->GetListOfCanvases()->FindObject("c1");
    if (!c1) c1 = new TCanvas("c1","c1",10,10,1000,1000);
 
    ofstream globpeaks;
@@ -429,13 +432,15 @@ Int_t Sel_Calibrator::FitAllGlobal(){
    Double_t xlow,xhigh,eres, d_eres;
    TString fDIR="GLOBFITS";
    
- if ( access( fDIR.Data(), 0 ) != 0 ) {
-   if (!fQuiet) cout << "creating dir " << fDIR << endl; 
-        if ( mkdir(fDIR, 0777) != 0 ) { 
+   if ( access( fDIR.Data(), 0 ) != 0 ) 
+     {
+       if (!fQuiet) cout << "creating dir " << fDIR << endl; 
+       if ( mkdir(fDIR, 0777) != 0 ) 
+	 { 
 	  if (!fQuiet) cout << " Error making directory " << fDIR << endl;
-	    return -2;
-	}
-    }
+	  return -2;
+	 }
+     }
    
 
    sprintf(peaklocationfilename,"%s/%s_globfits_spat.txt",fDIR.Data(),fFileBase.Data());
@@ -449,7 +454,9 @@ Int_t Sel_Calibrator::FitAllGlobal(){
    labeltxt_com->SetShadowColor(0);
 
     for (Int_t cc=0;cc<CARTRIDGES_PER_PANEL;cc++){
+      if ( ( C != -1) && ( C != cc) ) continue; 
      for (Int_t f=0;f<FINS_PER_CARTRIDGE;f++){
+      if ( ( F != -1) && ( F != f) ) continue; 
        for (Int_t m=0;m<MODULES_PER_FIN;m++){
          for (Int_t j=0;j<APDS_PER_MODULE;j++){
 	    if (verbose){
