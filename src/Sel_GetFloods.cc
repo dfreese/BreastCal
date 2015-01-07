@@ -233,19 +233,24 @@ Int_t Sel_GetFloods::Makeplot(TH2F *hist[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDG
       	 c1->Clear();
 
 	     Int_t kk,i,j;
-	   for (kk=0;kk<TMath::Floor(MODULES_PER_FIN/NRFLOODSTODRAW);kk++){
-         c1->Clear();
-         c1->Divide(NRFLOODSTODRAW,APDS_PER_MODULE);
-	 for (i=kk*NRFLOODSTODRAW;i<NRFLOODSTODRAW*(kk+1);i++){ 
-          for (j=0;j<APDS_PER_MODULE;j++){
-            c1->cd((i%NRFLOODSTODRAW)+1+j*NRFLOODSTODRAW);
-            hist[c][f][i][j]->Draw("colz"); } //j
-	 } //i
-	 sprintf(pngstring,"%s/%s.C%dF%dM%d-%d.%s.",fDIR.Data(),fFileBase.c_str(),c,f,kk*NRFLOODSTODRAW,i-1,suffix);
-         strcat(pngstring,"png");
-         c1->Print(pngstring);
-       } // kk
-	   return 0;	   }
+	   for (kk=0;kk<TMath::Floor(MODULES_PER_FIN/NRFLOODSTODRAW);kk++)
+	     {
+	       c1->Clear();
+	       c1->Divide(NRFLOODSTODRAW,APDS_PER_MODULE);
+	       for (i=kk*NRFLOODSTODRAW;i<NRFLOODSTODRAW*(kk+1);i++)
+		 {
+		   for (j=0;j<APDS_PER_MODULE;j++)
+		     {
+		       c1->cd((i%NRFLOODSTODRAW)+1+j*NRFLOODSTODRAW);
+		       hist[c][f][i][j]->Draw("colz"); 
+		     } //j
+		 } //i
+	       sprintf(pngstring,"%s/%s.C%dF%dM%d-%d.%s.",fDIR.Data(),fFileBase.c_str(),c,f,kk*NRFLOODSTODRAW,i-1,suffix);
+	       strcat(pngstring,"png");
+	       c1->Print(pngstring);
+	     } // kk
+	   return 0;	   
+}
 #endif
 
 Int_t Sel_GetFloods::WriteFloods(TFile *rfile,Int_t verbose=0){
