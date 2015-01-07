@@ -132,6 +132,7 @@ done
 voltages=$(cat filelist | grep -v _ped_ | sed 's/V.\{7,\}dat//g' | sed 's/.\{11,\}_//g')
 
 
+
 # Now run through the calibration chain for each of the voltages
 for voltage in $voltages; do
     if [ "$voltage" == "0000" ]; then
@@ -188,6 +189,7 @@ for voltage in $voltages; do
             fi
         done
 
+	
         if [ ! -d CHIPDATA ]; then 
             mkdir CHIPDATA
         fi
@@ -203,14 +205,15 @@ for voltage in $voltages; do
         mv $chain_filebase*_peaks*.txt ./CHIPDATA/
 
         # Generate energy calibration for each pixel of the module
-        enecal -f $chain_filename
+        enecal -f $chain_filename -w 1
         check ${?} "enecal -f $chain_filename"
 
-        # Apply the calibration to the data to generate the cal.root file
-        calibrate -q -P -f $chain_filename
+	# Apply the calibration to the data to generate the cal.root file
+        calibrate -q -P -f $chain_filename -globfitcart 0 -globfitfin 6
         check ${?} "calibrate -f $chain_filename"
     fi
 
+    
     # Analyze the figure of merit for each module from the calibrated data
     # This produces the .fom.txt and .fom.root files.  The .fom.root file is
     # empty and unused.
@@ -218,6 +221,7 @@ for voltage in $voltages; do
     fom_ana -f $cal_filename -c 0
     check ${?} "fom_ana -f $cal_filename -c 0"
 
+   
     while read line ; do 
         # each line int he modulenames.txt file is the module number followed by
         # the module name.  Separate those out
@@ -272,7 +276,7 @@ for voltage in $voltages; do
 done
 
 
-#exit -92133434;
+
 
 
 while read line ; do 
@@ -360,6 +364,10 @@ while read line ; do
 
         #Go back to the working directory
         cd .. 
+	# check if link exists :: 
+	if [ -L ${STORAGEFOLDER}/${shipdate}/${boxdir} ] ; then 
+	    rm ${STORAGEFOLDER}/${shipdate}/${boxdir}
+	fi
 	ln -s `pwd`/$module_dir ${STORAGEFOLDER}/${shipdate}/${boxdir}
         # $prev_dir
     fi
