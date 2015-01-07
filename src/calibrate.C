@@ -16,13 +16,14 @@
 */
 
 void usage(void){
-  cout << " calibrate -f filename [ -v -P -c [calibrationfile] -noplots -q ]" << endl;
+  cout << " calibrate -f filename [ -v -P -c [calibrationfile] -noplots -q -W [workernodes]" << endl;
   cout << "   -P     :: use PROOF ( results in unsorted events ) " << endl;
   cout << "   -c [ ] :: use calibrationfile [] " << endl;
   cout << "   -noplots :: Don't fit the global E-spectra " << endl;
   cout << "   -q :: Quiet mode" << endl;
   cout << "   -globfitcart C :: only fit globals for cartridge C" << endl;
   cout << "   -globfitfin F :: only fit globals for fin F" << endl;
+  cout << "   -W [workernodes] :: use workernodes CPU CORES" << endl;
 }
 
 int main(int argc, Char_t *argv[])
@@ -44,6 +45,7 @@ int main(int argc, Char_t *argv[])
 	 Bool_t globfitfinspec=kFALSE;
 	 Int_t globcartfit = 0;
 	 Int_t globfinfit = 0; 
+	 Int_t nworkers = 2;
 	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 	//see eg http://root.cern.ch/phpBB3/viewtopic.php?f=14&t=3498
@@ -66,6 +68,13 @@ int main(int argc, Char_t *argv[])
 	      globfinfit = atoi(argv[ix+1]);
 	      ix++;
 	      cout << " Only Performing Fits to global Espec for fin " << globfinfit << endl;
+	    }
+
+	  if(strncmp(argv[ix], "-w", 2) == 0) 
+	    {
+	      nworkers = atoi(argv[ix+1]);
+	      ix++;
+	      cout << " Using " << nworkers << " CPU cores " << endl;
 	    }
 
 
@@ -244,7 +253,11 @@ int main(int argc, Char_t *argv[])
      {
        //  TProof *proof = new TProof("proof");
        //   proof->Open("");
-             	 TProof *p = TProof::Open("workers=2");
+       Char_t proofstring[30];
+       sprintf(proofstring,"workers=%d",nworkers);
+       TProof *p = TProof::Open(proofstring);
+
+       //      	 TProof *p = TProof::Open("workers=2");
        //	 	 TProof *p = TProof::Open("");
        //       gProof->UploadPackage("/home/miil/MODULE_ANA/ANA_V5/SpeedUp/PAR/ModuleDatDict.par");
        //       gProof->EnablePackage("ModuleDatDict");
