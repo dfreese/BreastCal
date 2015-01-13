@@ -220,8 +220,8 @@ int RawEventToModuleDat(
                  event.fin);
 
     event.E = event.a + event.b + event.c + event.d;
-    event.x = (event.c + event.d - (event.b + event.a)) / event.E;
-    event.y = (event.a + event.d - (event.b + event.c)) / event.E;
+    event.x = float(event.c + event.d - (event.b + event.a)) / float(event.E);
+    event.y = float(event.a + event.d - (event.b + event.c)) / float(event.E);
 
     if (event.apd == 1) {
         event.y *= -1;
