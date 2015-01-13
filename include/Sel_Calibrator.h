@@ -175,7 +175,7 @@ public :
    virtual TList  *GetOutputList() const { return fOutput; }
    virtual void    SlaveTerminate();
    virtual void    Terminate();
-   Int_t FitAllGlobal();
+   Int_t FitAllGlobal(Int_t C=-1, Int_t F=-1);
    Float_t Getmean(Float_t *array);
    Int_t FitGlobal(TH1F *globhist, Double_t xlow, Double_t xhigh, Double_t &eres, Double_t &d_eres);
      Int_t WriteGlobPeaks(ofstream &globpeaks, Int_t cc, Int_t f, Int_t i, Int_t j, Double_t eres, Double_t d_eres, Float_t mean);

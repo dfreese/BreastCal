@@ -274,7 +274,7 @@ Int_t main(int argc, Char_t *argv[])
 
 #else
     /* Loading the shared library */
-    cout << "getfloods - loading libModuleAna.so" << endl;
+    cout << "getfloods - loading libModuleAna.so from path " << libpath << endl;
     exestring.Form("gSystem->Load(\"%s/lib/libModuleAna.so\")",libpath);
     p->Exec(exestring.Data());
 

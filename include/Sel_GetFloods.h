@@ -104,7 +104,7 @@ public :
 
 }
    virtual void   SetOutputFileName( const Char_t* name ) { fOutputfilename = name ;}
-     virtual void   SetFileBase( const Char_t* name ) { fFileBase = name ;}
+   virtual void   SetFileBase( const Char_t* name ) { fFileBase = name ;}
    void  SetNFloods(Int_t nf) { fNfloods = nf ; } 
    Int_t GetNFloods() { return fNfloods; }
 #ifndef __CINT__
