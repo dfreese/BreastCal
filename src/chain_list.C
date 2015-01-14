@@ -47,6 +47,10 @@ int main(int argc, char *argv[]){
             verbose=1;
             cout << " Verbose mode. ";        
         }
+        if (strcmp(argv[i], "-h") == 0) {
+            usage();
+            return(0);
+        }
         if (strncmp(argv[i],"-c",2)==0) {
             chain_name = string(argv[i + 1]);
             i++;

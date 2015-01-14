@@ -91,7 +91,7 @@ Int_t main(int argc, Char_t *argv[])
     Int_t aa=99;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    cout << "Welcome " << endl;
+    if (verbose) cout << "Welcome " << endl;
 
     /*~~~~~~~~~~~~~~*/
     /*
@@ -229,7 +229,7 @@ Int_t main(int argc, Char_t *argv[])
 
     strncpy(basestring, filename, strlen(filename) - 5);
     basestring[strlen(filename) - 5] = '\0';
-    cout << " BASE STRING :: " << basestring <<endl;
+    if (verbose) cout << " BASE STRING :: " << basestring <<endl;
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     /*
@@ -1088,7 +1088,7 @@ Int_t main(int argc, Char_t *argv[])
     sprintf(curoutfile, "%s_%s.sum.png", basestring,modulestringcfma);
     c2->Print(curoutfile);
 
-    printf("SCORE = 0x%x\n",SCOREMASK);
+    if (verbose) printf("SCORE = 0x%x\n",SCOREMASK);
     sprintf(curoutfile, "%s_%s.sum.txt", basestring,modulestringcfma);
     ofstream globfile;
     globfile.open(curoutfile);
