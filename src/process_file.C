@@ -176,7 +176,7 @@ int main(int argc, Char_t *argv[])
 
     size_t root_file_ext_pos(filename.rfind(".dat.root"));
     if (root_file_ext_pos == string::npos) {
-        cerr << "Unable to find .cal.root extension in: \"" << filename << "\"" << endl;
+        cerr << "Unable to find .dat.root extension in: \"" << filename << "\"" << endl;
         if (!output_filename_spec) {
             cerr << "...Exiting." << endl;
             return(-4);
