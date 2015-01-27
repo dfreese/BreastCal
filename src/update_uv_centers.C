@@ -169,8 +169,13 @@ int main(int argc, char ** argv) {
 
     if (ReadUVCenters(input_file, uu_c, vv_c) < 0) {
         cerr << "Problem reading uv circle centers from " << filename << endl;
-        cerr << "Exiting...";
-        return(-9);
+        cout << "Creating new vectors" << endl;
+        for (int c=0; c<CARTRIDGES_PER_PANEL; c++) {
+            for (int f=0; f<FINS_PER_CARTRIDGE; f++) {
+                uu_c[c][f] = new TVector(APDS_PER_MODULE*MODULES_PER_FIN);
+                vv_c[c][f] = new TVector(APDS_PER_MODULE*MODULES_PER_FIN);
+            }
+        }
     }
     if (verbose) {
         cout << "Finished reading uv centers from file" << endl;
