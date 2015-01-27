@@ -12,11 +12,19 @@ This program fills the energy histograms for every crystal, needed to do energy 
 //#include "Sel_Calibrator.h"
 //#include "TProof.h"
 //#include "TChain.h"
+
+
 //void usage(void);
 
-//void usage(void){
-// cout << " Parsetomodule -f [filename] [-p [pedfile] -v -o [outputfilename]] -n [nrfiles in loop] -t [threshold]" <<endl;
-//  return;}
+void usage(void)
+{
+ cout << " enecal -f [filename] [-fit  -map  -W [workernodes] ]"  << endl; 
+ cout << "   -f [filename] :: filename " << endl;
+ cout << "   -fit :: Only perform fitting ( no binning ) " << endl;
+ cout << "   -map :: Use a flood  look-up table rather than least square distance " << endl;
+ cout << "   -w [W] :: Use W worker nodes " << endl;
+ return;
+}
 
 
 int main(int argc, Char_t *argv[])
@@ -28,6 +36,7 @@ int main(int argc, Char_t *argv[])
 //	Char_t		tmpstring[FILENAMELENGTH] = "";
 	Int_t		verbose = 0;
 	Int_t		ix;
+	Int_t           nworkers=2; 
         Bool_t          fileset=0;
         Bool_t          floodlut=kFALSE;
 	Bool_t          fitonly=kFALSE;
@@ -39,39 +48,52 @@ int main(int argc, Char_t *argv[])
 		/*
 		 * Verbose '-v'
 		 */
-		if(strncmp(argv[ix], "-v", 2) == 0) {
-			cout << "Verbose Mode " << endl;
-			verbose = 1;
-		}
+		if(strncmp(argv[ix], "-v", 2) == 0) 
+		  {
+		    cout << "Verbose Mode " << endl;
+		    verbose = 1;
+		  }
+
+		if(strncmp(argv[ix], "-w", 2) == 0) 
+		  {
+		    nworkers = atoi(argv[ix+1]);
+		    ix++;
+		    cout << " Using " << nworkers << " CPU cores " << endl;
+		  }
 
 
-		if(strncmp(argv[ix], "-fit", 4) == 0) {
-			cout << "Only Perform Fitting " << endl;
-			fitonly = 1;
-			ix++;
-		}
+		if(strncmp(argv[ix], "-fit", 4) == 0) 
+		  {
+		    cout << "Only Perform Fitting " << endl;
+		    fitonly = 1;
+		    ix++;
+		  }
 
 
 		/*
 		 * Verbose '-map'
 		 */
-		if(strncmp(argv[ix], "-map", 4) == 0) {
-			cout << "Using Flood Map " << endl;
-			floodlut = kTRUE;
-		}
+		if(strncmp(argv[ix], "-map", 4) == 0)
+		  {
+		    cout << "Using Flood Map " << endl;
+		    floodlut = kTRUE;
+		  }
 
 		/* filename '-f' */
-		if(strncmp(argv[ix], "-f", 2) == 0) {
-			if(strlen(argv[ix + 1]) < FILENAMELENGTH) {
-				sprintf(filename, "%s", argv[ix + 1]);
-				fileset=1;
-			}
-			else {
-				cout << "Filename " << argv[ix + 1] << " too long !" << endl;
-				cout << "Exiting.." << endl;
-				return -99;
-			}
-		}
+		if(strncmp(argv[ix], "-f", 2) == 0) 
+		  {
+		    if(strlen(argv[ix + 1]) < FILENAMELENGTH)
+		      {
+			sprintf(filename, "%s", argv[ix + 1]);
+			fileset=1;
+		      }
+		    else 
+		      {
+			cout << "Filename " << argv[ix + 1] << " too long !" << endl;
+			cout << "Exiting.." << endl;
+			return -99;
+		       }
+		  }
 	}
 
         rootlogon(verbose);
@@ -237,7 +259,9 @@ int main(int argc, Char_t *argv[])
 #ifdef USEPROOF      
        //  TProof *proof = new TProof("proof");
        //   proof->Open("");
-	 	 TProof *p = TProof::Open("workers=4");
+	 Char_t proofstring[30];
+	 sprintf(proofstring,"workers=%d",nworkers);
+ 	 TProof *p = TProof::Open(proofstring);
 	 //	 TProof *p = TProof::Open("");
        //       gProof->UploadPackage("/home/miil/MODULE_ANA/ANA_V5/SpeedUp/PAR/ModuleDatDict.par");
        //       gProof->EnablePackage("ModuleDatDict");
