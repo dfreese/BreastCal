@@ -16,8 +16,25 @@
 #include "string.h"
 #include "cal_helper_functions.h"
 
+void usage() {
+    cout << "cal_edep [-v -h] -f [Filename]\n"
+         << "\n"
+         << "Options:"
+         << "  -n:  do not write out the resulting root file\n"
+         << "  -dp:  do not print out any postscript files\n"
+         << "  -pto:  only write out the time resolution plot\n"
+         << "  -c:  use common channel energy for calibration\n"
+         << "  -rcal (filename):  read in initial per crystal calibration\n"
+         << "  -ft (limit ns):  use fine timestamp limit for calibration\n"
+         << "      default: use limit +/-40ns\n";
+}
 
 int main(int argc, Char_t *argv[]) {
+    if (argc == 1) {
+        usage();
+        return(0);
+    }
+
     Int_t verbose = 0;
 
     // The limit that is put on events before they are placed into histograms.
@@ -48,6 +65,14 @@ int main(int argc, Char_t *argv[]) {
 
     // Flags not requiring input
     for (int ix = 1; ix < argc; ix++) {
+        if(strncmp(argv[ix], "-h", 2) == 0) {
+            usage();
+            return(0);
+        }
+        if(strncmp(argv[ix], "--help", 2) == 0) {
+            usage();
+            return(0);
+        }
         if (strncmp(argv[ix], "-v", 2) == 0) {
             cout << "Verbose Mode " << endl;
             verbose = 1;
