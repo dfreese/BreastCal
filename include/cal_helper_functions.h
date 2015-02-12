@@ -34,6 +34,15 @@ int ReadPerCrystalCal(
                                 [APDS_PER_MODULE]
                                 [CRYSTALS_PER_APD]);
 
+int ReadPerCrystalEnergyCal(
+        std::string filename,
+        float crystal_correction[SYSTEM_PANELS]
+                                [CARTRIDGES_PER_PANEL]
+                                [FINS_PER_CARTRIDGE]
+                                [MODULES_PER_FIN]
+                                [APDS_PER_MODULE]
+                                [CRYSTALS_PER_APD][2]);
+
 int WritePerCrystalCal(
         std::string filename,
         float crystal_correction[SYSTEM_PANELS]
@@ -50,6 +59,22 @@ int WritePerApdAsPerCrystalCal(
                             [FINS_PER_CARTRIDGE]
                             [MODULES_PER_FIN]
                             [APDS_PER_MODULE]);
+
+int WritePerCrystalEnergyCal(
+        std::string filename,
+        float crystal_correction[SYSTEM_PANELS]
+                                [CARTRIDGES_PER_PANEL]
+                                [FINS_PER_CARTRIDGE]
+                                [MODULES_PER_FIN]
+                                [APDS_PER_MODULE]
+                                [CRYSTALS_PER_APD]
+                                [2]);
+
+int WritePerCartridgeAsPerCrystalEnergyCal(
+        std::string filename,
+        float crystal_correction[SYSTEM_PANELS]
+                                [CARTRIDGES_PER_PANEL]
+                                [2]);
 
 int AddPerCrystalCal(
         float augend[SYSTEM_PANELS]
@@ -119,3 +144,13 @@ float GetEventOffset(
                          [MODULES_PER_FIN]
                          [APDS_PER_MODULE]
                          [CRYSTALS_PER_APD]);
+
+float GetEventOffsetEdep(
+        const CoincEvent & event,
+        float crystal_cal[SYSTEM_PANELS]
+                         [CARTRIDGES_PER_PANEL]
+                         [FINS_PER_CARTRIDGE]
+                         [MODULES_PER_FIN]
+                         [APDS_PER_MODULE]
+                         [CRYSTALS_PER_APD]
+                         [2]);

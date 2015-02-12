@@ -277,8 +277,84 @@ int ReadPerCrystalCal(
                                               [fin]
                                               [module]
                                               [apd]
-                                              [crystal] = 
+                                              [crystal] =
                                               file_values[current_entry++];
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return(0);
+}
+
+int ReadPerCrystalEnergyCal(
+        std::string filename,
+        float crystal_correction[SYSTEM_PANELS]
+                                [CARTRIDGES_PER_PANEL]
+                                [FINS_PER_CARTRIDGE]
+                                [MODULES_PER_FIN]
+                                [APDS_PER_MODULE]
+                                [CRYSTALS_PER_APD][2])
+{
+    std::ifstream input;
+    input.open(filename.c_str());
+    if (!input.good()) {
+        return(-1);
+    }
+
+    int entries(SYSTEM_PANELS *
+            CARTRIDGES_PER_PANEL *
+            FINS_PER_CARTRIDGE *
+            MODULES_PER_FIN *
+            APDS_PER_MODULE *
+            CRYSTALS_PER_APD);
+
+    std::string file_line;
+    std::vector<std::vector<float> > file_values(entries,
+                                                 std::vector<float>(2,0));
+    int no_entries_found(0);
+    while (getline(input, file_line)) {
+        no_entries_found++;
+        if (no_entries_found > entries) {
+            return(-2);
+        }
+        std::stringstream ss(file_line);
+        if (!(ss >> file_values[no_entries_found-1][0])) {
+            return(-3);
+        }
+        if (!(ss >> file_values[no_entries_found-1][1])) {
+            return(-4);
+        }
+    }
+
+    int current_entry(0);
+    for (int panel = 0; panel < SYSTEM_PANELS; panel++) {
+        for (int cartridge = 0; cartridge < CARTRIDGES_PER_PANEL; cartridge++) {
+            for (int fin = 0; fin < FINS_PER_CARTRIDGE; fin++) {
+                for (int module = 0; module < MODULES_PER_FIN; module++) {
+                    for (int apd = 0; apd < APDS_PER_MODULE; apd++) {
+                        for (int crystal = 0;
+                                crystal < CRYSTALS_PER_APD;
+                                crystal++)
+                        {
+                            crystal_correction[panel]
+                                              [cartridge]
+                                              [fin]
+                                              [module]
+                                              [apd]
+                                              [crystal]
+                                              [0] =
+                                    file_values[current_entry][0];
+                            crystal_correction[panel]
+                                              [cartridge]
+                                              [fin]
+                                              [module]
+                                              [apd]
+                                              [crystal]
+                                              [1] =
+                                    file_values[current_entry][1];
+                            current_entry++;
                         }
                     }
                 }
@@ -498,6 +574,95 @@ int AddPerCrystalLocationAsPerCrystalCal (
     return(0);
 }
 
+/*!
+ * Writes out a linear energy calibration per crystal.  In practice there is
+ * typically only one fit per cartridge, but we write them out as per crystal
+ * in case something needs to be modified.  Parameters are written out at p0,
+ * space, p1, where p0 is the constant term, and p1 is the energy dependent
+ * slope.
+ */
+int WritePerCrystalEnergyCal(
+        std::string filename,
+        float crystal_correction[SYSTEM_PANELS]
+                                [CARTRIDGES_PER_PANEL]
+                                [FINS_PER_CARTRIDGE]
+                                [MODULES_PER_FIN]
+                                [APDS_PER_MODULE]
+                                [CRYSTALS_PER_APD]
+                                [2])
+{
+    std::ofstream output;
+    output.open(filename.c_str());
+    if (!output.good()) {
+        return(-1);
+    }
+
+    for (int panel = 0; panel < SYSTEM_PANELS; panel++) {
+        for (int cartridge = 0; cartridge < CARTRIDGES_PER_PANEL; cartridge++) {
+            for (int fin = 0; fin < FINS_PER_CARTRIDGE; fin++) {
+                for (int module = 0; module < MODULES_PER_FIN; module++) {
+                    for (int apd = 0; apd < APDS_PER_MODULE; apd++) {
+                        for (int crystal = 0;
+                                crystal < CRYSTALS_PER_APD;
+                                crystal++)
+                        {
+                            float * values(crystal_correction[panel]
+                                                             [cartridge]
+                                                             [fin]
+                                                             [module]
+                                                             [apd]
+                                                             [crystal]);
+                            output << values[0] << " " << values[1] << "\n";
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return(0);
+}
+
+
+/*!
+ * Writes out a linear energy calibration per crystal.  In practice there is
+ * typically only one fit per cartridge, but we write them out as per crystal
+ * in case something needs to be modified.  Parameters are written out at p0,
+ * space, p1, where p0 is the constant term, and p1 is the energy dependent
+ * slope.
+ */
+int WritePerCartridgeAsPerCrystalEnergyCal(
+        std::string filename,
+        float crystal_correction[SYSTEM_PANELS]
+                                [CARTRIDGES_PER_PANEL]
+                                [2])
+{
+    std::ofstream output;
+    output.open(filename.c_str());
+    if (!output.good()) {
+        return(-1);
+    }
+
+    for (int panel = 0; panel < SYSTEM_PANELS; panel++) {
+        for (int cartridge = 0; cartridge < CARTRIDGES_PER_PANEL; cartridge++) {
+            for (int fin = 0; fin < FINS_PER_CARTRIDGE; fin++) {
+                for (int module = 0; module < MODULES_PER_FIN; module++) {
+                    for (int apd = 0; apd < APDS_PER_MODULE; apd++) {
+                        for (int crystal = 0;
+                                crystal < CRYSTALS_PER_APD;
+                                crystal++)
+                        {
+                            float * values(crystal_correction[panel]
+                                                             [cartridge]);
+                            output << values[0] << " " << values[1] << "\n";
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return(0);
+}
+
 
 int BoundsCheckEvent(const CoincEvent & event) {
     if ((event.cartridge1 < 0) || (event.cartridge1 >= CARTRIDGES_PER_PANEL)) {
@@ -559,3 +724,29 @@ float GetEventOffset(
     }
 }
 
+float GetEventOffsetEdep(
+        const CoincEvent & event,
+        float crystal_cal[SYSTEM_PANELS]
+                         [CARTRIDGES_PER_PANEL]
+                         [FINS_PER_CARTRIDGE]
+                         [MODULES_PER_FIN]
+                         [APDS_PER_MODULE]
+                         [CRYSTALS_PER_APD]
+                         [2])
+{
+    if (BoundsCheckEvent(event) < 0) {
+        return(0);
+    } else {
+        float offset(crystal_cal[0][event.cartridge1][event.fin1]
+                                [event.m1][event.apd1][event.crystal1][0]
+                     + crystal_cal[1][event.cartridge2][event.fin2]
+                                  [event.m2][event.apd2][event.crystal2][0]
+                     + event.E1 * crystal_cal[0][event.cartridge1][event.fin1]
+                                             [event.m1][event.apd1]
+                                             [event.crystal1][1]
+                     + event.E2 * crystal_cal[1][event.cartridge2][event.fin2]
+                                             [event.m2][event.apd2]
+                                             [event.crystal2][1]);
+        return(offset);
+    }
+}

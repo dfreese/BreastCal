@@ -19,14 +19,15 @@
 void usage() {
     cout << "cal_edep [-v -h] -f [Filename]\n"
          << "\n"
-         << "Options:"
+         << "Options:\n"
          << "  -n:  do not write out the resulting root file\n"
          << "  -dp:  do not print out any postscript files\n"
          << "  -pto:  only write out the time resolution plot\n"
          << "  -c:  use common channel energy for calibration\n"
          << "  -rcal (filename):  read in initial per crystal calibration\n"
          << "  -ft (limit ns):  use fine timestamp limit for calibration\n"
-         << "      default: use limit +/-40ns\n";
+         << "      default: use limit +/-40ns\n"
+         << "  -wedcal (filename): write out the energy dependence to a file\n";
 }
 
 int main(int argc, Char_t *argv[]) {
@@ -60,6 +61,9 @@ int main(int argc, Char_t *argv[]) {
 
     bool read_per_crystal_correction(false);
     string input_crystal_cal_filename;
+
+    bool write_per_crystal_energy_correction(false);
+    string output_per_crystal_energy_cal_filename;
 
     string filename;
 
@@ -115,6 +119,10 @@ int main(int argc, Char_t *argv[]) {
                 return(-20);
             }
             cout << " Fine time interval = "  << dtf_difference_limit << endl;
+        }
+        if(strcmp(argv[ix], "-wedcal") == 0) {
+            write_per_crystal_energy_correction = true;
+            output_per_crystal_energy_cal_filename = string(argv[ix + 1]);
         }
     }
     rootlogon(verbose);
@@ -211,8 +219,8 @@ int main(int argc, Char_t *argv[]) {
         cout << " I made " << checkevts << " calls to Fill() " << endl;         
     }
 
-    TH1F *profehist[2][CARTRIDGES_PER_PANEL];
-    TF1 *profehistfit[2][CARTRIDGES_PER_PANEL];
+    TH1F *profehist[SYSTEM_PANELS][CARTRIDGES_PER_PANEL];
+    TF1 *profehistfit[SYSTEM_PANELS][CARTRIDGES_PER_PANEL];
 
     profehistfit[0][0] = new TF1("profehistfit[0][0]","pol1",400,600);   
     profehistfit[1][0] = new TF1("profehistfit[1][0]","pol1",400,600);   
@@ -371,6 +379,27 @@ int main(int argc, Char_t *argv[]) {
     if (verbose) {
         cout << " Done looping over entries " << endl;
         cout << " I made " << checkevts << " calls to Fill() " << endl;
+    }
+
+    if (write_per_crystal_energy_correction) {
+        float crystal_energy_correction[SYSTEM_PANELS]
+                                [CARTRIDGES_PER_PANEL]
+                                [2] = {{{0}}};
+        for (int panel = 0; panel < SYSTEM_PANELS; panel++) {
+            for (int cart = 0; cart < CARTRIDGES_PER_PANEL; cart++) {
+                crystal_energy_correction[panel][cart][0] =
+                        profehistfit[panel][cart]->GetParameter(0);
+                crystal_energy_correction[panel][cart][1] =
+                        profehistfit[panel][cart]->GetParameter(1);
+            }
+        }
+        int write_status(WritePerCartridgeAsPerCrystalEnergyCal(
+                             output_per_crystal_energy_cal_filename,
+                             crystal_energy_correction));
+        if (write_status < 0) {
+            cerr << "Error: Writing out per crystal energy calibration"
+                 << " failed\n";
+        }
     }
 
     if (write_out_time_res_plot_flag) {
