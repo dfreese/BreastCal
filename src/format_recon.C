@@ -11,7 +11,7 @@
 #define ZPITCH 0.0565*INCHTOMM //
 
 void usage(void){
-    cout << " format_recon [-r -v -a] -f [filename] -p [panelseparation] -t [finetimewindow] -ft [threshold] -mt [maxtime]]" <<endl;
+    cout << " format_recon [-r -v -a] -f [filename] -p [panelseparation] -t [finetimewindow] -mt [maxtime]]" <<endl;
     cout << " -r : needed for randoms " << endl;
     cout << " -v : verbose " << endl;
     cout << " -a : ascii  " << endl;
@@ -20,17 +20,20 @@ void usage(void){
          << " -el: Set Lower Energy Window - Default is 400keV\n"
          << " -dtc: Enable Course Timestamp Windowing\n"
          << " -dtcl: Set Lower Course Timestamp Window - Default 0\n"
-         << " -dtcl: Set Lower Course Timestamp Window - Default 4\n";
+         << " -dtcl: Set Lower Course Timestamp Window - Default 4\n"
+         << " -rcal (filename):  read in initial per crystal calibration\n";
     return;
 }
 
 int main(int argc, char ** argv)
 {
+    if (argc == 1) {
+        usage();
+        return(0);
+    }
     cout << "Welcome " << endl;
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    string filename("");
-    Int_t threshold(-1000);
+    string filename;
     int verbose(0);
     int ascii(0);
     Float_t PANELDISTANCE(-1); // mm
@@ -42,92 +45,75 @@ int main(int argc, char ** argv)
     int dtc_gate_low(0);
     int dtc_gate_high(4);
     bool use_dtc_gating_flag(false);
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    bool read_per_crystal_correction(false);
+    string input_crystal_cal_filename;
 
+    // Options not requiring input
     for(int ix = 1; ix < argc; ix++) {
-
-        /*
-         * Verbose '-v'
-		 */
 		if(strncmp(argv[ix], "-v", 2) == 0) {
 			cout << "Verbose Mode " << endl;
 			verbose = 1;
 		}
-
-		if(strncmp(argv[ix], "-h", 2) == 0) {
+		if(strcmp(argv[ix], "-h") == 0) {
 		  usage();
-		  return 0;
+		  return(0);
 		}
-
-        if(strncmp(argv[ix], "-r", 2) == 0) {
+        if(strcmp(argv[ix], "-r") == 0) {
 			cout << "RANDOMS SELECTION " << endl;
 			RANDOMS = 1;
 		}
-
-        if (strncmp(argv[ix],"-p",2) ==0 ) {
-            ix++;
-            PANELDISTANCE=atof(argv[ix]);
-            cout << " Using panel distance " << PANELDISTANCE << " mm." << endl;
-		}
-
-        if(strncmp(argv[ix], "-a", 2) == 0) {
+        if(strcmp(argv[ix], "-a") == 0) {
             cout << "Ascii output file generated" << endl;
             ascii = 1;
         }
-
-        if(strncmp(argv[ix], "-t", 2) == 0) {
-            FINETIMEWINDOW = atoi( argv[ix+1]);
-            ix++;
+        if(strcmp(argv[ix], "-dtc") == 0) {
+            use_dtc_gating_flag = true;
         }
+    }
 
-        if(strncmp(argv[ix], "-mt", 3) == 0) {
+    // Options requiring input
+    for(int ix = 1; ix < (argc - 1); ix++) {
+        if (strcmp(argv[ix],"-p") ==0 ) {
+            PANELDISTANCE=atof(argv[ix + 1]);
+            cout << " Using panel distance " << PANELDISTANCE << " mm." << endl;
+		}
+        if(strcmp(argv[ix], "-t") == 0) {
+            FINETIMEWINDOW = atoi(argv[ix + 1]);
+        }
+        if(strcmp(argv[ix], "-mt") == 0) {
             MAXTIME = atoi( argv[ix+1]);
             cout <<"Only events within first " << MAXTIME << " minutes." << endl;
-            ix++;
         }
-
-        if(strncmp(argv[ix], "-f", 2) == 0) {
-            if(strncmp(argv[ix], "-ft", 3) == 0) {
-                threshold = atoi( argv[ix+1]);
-                cout << "Threshold =  " << threshold << " ( not implemented yet ) " << endl;
-                ix++;
-            } else {
-                /* filename '-f' */
-                filename = string(argv[ix+1]);
-            }
-
+        if(strcmp(argv[ix], "-f") == 0) {
+            filename = string(argv[ix + 1]);
         }
-        
-        if(strncmp(argv[ix], "-eh", 3) == 0) {
+        if(strcmp(argv[ix], "-eh") == 0) {
             stringstream ss;
             ss << argv[ix + 1];
             ss >> energy_gate_high;
-            ix++;
         }
-        if(strncmp(argv[ix], "-el", 3) == 0) {
+        if(strcmp(argv[ix], "-el") == 0) {
             stringstream ss;
             ss << argv[ix + 1];
             ss >> energy_gate_low;
-            ix++;
         }
         if(strcmp(argv[ix], "-dtcl") == 0) {
             stringstream ss;
             ss << argv[ix + 1];
             ss >> dtc_gate_low;
-            ix++;
             use_dtc_gating_flag = true;
         }
         if(strcmp(argv[ix], "-dtch") == 0) {
             stringstream ss;
             ss << argv[ix + 1];
             ss >> dtc_gate_high;
-            ix++;
             use_dtc_gating_flag = true;
         }
-        if(strcmp(argv[ix], "-dtc") == 0) {
-            use_dtc_gating_flag = true;
+        if(strcmp(argv[ix], "-rcal") == 0) {
+            read_per_crystal_correction = true;
+            input_crystal_cal_filename = string(argv[ix + 1]);
         }
-    } // loop over arguments
+    }
 
     rootlogon(verbose);
 
@@ -135,6 +121,24 @@ int main(int argc, char ** argv)
         cerr << "Panel Distance not specified or invalid" << endl;
         cerr << "Exiting" << endl;
         return(-2);
+    }
+
+    float crystal_cal[SYSTEM_PANELS]
+            [CARTRIDGES_PER_PANEL]
+            [FINS_PER_CARTRIDGE]
+            [MODULES_PER_FIN]
+            [APDS_PER_MODULE]
+            [CRYSTALS_PER_APD] = {{{{{{0}}}}}};
+
+    if (read_per_crystal_correction) {
+        int cal_read_status(ReadPerCrystalCal(
+                input_crystal_cal_filename,crystal_cal));
+        if (cal_read_status < 0) {
+            cerr << "Error in reading input calibration file: "
+                 << cal_read_status << endl;
+            cerr << "Exiting.." << endl;
+            return(-3);
+        }
     }
 
     if (RANDOMS) {
@@ -224,6 +228,7 @@ int main(int argc, char ** argv)
         // the selection is only converted to CUDA readable format. 
         if (BoundsCheckEvent(*data) == 0) {
             if (EnergyGateEvent(*data, energy_gate_low, energy_gate_high) == 0) {
+                data->dtf -= GetEventOffset(*data, crystal_cal);
                 if (((TMath::Abs(data->dtf)<FINETIMEWINDOW) && (!use_dtc_gating_flag))
                         || ((data->dtc >= dtc_gate_low) && (data->dtc <= dtc_gate_high) && (use_dtc_gating_flag))
                         || (RANDOMS)) 
