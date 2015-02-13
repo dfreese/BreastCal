@@ -65,7 +65,8 @@ void usage() {
          << "  -rcal (filename):  read in initial per crystal calibration\n"
          << "  -wcal (filename):  write out per crystal calibration\n"
          << "  -ft (limit ns):  use fine timestamp limit for calibration\n"
-         << "      default: use limit +/-400ns\n";
+         << "      default: use limit +/-400ns\n"
+         << "  -redcal (filename): read in an energy dependence file\n";
 }
 
 int main(int argc, Char_t *argv[])
@@ -90,6 +91,9 @@ int main(int argc, Char_t *argv[])
     bool write_per_crystal_correction(false);
     string input_crystal_cal_filename;
     string output_crystal_cal_filename;
+
+    bool read_per_crystal_energy_correction(false);
+    string input_per_crystal_energy_cal_filename;
 
     // A flag that is true unless a -n option is found in which case only the
     // calibration parameters and the associated plots are generated, but the
@@ -141,6 +145,10 @@ int main(int argc, Char_t *argv[])
         if(strcmp(argv[ix], "-wcal") == 0) {
             write_per_crystal_correction = true;
             output_crystal_cal_filename = string(argv[ix + 1]);
+        }
+        if(strcmp(argv[ix], "-redcal") == 0) {
+            read_per_crystal_energy_correction = true;
+            input_per_crystal_energy_cal_filename = string(argv[ix + 1]);
         }
         if(strncmp(argv[ix], "-f", 2) == 0) {
             if(strncmp(argv[ix], "-ft", 3) == 0) {
@@ -247,6 +255,30 @@ int main(int argc, Char_t *argv[])
         }
     }
 
+
+    if (verbose) {
+        cout << "Reading Input crystal energy calibration file\n";
+    }
+    float crystal_edep_cal[SYSTEM_PANELS]
+            [CARTRIDGES_PER_PANEL]
+            [FINS_PER_CARTRIDGE]
+            [MODULES_PER_FIN]
+            [APDS_PER_MODULE]
+            [CRYSTALS_PER_APD]
+            [2] = {{{{{{{0}}}}}}};
+
+    if (read_per_crystal_energy_correction) {
+        int cal_read_status(ReadPerCrystalEnergyCal(
+                input_per_crystal_energy_cal_filename, crystal_edep_cal));
+        if (cal_read_status < 0) {
+            cerr << "Error in reading input calibration file: "
+                 << cal_read_status << endl;
+            cerr << "Exiting.." << endl;
+            return(-4);
+        }
+    }
+
+
     cout << " Opening file " << filename << endl;
     TFile *rtfile = new TFile(filename.c_str(),"OPEN");
     TTree *mm  = (TTree *) rtfile->Get("merged");
@@ -287,7 +319,10 @@ int main(int argc, Char_t *argv[])
                         checkevts++;
                         apdoffset[panel][evt->cartridge1][evt->fin1]
                                 [evt->m1][evt->apd1]->Fill(
-                                    evt->dtf - GetEventOffset(*evt, crystal_cal));
+                                    evt->dtf
+                                    - GetEventOffset(*evt, crystal_cal)
+                                    - GetEventOffsetEdep(*evt,
+                                                         crystal_edep_cal));
                     }
                 }
             }
@@ -348,6 +383,7 @@ int main(int argc, Char_t *argv[])
                         checkevts++;
                         apdoffset[1][evt->cartridge2][evt->fin2][evt->m2][evt->apd2]->Fill(
                                 evt->dtf - GetEventOffset(*evt, crystal_cal)
+                                - GetEventOffsetEdep(*evt, crystal_edep_cal)
                                 - mean_apdoffset[0][evt->cartridge1][evt->fin1][evt->m1][evt->apd1]);
                     }
                 }
@@ -426,6 +462,7 @@ int main(int argc, Char_t *argv[])
             calevt->dtf -= mean_apdoffset[0][evt->cartridge1][evt->fin1][evt->m1][evt->apd1];
             calevt->dtf -= mean_apdoffset[1][evt->cartridge2][evt->fin2][evt->m2][evt->apd2]; 
             calevt->dtf -= GetEventOffset(*evt, crystal_cal);
+            calevt->dtf -= GetEventOffsetEdep(*evt, crystal_edep_cal);
             // Energy gate to put only the photopeaks in the fine time
             // stamp histogram for the time calibration calculation
             if (EnergyGateEvent(*evt, energy_gate_low, energy_gate_high) == 0) {
