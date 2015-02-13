@@ -204,7 +204,7 @@ int main(int argc, Char_t *argv[])
             [APDS_PER_MODULE]
             [CRYSTALS_PER_APD] = {{{{{{0}}}}}};
 
-    if (read_per_crystal_energy_correction) {
+    if (read_per_crystal_correction) {
         int cal_read_status(ReadPerCrystalCal(
                 input_crystal_cal_filename, crystal_cal));
         if (cal_read_status < 0) {
@@ -227,7 +227,7 @@ int main(int argc, Char_t *argv[])
             [CRYSTALS_PER_APD]
             [2] = {{{{{{{0}}}}}}};
 
-    if (read_per_crystal_correction) {
+    if (read_per_crystal_energy_correction) {
         int cal_read_status(ReadPerCrystalEnergyCal(
                 input_per_crystal_energy_cal_filename, crystal_edep_cal));
         if (cal_read_status < 0) {
@@ -372,7 +372,7 @@ int main(int argc, Char_t *argv[])
 
     if (verbose) {
         cout << " Done looping over entries " << endl;
-        cout << " I made " << checkevts << " calls to Fill() " << endl;         
+        cout << " I made " << checkevts << " calls to Fill() " << endl;
     }
 
     for (int cartridge = 0; cartridge < CARTRIDGES_PER_PANEL; cartridge++) {
