@@ -17,7 +17,25 @@
 #include "cal_helper_functions.h"
 
 //#define DEBUG2
-#define UNITS 16
+
+
+void usage() {
+    cout << "cal_crystal_offset2 [-v -h] -f [Filename]\n"
+         << "\n"
+         << "Options:\n"
+         << "  -n:  do not write out the resulting root file\n"
+         << "  -dp:  do not print out any postscript files\n"
+         << "  -pto:  only write out the time resolution plot\n"
+         << "  -log:  print the time resolution plot using a log scale\n"
+         << "  -gf:  use a gaussian fit for the timing calibration\n"
+         << "      default: peak search\n"
+         << "  -rcal (filename):  read in initial per crystal calibration\n"
+         << "  -wcal (filename):  write out per crystal calibration\n"
+         << "  -ft (limit ns):  use fine timestamp limit for calibration\n"
+         << "      default: use limit +/-100ns\n"
+         << "  -redcal (filename): read in an energy dependence file\n";
+}
+
 
 #define MINMODENTRIES 1000
 
@@ -50,6 +68,10 @@ Float_t cryscalfunc(
 
 int main(int argc, Char_t *argv[])
 {
+    if (argc == 1) {
+        usage();
+        return(0);
+    }
     // A flag that is used by the crystal calibration function to determine
     // wether a fit algorithm or a peak searching algorithm should be used
     // in determining the calibration parameter for that crystal
@@ -66,6 +88,9 @@ int main(int argc, Char_t *argv[])
     bool write_per_crystal_correction(false);
     string input_crystal_cal_filename;
     string output_crystal_cal_filename;
+
+    bool read_per_crystal_energy_correction(false);
+    string input_per_crystal_energy_cal_filename;
 
     Int_t verbose = 0;
     // Parameter for determining if the fine time stamp histogram generated
@@ -112,6 +137,9 @@ int main(int argc, Char_t *argv[])
             usegausfit=1;
             cout << " Using Gauss Fit "  <<endl;
         }
+    }
+
+    for(int ix = 1; ix < (argc - 1); ix++) {
         if(strcmp(argv[ix], "-rcal") == 0) {
             read_per_crystal_correction = true;
             input_crystal_cal_filename = string(argv[ix + 1]);
@@ -120,22 +148,20 @@ int main(int argc, Char_t *argv[])
             write_per_crystal_correction = true;
             output_crystal_cal_filename = string(argv[ix + 1]);
         }
+        if(strcmp(argv[ix], "-redcal") == 0) {
+            read_per_crystal_energy_correction = true;
+            input_per_crystal_energy_cal_filename = string(argv[ix + 1]);
+        }
         if(strcmp(argv[ix], "-ft") == 0) {
-            ix++;
-            if (ix == argc) {
-                cout << " Please enter finelimit interval:"
-                     << " -ft [finelimit]\nExiting. " << endl;
-                return(-20);
-            }
-            FINELIMIT = atoi(argv[ix]);
+            FINELIMIT = atoi(argv[ix + 1]);
             if (FINELIMIT < 1) {
                 cout << " Error. FINELIMIT = " << FINELIMIT
                      << " too small. Please specify -ft [finelimit]. " << endl;
-                cout << "Exiting." << endl; return -20;
+                cout << "Exiting." << endl;
+                return(-20);
             }
             cout << " Fine time interval = "  << FINELIMIT << endl;
         }
-        /* filename '-f' */
         if(strcmp(argv[ix], "-f") == 0) {
             filename = string(argv[ix + 1]);
         }
@@ -178,14 +204,37 @@ int main(int argc, Char_t *argv[])
             [APDS_PER_MODULE]
             [CRYSTALS_PER_APD] = {{{{{{0}}}}}};
 
-    if (read_per_crystal_correction) {
+    if (read_per_crystal_energy_correction) {
         int cal_read_status(ReadPerCrystalCal(
-                input_crystal_cal_filename,crystal_cal));
+                input_crystal_cal_filename, crystal_cal));
+        if (cal_read_status < 0) {
+            cerr << "Error in reading input energy calibration file: "
+                 << cal_read_status << endl;
+            cerr << "Exiting.." << endl;
+            return(-3);
+        }
+    }
+
+
+    if (verbose) {
+        cout << "Reading Input crystal energy calibration file\n";
+    }
+    float crystal_edep_cal[SYSTEM_PANELS]
+            [CARTRIDGES_PER_PANEL]
+            [FINS_PER_CARTRIDGE]
+            [MODULES_PER_FIN]
+            [APDS_PER_MODULE]
+            [CRYSTALS_PER_APD]
+            [2] = {{{{{{{0}}}}}}};
+
+    if (read_per_crystal_correction) {
+        int cal_read_status(ReadPerCrystalEnergyCal(
+                input_per_crystal_energy_cal_filename, crystal_edep_cal));
         if (cal_read_status < 0) {
             cerr << "Error in reading input calibration file: "
                  << cal_read_status << endl;
             cerr << "Exiting.." << endl;
-            return(-3);
+            return(-4);
         }
     }
 
@@ -244,7 +293,9 @@ int main(int argc, Char_t *argv[])
                         crystaloffset[0][evt->cartridge1][evt->fin1][evt->m1]
                                 [evt->apd1][evt->crystal1]->Fill(
                                     evt->dtf
-                                    - GetEventOffset(*evt, crystal_cal));
+                                    - GetEventOffset(*evt, crystal_cal)
+                                    - GetEventOffsetEdep(*evt,
+                                                         crystal_edep_cal));
                     }
                 }
             }
@@ -253,7 +304,8 @@ int main(int argc, Char_t *argv[])
 
     if (verbose){
         cout << " Done looping over entries " << endl;
-        cout << " I made " << checkevts << " calls to Fill() " << endl;         }
+        cout << " I made " << checkevts << " calls to Fill() " << endl;
+    }
 
     float mean_crystaloffset[SYSTEM_PANELS]
             [CARTRIDGES_PER_PANEL]
@@ -309,7 +361,9 @@ int main(int argc, Char_t *argv[])
                                 evt->dtf - GetEventOffset(*evt, crystal_cal)
                                 - mean_crystaloffset[0][evt->cartridge1]
                                                     [evt->fin1][evt->m1]
-                                                    [evt->apd1][evt->crystal1]);
+                                                    [evt->apd1][evt->crystal1]
+                                - GetEventOffsetEdep(*evt,
+                                                     crystal_edep_cal));
                     }
                 }
             }
@@ -377,6 +431,7 @@ int main(int argc, Char_t *argv[])
             calevt->dtf -= mean_crystaloffset[0][evt->cartridge1][evt->fin1][evt->m1][evt->apd1][evt->crystal1];
             calevt->dtf -= mean_crystaloffset[1][evt->cartridge2][evt->fin2][evt->m2][evt->apd2][evt->crystal2];
             calevt->dtf -= GetEventOffset(*evt, crystal_cal);
+            calevt->dtf -= GetEventOffsetEdep(*evt, crystal_edep_cal);
             if (EnergyGateEvent(*evt, energy_gate_low, energy_gate_high) == 0) {
                 if (write_out_time_res_plot_flag) {
                     tres->Fill(calevt->dtf);
