@@ -15,9 +15,9 @@
 #include "cal_helper_functions.h"
 
 void usage(void) {
-    cout << " Energy Gate calibrated files.\n";
+    cout << " Write out time calibrated files.\n";
     cout << " Usage:  " << endl;
-    cout << " ./energy_gate_file [-v] -f [Filename] -el [Low Threshold] -eh [High Threshold]" << endl;
+    cout << " ./write_with_timing_cal [-v] -f [Filename]" << endl;
     cout << " -of: Specifies output filename. Default replaces .root\n"
          << "      extension with .tcal.root\n"
          << " -t:  Optionally sets the expected input tree name.\n"
@@ -25,7 +25,8 @@ void usage(void) {
          << " -ot: Optionally sets the output tree name.\n"
          << "      Default is merged\n"
          << " -rcal (filename):  read in initial per crystal calibration\n"
-         << " -redcal (filename): read in an energy dependence file\n";
+         << " -redcal (filename): read in an energy dependence file\n"
+         << " -n: do not write out the resulting root file\n";
 }
 
 int main(int argc, char ** argv) {
@@ -51,15 +52,24 @@ int main(int argc, char ** argv) {
     bool read_per_crystal_energy_correction(false);
     string input_per_crystal_energy_cal_filename;
 
+    // A flag that is true unless a -n option is found in which case only the
+    // calibration parameters and the associated plots are generated, but the
+    // calibrated root file is not created.
+    bool write_out_root_file_flag(true);
+
 
     for(int ix = 1; ix < argc; ix++) {
-        if (strncmp(argv[ix], "-h", 2) == 0) {
+        if (strcmp(argv[ix], "-h") == 0) {
             usage();
             return(0);
         }
-        if (strncmp(argv[ix], "-v", 2) == 0) {
+        if (strcmp(argv[ix], "-v") == 0) {
             cout << "Verbose Mode " << endl;
             verbose = 1;
+        }
+        if(strcmp(argv[ix], "-n") == 0) {
+            cout << "Calibrated Root File will not be created." << endl;
+            write_out_root_file_flag = false;
         }
     }
 
@@ -197,29 +207,37 @@ int main(int argc, char ** argv) {
     Long64_t entries = input_tree->GetEntries();
 
     if (verbose) {
-        cout << "Writing out energy gated root file" << endl;
+        cout << "Writing out time calibrated root file" << endl;
     }
 
     TH1F * tres = new TH1F("tres",
                            "Time Resolution After Time walk correction",
                            400, -100, 100);
 
-    TFile * output_rootfile = new TFile(output_filename.c_str(),"RECREATE");
-    TTree * output_tree = new TTree(output_tree_name.c_str(), output_tree_title.c_str());
+    TFile * output_rootfile = 0;
+    TTree * output_tree = 0;
     CoincEvent * output_event = new CoincEvent();
-    output_tree->Branch(output_branch_title.c_str(), &output_event);
+    if (write_out_root_file_flag) {
+        output_rootfile = new TFile(output_filename.c_str(),"RECREATE");
+        output_tree = new TTree(output_tree_name.c_str(), output_tree_title.c_str());
+        output_tree->Branch(output_branch_title.c_str(), &output_event);
+    }
 
     for (Long64_t ii = 0; ii < entries; ii++) {
         input_tree->GetEntry(ii);
         output_event = input_event;
         output_event->dtf -= GetEventOffset(*output_event, crystal_cal);
         output_event->dtf -= GetEventOffsetEdep(*output_event, crystal_edep_cal);
-        output_tree->Fill();
         tres->Fill(output_event->dtf);
+        if (write_out_root_file_flag) {
+            output_tree->Fill();
+        }
     }
 
-    output_tree->Write();
-    output_rootfile->Close();
+    if (write_out_root_file_flag) {
+        output_tree->Write();
+        output_rootfile->Close();
+    }
 
     if (verbose) {
         cout << "Finished writing out file" << endl;
