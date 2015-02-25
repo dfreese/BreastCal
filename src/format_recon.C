@@ -21,7 +21,8 @@ void usage(void){
          << " -dtc: Enable Course Timestamp Windowing\n"
          << " -dtcl: Set Lower Course Timestamp Window - Default 0\n"
          << " -dtcl: Set Lower Course Timestamp Window - Default 4\n"
-         << " -rcal (filename):  read in initial per crystal calibration\n";
+         << " -rcal (filename):  read in initial per crystal calibration\n"
+         << " -redcal (filename): read in an energy dependence file\n";
     return;
 }
 
@@ -47,6 +48,10 @@ int main(int argc, char ** argv)
     bool use_dtc_gating_flag(false);
     bool read_per_crystal_correction(false);
     string input_crystal_cal_filename;
+
+    bool read_per_crystal_energy_correction(false);
+    string input_per_crystal_energy_cal_filename;
+
 
     // Options not requiring input
     for(int ix = 1; ix < argc; ix++) {
@@ -113,6 +118,10 @@ int main(int argc, char ** argv)
             read_per_crystal_correction = true;
             input_crystal_cal_filename = string(argv[ix + 1]);
         }
+        if(strcmp(argv[ix], "-redcal") == 0) {
+            read_per_crystal_energy_correction = true;
+            input_per_crystal_energy_cal_filename = string(argv[ix + 1]);
+        }
     }
 
     rootlogon(verbose);
@@ -140,6 +149,30 @@ int main(int argc, char ** argv)
             return(-3);
         }
     }
+
+
+    if (verbose) {
+        cout << "Reading Input crystal energy calibration file\n";
+    }
+    float crystal_edep_cal[SYSTEM_PANELS]
+            [CARTRIDGES_PER_PANEL]
+            [FINS_PER_CARTRIDGE]
+            [MODULES_PER_FIN]
+            [APDS_PER_MODULE]
+            [CRYSTALS_PER_APD]
+            [2] = {{{{{{{0}}}}}}};
+
+    if (read_per_crystal_energy_correction) {
+        int cal_read_status(ReadPerCrystalEnergyCal(
+                input_per_crystal_energy_cal_filename, crystal_edep_cal));
+        if (cal_read_status < 0) {
+            cerr << "Error in reading input calibration file: "
+                 << cal_read_status << endl;
+            cerr << "Exiting.." << endl;
+            return(-4);
+        }
+    }
+
 
     if (RANDOMS) {
         cout << " Reformatting for RANDOMS " << endl;
@@ -229,9 +262,10 @@ int main(int argc, char ** argv)
         if (BoundsCheckEvent(*data) == 0) {
             if (EnergyGateEvent(*data, energy_gate_low, energy_gate_high) == 0) {
                 data->dtf -= GetEventOffset(*data, crystal_cal);
+                data->dtf -= GetEventOffsetEdep(*data, crystal_edep_cal);
                 if (((TMath::Abs(data->dtf)<FINETIMEWINDOW) && (!use_dtc_gating_flag))
                         || ((data->dtc >= dtc_gate_low) && (data->dtc <= dtc_gate_high) && (use_dtc_gating_flag))
-                        || (RANDOMS)) 
+                        || (RANDOMS))
                 {
                     if (!firsteventtimeset){ 
                         firsteventtime=data->ct;
