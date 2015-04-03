@@ -97,6 +97,7 @@ int DecodePacketByteStream(
     }
 
     // Remaining bytes are ADC data for each channel
+    packet_info.adc_values.reserve((expected_packet_size - 1 - 9)/2);
     for (unsigned int counter = 9;
          counter < (expected_packet_size - 1);
          counter += 2)
