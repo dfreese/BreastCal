@@ -84,42 +84,31 @@ Int_t PixelCal::ReadCal(const char *filebase){
       return 0;}  //ReadCal
 
 
-Int_t PixelCal::GetCrystalId(Float_t x, Float_t y, Int_t c, Int_t f, Int_t i, Int_t j){
-  //  cout << " Getcrystal :: " << " xpos[21] = " << xpos[21] << " ypos[21] = " << ypos[21] << endl;
-  //  cout << " x = " << x << " y = " << y << endl;
-  
-  Double_t dist,min;
-  Int_t histnr;
+Int_t PixelCal::GetCrystalId(Float_t x, Float_t y, Int_t c, Int_t f, Int_t i, Int_t j) {
+    Double_t min(100000);
+    Int_t histnr(9999);
 
-  histnr=9999;
-  min=100000;
-  if ((TMath::Abs(x)>1)||(TMath::Abs(y)>1)) return -3;
-   for (Int_t k=0;k<PEAKS;k++){
-      //      dist=(*(*xpeaks+k)-xdata)*(*(*xpeaks+k)-xdata)+(*(*ypeaks+k)-ydata)*(*(*ypeaks+k)-ydata);
-
-      dist=TMath::Power((Float_t) Y[c][f][i][j][k]-y,2)+TMath::Power((Float_t) X[c][f][i][j][k]-x,2);
-
-     //if (debvar) cout << "k = " << k << "dist = " << dist << endl;
-
-     if (dist<min) {histnr=k;min=dist;
-
-       //   if (debvar) cout << "--------> k = " << k <<" min = " << min <<endl;
-       }
-     } //for loop 
-   //      if (verbose) cout << "FINAL :: histnr = " << histnr <<" min = " << min << endl;
-     if (histnr!=9999) { 
-       return histnr;
-	}
-     
-  
-     else { if (verbose) 
-	 {cout << "No associated histogram found !" << endl;
-	   cout << " Entry :  x = " << x << " y = " << y <<endl;}
-     }
-    min=10000;
-    histnr=9999;
-    
-  return -2;}
+    if ((TMath::Abs(x)>1)||(TMath::Abs(y)>1)) {
+        return(-3);
+    }
+    for (Int_t k = 0; k < PEAKS; k++) {
+        Double_t dist = TMath::Power((Float_t) Y[c][f][i][j][k]-y,2) +
+                        TMath::Power((Float_t) X[c][f][i][j][k]-x,2);
+        if (dist < min) {
+            histnr = k;
+            min = dist;
+        }
+    }
+    if (histnr != 9999) { 
+        return(histnr);
+    } else {
+        if (verbose) {
+            cout << "No associated histogram found !" << endl;
+            cout << " Entry :  x = " << x << " y = " << y <<endl;
+        }
+        return(-2);
+    }
+}
 
 
 
