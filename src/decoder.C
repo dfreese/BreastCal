@@ -354,11 +354,25 @@ int main(int argc, char *argv[])
     double uv_pedestal_rms[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][4]= {{{{0}}}};
     int uv_pedestal_events[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]= {{{0}}};
 
+    dataFile.seekg(0, std::ios::end);
+    std::streamsize dataFileSize = dataFile.tellg();
+    dataFile.seekg(0, std::ios::beg);
+
+    std::vector<char> buffer(dataFileSize);
+    if (dataFile.read(buffer.data(), dataFileSize)) {
+        cout << "read worked" << endl;
+    }
+    //dataFile.seekg(0, std::ios::beg);
+
     char cc;
-    while (dataFile.get(cc)) {
-        packBuffer.push_back(cc);
+    std::vector<char>::iterator buffer_iter(buffer.begin());
+    //while (dataFile.get(cc)) {
+    //    packBuffer.push_back(cc);
+    while (buffer_iter != buffer.end()) {
+        packBuffer.push_back(*(buffer_iter++));
         byteCounter++;
-        if ((unsigned char)cc==0x81) {
+        //if ((unsigned char)cc==0x81) {
+        if ((unsigned char)packBuffer.back()==0x81) {
             // end of package (start processing)
             totalPckCnt++;
 
