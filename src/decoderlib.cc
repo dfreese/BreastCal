@@ -75,20 +75,18 @@ int DecodePacketByteStream(
 
     packet_info.no_modules_triggered = 0;
     for (int ii = 0; ii < 4; ii++) {
-        packet_info.no_modules_triggered += int((trigCode >> ii) & (0x01));
         packet_info.module_trigger_flags[ii] = bool((trigCode >> ii) & (0x01));
+        if (packet_info.module_trigger_flags[ii]) {
+            packet_info.no_modules_triggered++;
+        }
     }
 
-    unsigned int expected_packet_size = 10 +
-                                        32 * packet_info.no_modules_triggered;
+    unsigned int expected_packet_size =
+            10 + 32 * packet_info.no_modules_triggered;
 
     if (packet_byte_stream.size() != expected_packet_size) {
-//        std::cout << "packet_byte_stream.size(): " << packet_byte_stream.size()
-//                  << "expected_packet_size: " << expected_packet_size
-//                  << std::endl;
         return(-4);
     }
-    // Byte 1 is not used - 0x1f
 
     packet_info.timestamp = 0;
     for (int ii = 3; ii < 9; ii++) {
@@ -97,7 +95,8 @@ int DecodePacketByteStream(
     }
 
     // Remaining bytes are ADC data for each channel
-    packet_info.adc_values.reserve((expected_packet_size - 1 - 9)/2);
+    //packet_info.adc_values.reserve((expected_packet_size - 1 - 9)/2);
+    int adc_value(0);
     for (unsigned int counter = 9;
          counter < (expected_packet_size - 1);
          counter += 2)
@@ -105,7 +104,9 @@ int DecodePacketByteStream(
         short value(packet_byte_stream[counter] & 0x3F);
         value = value << 6;
         value += short(packet_byte_stream[counter + 1] & 0x3F);
-        packet_info.adc_values.push_back(value);
+        //packet_info.adc_values.push_back(value);
+        packet_info.adc_values[adc_value] = value;
+        adc_value++;
     }
     return(0);
 }

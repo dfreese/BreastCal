@@ -11,7 +11,8 @@ struct DaqPacket {
     int no_modules_triggered;
     bool module_trigger_flags[4];
     long timestamp;
-    std::vector<short> adc_values;
+    //std::vector<short> adc_values;
+    short adc_values[64];
 };
 
 #endif // DAQPACKET_H
