@@ -22,62 +22,25 @@
 
 using namespace std;
 
-
-
-
 // Energy histograms ::
 TH1F *E[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
 TH1F *E_com[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
 
-// U - V vectors
-#include "TVector.h"
-TVector *uu_c[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE];
-TVector *vv_c[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE];
-Long64_t uventries[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][2]={{{{0}}}};
-
 TDirectory *subdir[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE];
-
 
 void usage(void)
 {
     int t=DEFAULTTHRESHOLD;
     int tnohit=DEFAULT_NOHIT_THRESHOLD;
     cout << " decode  -f [filename] [-v -o [outputfilename] -p  -d -t [threshold] " ;
-    cout << " -uv -pedfile [pedfilename] ]" <<endl;
-    cout << " -d : debug mode, a tree with unparsed data will be written (non-pedestal corrected). " <<endl;
-    cout << "      you get access to u,v" << endl;
+    cout << " -uv -pedfile [pedfilename] ]" << endl;
     cout << " -t : threshold for hits (trigger threshold), default = " << t << endl;
     cout << " -n : no hit threshold in other APD on same module, default = " << tnohit << endl;
     cout << " -pedfile [pedfilename] : pedestal file name " << endl;
-    cout << " -p : calculate pedestals " << endl;
-    cout << " -up [panel_id]: calculate uv centers from pedestals (sine wave must be off)" << endl;
-    cout << " -uvo : calculate uv centers only" << endl;
     cout << " -o : optional outputfilename " <<endl;
-    cout << " -cmap [DAQBOARD_FILE] : specify which DAQ BOARD nfo file to use rather than the default in $ANADIR/nfo" << endl;
+    cout << " -cmap [DAQBOARD_FILE] : specify DAQ BOARD nfo file rather than the default in $ANADIR/nfo" << endl;
     return;
 }
-
-int pedana(double & mean, double & rms, int events, short value)
-{
-    double val = value;
-    // if the value is an outlier (or < 0) , then we reset the value to the current mean.
-    // Otherwise I had to include an event array for every channel value
-
-    if (value < 0) {
-        val = mean;
-    }
-    if (events > 10) {
-        if (std::abs(val - mean) > 12 * (std::sqrt(rms/double(events)))) {
-            val = mean;
-        }
-    }
-
-    double tmp = mean;
-    mean += (val - tmp) / (events);
-    rms += (val - mean) * (val - tmp);
-    return(0);
-}
-
 
 int main(int argc, char *argv[])
 {
@@ -241,7 +204,6 @@ int main(int argc, char *argv[])
     long droppedSize(0);
 
     long total_raw_events(0);
-
 
     dataFile.seekg(0, std::ios::end);
     std::streamsize dataFileSize = dataFile.tellg();

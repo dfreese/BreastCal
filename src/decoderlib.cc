@@ -95,18 +95,23 @@ int DecodePacketByteStream(
     }
 
     // Remaining bytes are ADC data for each channel
-    //packet_info.adc_values.reserve((expected_packet_size - 1 - 9)/2);
-    int adc_value(0);
+    packet_info.adc_values.clear();
+    packet_info.adc_values.reserve((expected_packet_size - 1 - 9)/2);
+    //int adc_value(0);
     for (unsigned int counter = 9;
          counter < (expected_packet_size - 1);
          counter += 2)
     {
-        short value(packet_byte_stream[counter] & 0x3F);
-        value = value << 6;
-        value += short(packet_byte_stream[counter + 1] & 0x3F);
-        //packet_info.adc_values.push_back(value);
-        packet_info.adc_values[adc_value] = value;
-        adc_value++;
+        //short value(packet_byte_stream[counter] & 0x3F);
+        //value = value << 6;
+        //value += short(packet_byte_stream[counter + 1] & 0x3F);
+
+        short value(((packet_byte_stream[counter] & 0x3F) << 6) +
+                     (packet_byte_stream[counter + 1] & 0x3F));
+
+        packet_info.adc_values.push_back(value);
+        //packet_info.adc_values[adc_value] = value;
+        //adc_value++;
     }
     return(0);
 }
