@@ -10,9 +10,9 @@ class ModuleDat;
 #include "Syspardef.h"
 
 void getfinmodule(
-        short panel,
-        short chip,
-        short local_module,
+        int panel,
+        int chip,
+        int local_module,
         short & module,
         short & fin);
 
@@ -54,5 +54,63 @@ int WritePedestalFile(const std::string & filename,
                       int events[CARTRIDGES_PER_PANEL]
                                 [RENAS_PER_CARTRIDGE]
                                 [MODULES_PER_RENA]);
+
+int ReadCalibrationFile(
+        const std::string & filename,
+        float use_crystal[SYSTEM_PANELS]
+                         [CARTRIDGES_PER_PANEL]
+                         [FINS_PER_CARTRIDGE]
+                         [MODULES_PER_FIN]
+                         [APDS_PER_MODULE]
+                         [CRYSTALS_PER_APD],
+        float gain_spat[SYSTEM_PANELS]
+                       [CARTRIDGES_PER_PANEL]
+                       [FINS_PER_CARTRIDGE]
+                       [MODULES_PER_FIN]
+                       [APDS_PER_MODULE]
+                       [CRYSTALS_PER_APD],
+        float gain_comm[SYSTEM_PANELS]
+                       [CARTRIDGES_PER_PANEL]
+                       [FINS_PER_CARTRIDGE]
+                       [MODULES_PER_FIN]
+                       [APDS_PER_MODULE]
+                       [CRYSTALS_PER_APD],
+        float eres_spat[SYSTEM_PANELS]
+                       [CARTRIDGES_PER_PANEL]
+                       [FINS_PER_CARTRIDGE]
+                       [MODULES_PER_FIN]
+                       [APDS_PER_MODULE]
+                       [CRYSTALS_PER_APD],
+        float eres_comm[SYSTEM_PANELS]
+                       [CARTRIDGES_PER_PANEL]
+                       [FINS_PER_CARTRIDGE]
+                       [MODULES_PER_FIN]
+                       [APDS_PER_MODULE]
+                       [CRYSTALS_PER_APD],
+        float crystal_x[SYSTEM_PANELS]
+                       [CARTRIDGES_PER_PANEL]
+                       [FINS_PER_CARTRIDGE]
+                       [MODULES_PER_FIN]
+                       [APDS_PER_MODULE]
+                       [CRYSTALS_PER_APD],
+        float crystal_y[SYSTEM_PANELS]
+                       [CARTRIDGES_PER_PANEL]
+                       [FINS_PER_CARTRIDGE]
+                       [MODULES_PER_FIN]
+                       [APDS_PER_MODULE]
+                       [CRYSTALS_PER_APD]);
+
+int ReadUVCirclesFile(
+        const std::string & filename,
+        float circles_u[SYSTEM_PANELS]
+                       [CARTRIDGES_PER_PANEL]
+                       [FINS_PER_CARTRIDGE]
+                       [MODULES_PER_FIN]
+                       [APDS_PER_MODULE],
+        float circles_v[SYSTEM_PANELS]
+                       [CARTRIDGES_PER_PANEL]
+                       [FINS_PER_CARTRIDGE]
+                       [MODULES_PER_FIN]
+                       [APDS_PER_MODULE]);
 
 #endif // DECODERLIB_H
