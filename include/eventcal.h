@@ -3,7 +3,7 @@
 
 #include "TObject.h"
 
-class ModuleCal :
+class EventCal :
         public TObject
 {
 public:
