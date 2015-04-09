@@ -23,7 +23,7 @@ int PacketToRawEvents(
         const DaqPacket & packet_info,
         std::vector<chipevent> & raw_events,
         int cartridge_id,
-        int sourcepos);
+        int sourcepos = 0);
 
 int RawEventToModuleDat(
         const chipevent & rawevent,

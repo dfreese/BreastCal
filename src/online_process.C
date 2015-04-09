@@ -32,13 +32,17 @@ void usage(void)
 {
     int t=DEFAULTTHRESHOLD;
     int tnohit=DEFAULT_NOHIT_THRESHOLD;
-    cout << " decode  -f [filename] [-v -o [outputfilename] -p  -d -t [threshold] " ;
-    cout << " -uv -pedfile [pedfilename] ]" << endl;
-    cout << " -t : threshold for hits (trigger threshold), default = " << t << endl;
-    cout << " -n : no hit threshold in other APD on same module, default = " << tnohit << endl;
-    cout << " -pedfile [pedfilename] : pedestal file name " << endl;
-    cout << " -o : optional outputfilename " <<endl;
-    cout << " -cmap [DAQBOARD_FILE] : specify DAQ BOARD nfo file rather than the default in $ANADIR/nfo" << endl;
+    cout << "online_process [-v] -f [filename]\n"
+         << " -pedfile [pedfilename] : File holding pedestal values\n"
+         << " -t [threshold]: threshold for hits, default = " << t << "\n"
+         << " -n : double trigger threshold for other APD on same module\n"
+         << "       default = " << tnohit << "\n"
+         << " -pedfile [pedfilename] : pedestal file name\n"
+         << " -o : optional outputfilename\n"
+         << " -cmap [DAQBOARD_FILE] : specify DAQ BOARD nfo file\n"
+         << "       default = $ANADIR/nfo/DAQ_Board_Map.nfo"
+         << " -calfile [calibration filename]\n"
+         << " -uvfile [uv center filename]\n" << endl;
     return;
 }
 
@@ -59,7 +63,9 @@ int main(int argc, char *argv[])
     string pedfilename;
     string pedvaluefilename;
 
-    Int_t sourcepos=0;
+    string cal_filename;
+    string uv_filename;
+
     int threshold=DEFAULTTHRESHOLD;
     int nohit_threshold=DEFAULT_NOHIT_THRESHOLD;
 
@@ -88,8 +94,11 @@ int main(int argc, char *argv[])
         if (strcmp(argv[ix], "-pedfile") == 0) {
             pedvaluefilename = string(argv[ix + 1]);
         }
-        if (strcmp(argv[ix], "-pos") == 0) {
-            sourcepos = atoi(argv[ix + 1]);
+        if (strcmp(argv[ix], "-calfile") == 0) {
+            cal_filename = string(argv[ix + 1]);
+        }
+        if (strcmp(argv[ix], "-uvfile") == 0) {
+            uv_filename = string(argv[ix + 1]);
         }
         if (strcmp(argv[ix], "-cmap") == 0) {
             cmap_spec_flag = true;
@@ -141,6 +150,93 @@ int main(int argc, char *argv[])
         cerr << "Exiting." << endl;
         return(-3);
     }
+
+    float use_crystal[SYSTEM_PANELS]
+                     [CARTRIDGES_PER_PANEL]
+                     [FINS_PER_CARTRIDGE]
+                     [MODULES_PER_FIN]
+                     [APDS_PER_MODULE]
+                     [CRYSTALS_PER_APD] = {{{{{{0}}}}}};
+
+    float gain_spat[SYSTEM_PANELS]
+                   [CARTRIDGES_PER_PANEL]
+                   [FINS_PER_CARTRIDGE]
+                   [MODULES_PER_FIN]
+                   [APDS_PER_MODULE]
+                   [CRYSTALS_PER_APD] = {{{{{{0}}}}}};
+
+    float gain_comm[SYSTEM_PANELS]
+                   [CARTRIDGES_PER_PANEL]
+                   [FINS_PER_CARTRIDGE]
+                   [MODULES_PER_FIN]
+                   [APDS_PER_MODULE]
+                   [CRYSTALS_PER_APD] = {{{{{{0}}}}}};
+
+    float eres_spat[SYSTEM_PANELS]
+                   [CARTRIDGES_PER_PANEL]
+                   [FINS_PER_CARTRIDGE]
+                   [MODULES_PER_FIN]
+                   [APDS_PER_MODULE]
+                   [CRYSTALS_PER_APD] = {{{{{{0}}}}}};
+
+    float eres_comm[SYSTEM_PANELS]
+                   [CARTRIDGES_PER_PANEL]
+                   [FINS_PER_CARTRIDGE]
+                   [MODULES_PER_FIN]
+                   [APDS_PER_MODULE]
+                   [CRYSTALS_PER_APD] = {{{{{{0}}}}}};
+
+    float crystal_x[SYSTEM_PANELS]
+                   [CARTRIDGES_PER_PANEL]
+                   [FINS_PER_CARTRIDGE]
+                   [MODULES_PER_FIN]
+                   [APDS_PER_MODULE]
+                   [CRYSTALS_PER_APD] = {{{{{{0}}}}}};
+
+    float crystal_y[SYSTEM_PANELS]
+                   [CARTRIDGES_PER_PANEL]
+                   [FINS_PER_CARTRIDGE]
+                   [MODULES_PER_FIN]
+                   [APDS_PER_MODULE]
+                   [CRYSTALS_PER_APD] = {{{{{{0}}}}}};
+
+    int read_cal_status(ReadCalibrationFile(cal_filename,
+                                            use_crystal,
+                                            gain_spat,
+                                            gain_comm,
+                                            eres_spat,
+                                            eres_comm,
+                                            crystal_x,
+                                            crystal_y));
+
+    if (read_cal_status < 0) {
+        cerr << "Calibration file: \"" << cal_filename
+             << "\" could not be read.  Exiting.";
+        return(-4);
+    }
+
+    float circles_u[SYSTEM_PANELS]
+                   [CARTRIDGES_PER_PANEL]
+                   [FINS_PER_CARTRIDGE]
+                   [MODULES_PER_FIN]
+                   [APDS_PER_MODULE] = {{{{{0}}}}};
+
+    float circles_v[SYSTEM_PANELS]
+                   [CARTRIDGES_PER_PANEL]
+                   [FINS_PER_CARTRIDGE]
+                   [MODULES_PER_FIN]
+                   [APDS_PER_MODULE] = {{{{{0}}}}};
+
+    int read_uv_status(ReadUVCirclesFile(uv_filename,
+                                         circles_u,
+                                         circles_v));
+
+    if (read_uv_status < 0) {
+        cerr << "UV Circle Centers file: \"" << uv_filename
+             << "\" could not be read.  Exiting.";
+        return(-5);
+    }
+
 
     if (verbose) {
         cout << " threshold :: " << threshold << endl;
@@ -276,8 +372,7 @@ int main(int argc, char *argv[])
             std::vector<chipevent> raw_events;
             int packet_status(PacketToRawEvents(packet_info,
                                                 raw_events,
-                                                cartridge_id,
-                                                sourcepos));
+                                                cartridge_id));
 
             for (size_t ii = 0; ii < raw_events.size(); ii++) {
                 ModuleDat processed_event;
