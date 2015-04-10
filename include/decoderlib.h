@@ -113,4 +113,12 @@ int ReadUVCirclesFile(
                        [MODULES_PER_FIN]
                        [APDS_PER_MODULE]);
 
+int ReadPedestalFile(
+        const std::string & filename,
+        float pedestals[SYSTEM_PANELS]
+                       [CARTRIDGES_PER_PANEL]
+                       [RENAS_PER_CARTRIDGE]
+                       [MODULES_PER_RENA]
+                       [CHANNELS_PER_MODULE]);
+
 #endif // DECODERLIB_H

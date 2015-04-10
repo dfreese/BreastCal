@@ -738,3 +738,80 @@ int ReadUVCirclesFile(
         return(0);
     }
 }
+
+int ReadPedestalFile(
+        const std::string & filename,
+        float pedestals[SYSTEM_PANELS]
+                       [CARTRIDGES_PER_PANEL]
+                       [RENAS_PER_CARTRIDGE]
+                       [MODULES_PER_RENA]
+                       [CHANNELS_PER_MODULE])
+{
+    std::ifstream pedestal_value_filestream;
+
+    pedestal_value_filestream.open(filename.c_str());
+    if (!pedestal_value_filestream) {
+        return(-1);
+    }
+
+    int lines(0);
+    std::string fileline;
+    while (std::getline(pedestal_value_filestream, fileline)) {
+        lines++;
+        std::stringstream line_stream(fileline);
+        std::string id_string;
+        if ((line_stream >> id_string).fail()) {
+            return(-2);
+        }
+        int panel;
+        int cartridge;
+        int chip;
+        int module;
+        int sscan_status(sscanf(id_string.c_str(),
+                                "P%dC%dR%dM%d",
+                                &panel, &cartridge, &chip, &module));
+
+        if (sscan_status != 3) {
+            return(-3);
+        }
+
+        int events;
+        if((line_stream >> events).fail()) {
+            return(-4);
+        }
+
+        if ((chip >= RENAS_PER_CARTRIDGE) || (chip < 0) ||
+                (module >= MODULES_PER_RENA) || (module < 0) ||
+                (cartridge >= CARTRIDGES_PER_PANEL) || (cartridge < 0) ||
+                (panel >= SYSTEM_PANELS) || (panel < 0))
+        {
+            return(-5);
+        }
+        for (int ii = 0; ii < CHANNELS_PER_MODULE; ii++) {
+            float channel_pedestal_value;
+            if ((line_stream >> channel_pedestal_value).fail()) {
+                return(-6);
+            } else {
+                pedestals[panel][cartridge][chip][module][ii] =
+                        channel_pedestal_value;
+            }
+
+            float channel_pedestal_rms;
+            if ((line_stream >> channel_pedestal_rms).fail()) {
+                return(-7);
+            }
+        }
+    }
+
+    const int expected_lines(SYSTEM_PANELS *
+                             CARTRIDGES_PER_PANEL *
+                             RENAS_PER_CARTRIDGE *
+                             MODULES_PER_RENA);
+
+    if (expected_lines != lines) {
+        return(-8);
+    } else {
+        return(0);
+    }
+}
+
