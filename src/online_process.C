@@ -53,8 +53,6 @@ int main(int argc, char *argv[])
         return(0);
     }
 
-    float pedestals[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][CHANNELS_PER_MODULE]= {{{{0}}}};
-
     Int_t verbose = 0;
     string filename;
     string outfilename;
@@ -141,6 +139,12 @@ int main(int argc, char *argv[])
         cerr << "Exiting." << endl;
         return(-2);
     }
+
+    float pedestals[SYSTEM_PANELS]
+                   [CARTRIDGES_PER_PANEL]
+                   [RENAS_PER_CARTRIDGE]
+                   [MODULES_PER_RENA]
+                   [CHANNELS_PER_MODULE] = {{{{{0}}}}};
 
     int read_ped_status(ReadPedestalFile(pedvaluefilename, pedestals));
 
@@ -378,7 +382,7 @@ int main(int argc, char *argv[])
                 ModuleDat processed_event;
                 int process_status(RawEventToModuleDat(raw_events.at(ii),
                                                        processed_event,
-                                                       pedestals,
+                                                       pedestals[panel_id],
                                                        threshold,
                                                        nohit_threshold,
                                                        panel_id));
