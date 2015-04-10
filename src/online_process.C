@@ -22,12 +22,6 @@
 
 using namespace std;
 
-// Energy histograms ::
-TH1F *E[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
-TH1F *E_com[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE][MODULES_PER_FIN][APDS_PER_MODULE];
-
-TDirectory *subdir[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE];
-
 void usage(void)
 {
     int t=DEFAULTTHRESHOLD;
@@ -256,6 +250,17 @@ int main(int argc, char *argv[])
     int belowthreshold[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]= {{{0}}};
     int totaltriggers[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][APDS_PER_MODULE]= {{{{0}}}};
 
+
+    TH1F *E[CARTRIDGES_PER_PANEL]
+           [FINS_PER_CARTRIDGE]
+           [MODULES_PER_FIN]
+           [APDS_PER_MODULE];
+
+    TH1F *E_com[CARTRIDGES_PER_PANEL]
+               [FINS_PER_CARTRIDGE]
+               [MODULES_PER_FIN]
+               [APDS_PER_MODULE];
+
     if (verbose) {
         cout << " Creating energy histograms " << endl;
     }
@@ -442,6 +447,9 @@ int main(int argc, char *argv[])
 
     Int_t totaldoubletriggers=0;
     Int_t totalbelowthreshold=0;
+
+    TDirectory *subdir[CARTRIDGES_PER_PANEL]
+                      [FINS_PER_CARTRIDGE];
 
     for (int c=0; c<CARTRIDGES_PER_PANEL; c++) {
         for (int f=0; f<FINS_PER_CARTRIDGE; f++) {
