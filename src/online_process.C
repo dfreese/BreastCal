@@ -12,6 +12,7 @@
 #include "TVector.h"
 #include "Util.h"
 #include "ModuleDat.h"
+#include "EventCal.h"
 #include "daqboardmap.h"
 #include "daqpacket.h"
 #include "decoderlib.h"
@@ -391,6 +392,24 @@ int main(int argc, char *argv[])
                                                        threshold,
                                                        nohit_threshold,
                                                        panel_id));
+
+                EventCal calibrated_event;
+
+                int calibration_status = RawEventToEventCal(raw_events.at(ii),
+                                                            calibrated_event,
+                                                            pedestals,
+                                                            circles_u,
+                                                            circles_v,
+                                                            gain_spat,
+                                                            gain_comm,
+                                                            eres_spat,
+                                                            eres_comm,
+                                                            crystal_x,
+                                                            crystal_y,
+                                                            threshold,
+                                                            nohit_threshold,
+                                                            panel_id);
+
                 if (process_status == 0) {
                     // Add the event to the root tree
                     event = &processed_event;
