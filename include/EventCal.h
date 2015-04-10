@@ -1,10 +1,12 @@
 #ifndef EVENTCAL_H
 #define EVENTCAL_H
 
+#ifndef ROOT_TObject
 #include "TObject.h"
+#endif
 
 class EventCal :
-        public TObject
+    public TObject
 {
 public:
     Long64_t ct;
@@ -18,7 +20,7 @@ public:
     EventCal();
     virtual ~EventCal();
 
-    ClassDef(EventCal,1)
+    ClassDef(EventCal,5);
 };
 
 #endif

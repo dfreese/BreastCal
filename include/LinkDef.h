@@ -6,12 +6,12 @@
 
 #pragma link C++ class ModuleDat;
 #pragma link C++ class ModuleCal;
+#pragma link C++ class EventCal;
 #pragma link C++ class CoincEvent;
 #pragma link C++ class Sel_GetFloods;
 #pragma link C++ class Sel_GetEhis;
 #pragma link C++ class Sel_Calibrator;
 #pragma link C++ class PPeaks;
 #pragma link C++ class PixelCal;
-
 
 #endif

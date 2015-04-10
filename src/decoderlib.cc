@@ -2,7 +2,7 @@
 #include "daqpacket.h"
 #include "chipevent.h"
 #include "ModuleDat.h"
-#include "eventcal.h"
+#include "EventCal.h"
 #include <fstream>
 #include <sstream>
 #include <iostream>
