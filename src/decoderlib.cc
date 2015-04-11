@@ -771,7 +771,7 @@ int ReadPedestalFile(
                                 "P%dC%dR%dM%d",
                                 &panel, &cartridge, &chip, &module));
 
-        if (sscan_status != 3) {
+        if (sscan_status != 4) {
             return(-3);
         }
 
