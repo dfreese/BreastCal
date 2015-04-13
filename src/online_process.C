@@ -150,12 +150,12 @@ int main(int argc, char *argv[])
         return(-3);
     }
 
-    float use_crystal[SYSTEM_PANELS]
+    bool use_crystal[SYSTEM_PANELS]
                      [CARTRIDGES_PER_PANEL]
                      [FINS_PER_CARTRIDGE]
                      [MODULES_PER_FIN]
                      [APDS_PER_MODULE]
-                     [CRYSTALS_PER_APD] = {{{{{{0}}}}}};
+                     [CRYSTALS_PER_APD] = {{{{{{false}}}}}};
 
     float gain_spat[SYSTEM_PANELS]
                    [CARTRIDGES_PER_PANEL]
@@ -246,47 +246,9 @@ int main(int argc, char *argv[])
         pedfilename = filename + ".ped";
     }
 
-    ModuleDat *event = new ModuleDat();
     int doubletriggers[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]= {{{0}}};
     int belowthreshold[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]= {{{0}}};
     int totaltriggers[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][APDS_PER_MODULE]= {{{{0}}}};
-
-
-    TH1F *E[CARTRIDGES_PER_PANEL]
-           [FINS_PER_CARTRIDGE]
-           [MODULES_PER_FIN]
-           [APDS_PER_MODULE];
-
-    TH1F *E_com[CARTRIDGES_PER_PANEL]
-               [FINS_PER_CARTRIDGE]
-               [MODULES_PER_FIN]
-               [APDS_PER_MODULE];
-
-    if (verbose) {
-        cout << " Creating energy histograms " << endl;
-    }
-    for (int c=0; c<CARTRIDGES_PER_PANEL; c++) {
-        for (int f=0; f<FINS_PER_CARTRIDGE; f++) {
-            for (int i=0; i<MODULES_PER_FIN; i++) {
-                for (int j=0; j<APDS_PER_MODULE; j++) {
-                    char tmpstring[30];
-                    char titlestring[50];
-                    sprintf(tmpstring,"E[%d][%d][%d][%d]",c,f,i,j);
-                    sprintf(titlestring,"E C%dF%d, Module %d, PSAPD %d ",c,f,i,j);
-                    E[c][f][i][j]=new TH1F(tmpstring,titlestring,Ebins,E_low,E_up);
-                    sprintf(tmpstring,"E_com[%d][%d][%d][%d]",c,f,i,j);
-                    sprintf(titlestring,"ECOM C%dF%d, Module %d, PSAPD %d",c,f,i,j);
-                    E_com[c][f][i][j]=new TH1F(tmpstring,titlestring,Ebins_com,E_low_com,E_up_com);
-                }
-            }
-        }
-    }
-
-    if (verbose) {
-        cout << " Creating tree " << endl;
-    }
-    TTree *mdata = new TTree("mdata","Converted RENA data");
-    mdata->Branch("eventdata",&event);
 
     ifstream dataFile;
     dataFile.open(filename.c_str(), ios::in | ios::binary);
@@ -296,8 +258,6 @@ int main(int argc, char *argv[])
         cerr << "Exiting." << endl;
         return(-1);
     }
-
-    TFile * hfile = new TFile(outfilename.c_str(),"RECREATE");
 
     vector<char> packBuffer;
 
@@ -337,23 +297,23 @@ int main(int argc, char *argv[])
                 if (decode_status == -1) {
                     droppedFirstLast++;
                     if (verbose) {
-                        cout << "Dropped: Empty Packet Vector" << endl;
+                        //cout << "Dropped: Empty Packet Vector" << endl;
                     }
                 } else if (decode_status == -2){
                     droppedFirstLast++;
                     if (verbose) {
-                        cout << "Dropped: First Byte not 0x80" << endl;
+                        //cout << "Dropped: First Byte not 0x80" << endl;
                     }
                 } else if (decode_status == -3) {
                     droppedTrigCode++;
                     if (verbose) {
-                        cout << "Dropped: Trigger Code = 0" << endl;
+                        //cout << "Dropped: Trigger Code = 0" << endl;
                     }
                 } else if (decode_status == -4) {
                     droppedSize++;
                     if (verbose) {
-                        cout << "Dropped: Packet Size Wrong - "
-                             << packBuffer.size() << endl;
+                        //cout << "Dropped: Packet Size Wrong - "
+                        //     << packBuffer.size() << endl;
                     }
                 }
                 droppedPckCnt++;
@@ -385,14 +345,6 @@ int main(int argc, char *argv[])
                                                 cartridge_id));
 
             for (size_t ii = 0; ii < raw_events.size(); ii++) {
-                ModuleDat processed_event;
-                int process_status(RawEventToModuleDat(raw_events.at(ii),
-                                                       processed_event,
-                                                       pedestals[panel_id],
-                                                       threshold,
-                                                       nohit_threshold,
-                                                       panel_id));
-
                 EventCal calibrated_event;
 
                 int calibration_status = RawEventToEventCal(raw_events.at(ii),
@@ -406,34 +358,22 @@ int main(int argc, char *argv[])
                                                             eres_comm,
                                                             crystal_x,
                                                             crystal_y,
+                                                            use_crystal,
                                                             threshold,
                                                             nohit_threshold,
                                                             panel_id);
 
-                if (process_status == 0) {
-                    // Add the event to the root tree
-                    event = &processed_event;
-
+                if (calibration_status >= 0) {
                     totaltriggers[raw_events.at(ii).cartridge]
                             [raw_events.at(ii).chip]
                             [raw_events.at(ii).module]
-                            [processed_event.apd]++;
+                            [calibration_status]++;
 
-                    mdata->Fill();
-                    E[raw_events.at(ii).cartridge]
-                            [processed_event.fin]
-                            [processed_event.module]
-                            [processed_event.apd]->Fill(processed_event.E);
-
-                    E_com[raw_events.at(ii).cartridge]
-                            [processed_event.fin]
-                            [processed_event.module]
-                            [processed_event.apd]->Fill(-processed_event.Ec);
-                } else if (process_status == -1) {
+                } else if (calibration_status == -1) {
                     belowthreshold[raw_events.at(ii).cartridge]
                             [raw_events.at(ii).chip]
                             [raw_events.at(ii).module]++;
-                } else if (process_status == -2) {
+                } else if (calibration_status == -2) {
                     doubletriggers[raw_events.at(ii).cartridge]
                             [raw_events.at(ii).chip]
                             [raw_events.at(ii).module]++;
@@ -467,24 +407,6 @@ int main(int argc, char *argv[])
     Int_t totaldoubletriggers=0;
     Int_t totalbelowthreshold=0;
 
-    TDirectory *subdir[CARTRIDGES_PER_PANEL]
-                      [FINS_PER_CARTRIDGE];
-
-    for (int c=0; c<CARTRIDGES_PER_PANEL; c++) {
-        for (int f=0; f<FINS_PER_CARTRIDGE; f++) {
-            char tmpstring[30];
-            sprintf(tmpstring,"C%dF%d",c,f);
-            subdir[c][f] = hfile->mkdir(tmpstring);
-            subdir[c][f]->cd();
-            for (int m=0; m<MODULES_PER_FIN; m++) {
-                for (int j=0; j<APDS_PER_MODULE; j++) {
-                    E[c][f][m][j]->Write();
-                    E_com[c][f][m][j]->Write();
-                }
-            }
-        }
-    }
-
     cout << "========== Double Triggers =============== " << endl;
     for (int c=0; c<CARTRIDGES_PER_PANEL; c++) {
         for (int r=0; r<RENAS_PER_CARTRIDGE; r++) {
@@ -492,10 +414,10 @@ int main(int argc, char *argv[])
                 cout << doubletriggers[c][r][i] << " " ;
                 totaldoubletriggers+=doubletriggers[c][r][i];
                 totalbelowthreshold+=belowthreshold[c][r][i];
-            } // i
+            }
             cout << endl;
-        } //r
-    } //c
+        }
+    }
 
     cout << "========== Total Triggers =============== " << endl;
     Long64_t totalmoduletriggers[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]= {{{0}}};
@@ -524,11 +446,6 @@ int main(int argc, char *argv[])
         cout << " Total below threshold :: " << totalbelowthreshold;
         cout << " (= " << 100* (float) totalbelowthreshold/total_raw_events << " %) " <<endl;
     }
-
-    hfile->cd();
-    mdata->Write();
-
-    hfile->Close();
 
     if (verbose) {
         cout << " byteCounter = " << byteCounter << endl;

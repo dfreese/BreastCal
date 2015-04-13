@@ -329,6 +329,12 @@ int RawEventToEventCal(
                        [MODULES_PER_FIN]
                        [APDS_PER_MODULE]
                        [CRYSTALS_PER_APD],
+        bool use_crystal[SYSTEM_PANELS]
+                        [CARTRIDGES_PER_PANEL]
+                        [FINS_PER_CARTRIDGE]
+                        [MODULES_PER_FIN]
+                        [APDS_PER_MODULE]
+                        [CRYSTALS_PER_APD],
         int threshold,
         int nohit_threshold,
         int panel_id)
@@ -387,6 +393,7 @@ int RawEventToEventCal(
     float module_centers_v =
             centers_v[panel_id][rawevent.cartridge][fin][module][apd];
 
+
     int E = a + b + c + d;
     event.x = float(c + d - (b + a)) / float(E);
     event.y = float(a + d - (b + c)) / float(E);
@@ -408,6 +415,9 @@ int RawEventToEventCal(
     if (crystal < 0) {
         return(-3);
     }
+    if (!use_crystal[panel_id][rawevent.cartridge][fin][module][apd]) {
+        return(-4);
+    }
 
     event.crystal = ((((panel_id * CARTRIDGES_PER_PANEL + rawevent.cartridge)
                                  * FINS_PER_CARTRIDGE + fin)
@@ -418,7 +428,7 @@ int RawEventToEventCal(
     event.Espat = E / apd_spat_gain[crystal] * 511;
     event.E = event.Espat;
 
-    return(0);
+    return(apd);
 }
 
 int ReadPedestalFile(
@@ -552,12 +562,12 @@ int WritePedestalFile(
 
 int ReadCalibrationFile(
         const std::string & filename,
-        float use_crystal[SYSTEM_PANELS]
-                         [CARTRIDGES_PER_PANEL]
-                         [FINS_PER_CARTRIDGE]
-                         [MODULES_PER_FIN]
-                         [APDS_PER_MODULE]
-                         [CRYSTALS_PER_APD],
+        bool use_crystal[SYSTEM_PANELS]
+                        [CARTRIDGES_PER_PANEL]
+                        [FINS_PER_CARTRIDGE]
+                        [MODULES_PER_FIN]
+                        [APDS_PER_MODULE]
+                        [CRYSTALS_PER_APD],
         float gain_spat[SYSTEM_PANELS]
                        [CARTRIDGES_PER_PANEL]
                        [FINS_PER_CARTRIDGE]
