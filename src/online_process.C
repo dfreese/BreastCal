@@ -37,7 +37,8 @@ void usage(void)
          << " -cmap [DAQBOARD_FILE] : specify DAQ BOARD nfo file\n"
          << "       default = $ANADIR/nfo/DAQ_Board_Map.nfo"
          << " -calfile [calibration filename]\n"
-         << " -uvfile [uv center filename]\n" << endl;
+         << " -uvfile [uv center filename]\n"
+         << endl;
     return;
 }
 
@@ -242,7 +243,7 @@ int main(int argc, char *argv[])
     }
 
     if (!outfile_spec_flag) {
-        outfilename = filename + ".root";
+        outfilename = filename + ".cal.dat";
         pedfilename = filename + ".ped";
     }
 
@@ -274,6 +275,10 @@ int main(int argc, char *argv[])
 
     long total_raw_events(0);
 
+    std::ofstream output_stream;
+    output_stream.open(outfilename.c_str(), std::ios::binary);
+
+    // Read the full input data file into memory
     dataFile.seekg(0, std::ios::end);
     std::streamsize dataFileSize = dataFile.tellg();
     dataFile.seekg(0, std::ios::beg);
@@ -372,6 +377,9 @@ int main(int argc, char *argv[])
                             [raw_events.at(ii).module]
                             [calibration_status]++;
 
+                    output_stream.write((char *)&calibrated_event,
+                                        sizeof(calibrated_event));
+
                 } else if (calibration_status == -1) {
                     belowthreshold[raw_events.at(ii).cartridge]
                             [raw_events.at(ii).chip]
@@ -389,6 +397,8 @@ int main(int argc, char *argv[])
             packBuffer.clear();
         }
     }
+
+    output_stream.close();
 
     if (totalPckCnt) {
         cout << "File Processed.\n"
