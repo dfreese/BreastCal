@@ -6,7 +6,7 @@
 
 #pragma link C++ class ModuleDat;
 #pragma link C++ class ModuleCal;
-#pragma link C++ class EventCal;
+//#pragma link C++ class EventCal;
 #pragma link C++ class CoincEvent;
 #pragma link C++ class Sel_GetFloods;
 #pragma link C++ class Sel_GetEhis;

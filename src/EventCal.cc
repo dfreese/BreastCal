@@ -1,11 +1,12 @@
 #include "EventCal.h"
 
-ClassImp(EventCal);
+//ClassImp(EventCal);
 
-EventCal::EventCal():
-    TObject()
-{
-}
+//EventCal::EventCal()
+//    :
+//    TObject()
+//{
+//}
 
-EventCal::~EventCal() {
-}
+//EventCal::~EventCal() {
+//}
