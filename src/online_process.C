@@ -269,6 +269,9 @@ int main(int argc, char *argv[])
     long droppedTrigCode(0);
     long droppedSize(0);
 
+    long droppedCrystalIdentification(0);
+    long droppedCrystalInvalid(0);
+
     long total_raw_events(0);
 
     dataFile.seekg(0, std::ios::end);
@@ -377,6 +380,10 @@ int main(int argc, char *argv[])
                     doubletriggers[raw_events.at(ii).cartridge]
                             [raw_events.at(ii).chip]
                             [raw_events.at(ii).module]++;
+                } else if (calibration_status == -3) {
+                    droppedCrystalIdentification++;
+                } else if (calibration_status == -4) {
+                    droppedCrystalInvalid++;
                 }
             }
             packBuffer.clear();
@@ -440,11 +447,16 @@ int main(int argc, char *argv[])
     cout << " Total accepted :: " << totalacceptedtriggers ;
     cout << setprecision(1) << fixed;
     if (total_raw_events) {
-        cout << " (= " << 100* (float) totalacceptedtriggers/total_raw_events << " %) " ;
-        cout << " Total double triggers :: " << totaldoubletriggers ;
-        cout << " (= " << 100* (float) totaldoubletriggers/total_raw_events << " %) " ;
-        cout << " Total below threshold :: " << totalbelowthreshold;
-        cout << " (= " << 100* (float) totalbelowthreshold/total_raw_events << " %) " <<endl;
+        cout << " (= " << 100* (float) totalacceptedtriggers/total_raw_events << " %)\n"
+             << " Total double triggers :: " << totaldoubletriggers
+             << " (= " << 100* (float) totaldoubletriggers/total_raw_events << " %)\n"
+             << " Total below threshold :: " << totalbelowthreshold
+             << " (= " << 100* (float) totalbelowthreshold/total_raw_events << " %)\n"
+             << " Total Crystal Misidentifcations :: " << droppedCrystalIdentification
+             << " (= " << 100* (float) droppedCrystalIdentification/total_raw_events << " %)\n"
+             << " Total Crystal Invalidated :: " << droppedCrystalInvalid
+             << " (= " << 100* (float) droppedCrystalInvalid/total_raw_events << " %)\n"
+             << endl;
     }
 
     if (verbose) {
