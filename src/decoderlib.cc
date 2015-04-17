@@ -394,9 +394,9 @@ int RawEventToEventCal(
             centers_v[panel_id][rawevent.cartridge][fin][module][apd];
 
 
-    int E = a + b + c + d;
-    event.x = float(c + d - (b + a)) / float(E);
-    event.y = float(a + d - (b + c)) / float(E);
+    event.anger_denom = a + b + c + d;
+    event.x = float(c + d - (b + a)) / float(event.anger_denom);
+    event.y = float(a + d - (b + c)) / float(event.anger_denom);
     if (apd == 1) {
         event.y *= -1;
         event.ft = FineCalc(rawevent.u1h,
@@ -425,8 +425,7 @@ int RawEventToEventCal(
                                  * APDS_PER_MODULE + apd)
                                  * CRYSTALS_PER_APD + crystal;
 
-    event.Espat = E / apd_spat_gain[crystal] * 511;
-    event.E = event.Espat;
+    event.E = event.anger_denom / apd_spat_gain[crystal] * 511;
 
     return(apd);
 }

@@ -23,12 +23,20 @@
 //};
 
 struct EventCal {
+    // The course timestamp recorded by the FPGA controlling the rena
     long ct;
+    // The fine timestamp calculated from the UV timing circle
     float ft;
+    // Calibrated Energy of the event
     float E;
-    float Espat;
+    // The denominator for the anger logic in adc values.  This is the sum of
+    // four 12-bit values, which can be placed in a short.
+    short anger_denom;
+    // The x and y positions of the event within the flood histogram
     float x;
     float y;
+    // The ID of the crystal within the system.  Since only 19 bits are required
+    // for the crystal ID, the 12 MSBs may be used to flag events for things.
     int crystal;
 };
 
