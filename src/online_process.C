@@ -35,7 +35,7 @@ void usage(void)
          << " -pedfile [pedfilename] : pedestal file name\n"
          << " -o : optional outputfilename\n"
          << " -cmap [DAQBOARD_FILE] : specify DAQ BOARD nfo file\n"
-         << "       default = $ANADIR/nfo/DAQ_Board_Map.nfo"
+         << "       default = $ANADIR/nfo/DAQ_Board_Map.nfo\n"
          << " -calfile [calibration filename]\n"
          << " -uvfile [uv center filename]\n"
          << endl;
