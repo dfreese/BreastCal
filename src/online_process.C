@@ -17,6 +17,7 @@
 #include "daqpacket.h"
 #include "decoderlib.h"
 #include "chipevent.h"
+#include "sorting.h"
 #include "libInit_avdb.h"
 #include "myrootlib.h"
 #include "Syspardef.h"
@@ -40,6 +41,18 @@ void usage(void)
          << " -uvfile [uv center filename]\n"
          << endl;
     return;
+}
+
+bool EventCalLessThan(EventCal arg1, EventCal arg2) {
+    if (arg1.ct < arg2.ct) {
+        return(true);
+    } else if (arg1.ct > arg2.ct) {
+        return(false);
+    } else if (arg1.ft < arg2.ft) {
+        return(true);
+    } else {
+        return(false);
+    }
 }
 
 int main(int argc, char *argv[])
@@ -403,6 +416,8 @@ int main(int argc, char *argv[])
             packBuffer.clear();
         }
     }
+
+    insertion_sort(output_events, EventCalLessThan);
 
     output_stream.write((char *)&output_events[0],
                         sizeof(EventCal) * output_events.size());
