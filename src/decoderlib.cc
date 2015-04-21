@@ -399,13 +399,13 @@ int RawEventToEventCal(
     event.y = float(a + d - (b + c)) / float(event.anger_denom);
     if (apd == 1) {
         event.y *= -1;
-        event.ft = FineCalc(rawevent.u1h,
-                            rawevent.v1h,
+        event.ft = FineCalc(rawevent.u2h,
+                            rawevent.v2h,
                             module_centers_u,
                             module_centers_v);
     } else {
-        event.ft = FineCalc(rawevent.u2h,
-                            rawevent.v2h,
+        event.ft = FineCalc(rawevent.u1h,
+                            rawevent.v1h,
                             module_centers_u,
                             module_centers_v);
     }
