@@ -245,7 +245,7 @@ int RawEventToModuleDat(
 
 
 float FineCalc(short u, short v, float u_cent, float v_cent) {
-    float tmp = TMath::ATan2((float)u - u_cent, (float)v - v_cent);
+    float tmp = TMath::ATan2((float) u - u_cent, (float) v - v_cent);
     if (tmp < 0.0) {
         tmp += 2 * 3.141592;
     }
