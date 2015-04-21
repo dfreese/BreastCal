@@ -289,6 +289,11 @@ int main(int argc, char *argv[])
         return(-2);
     }
 
+    std::vector<EventCal> output_events;
+    // most of the time we end up with a data file roughly half the size of the
+    // original datastream, but reserve up to three-quarters just to be safe.
+    output_events.reserve((int) (dataFileSize / sizeof(EventCal) * 0.75));
+
     std::vector<char>::iterator buffer_iter(buffer.begin());
 
     while (buffer_iter != buffer.end()) {
@@ -377,8 +382,9 @@ int main(int argc, char *argv[])
                             [raw_events.at(ii).module]
                             [calibration_status]++;
 
-                    output_stream.write((char *)&calibrated_event,
-                                        sizeof(calibrated_event));
+//                    output_stream.write((char *)&calibrated_event,
+//                                        sizeof(calibrated_event));
+                    output_events.push_back(calibrated_event);
 
                 } else if (calibration_status == -1) {
                     belowthreshold[raw_events.at(ii).cartridge]
@@ -398,6 +404,8 @@ int main(int argc, char *argv[])
         }
     }
 
+    output_stream.write((char *)&output_events[0],
+                        sizeof(EventCal) * output_events.size());
     output_stream.close();
 
     if (totalPckCnt) {
