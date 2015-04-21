@@ -44,11 +44,13 @@ void usage(void)
 }
 
 bool EventCalLessThan(EventCal arg1, EventCal arg2) {
-    if (arg1.ct < arg2.ct) {
-        return(true);
-    } else if (arg1.ct > arg2.ct) {
-        return(false);
-    } else if (arg1.ft < arg2.ft) {
+    if (std::abs(arg1.ct - arg2.ct) <= 2) {
+        if (arg1.ft < arg2.ft) {
+            return(true);
+        } else {
+            return(false);
+        }
+    } else if (arg1.ct < arg2.ct) {
         return(true);
     } else {
         return(false);
