@@ -17,6 +17,7 @@
 #define BYTESPERCOMMON 12 // ( 4 commons per module * 3 values per common )
 #define VALUESPERSPATIAL 4
 
+#define UV_PERIOD_NS 1020.040816
 
 void getfinmodule(
         int panel,
@@ -247,8 +248,9 @@ int RawEventToModuleDat(
 float FineCalc(short u, short v, float u_cent, float v_cent) {
     float tmp = TMath::ATan2((float) u - u_cent, (float) v - v_cent);
     if (tmp < 0.0) {
-        tmp += 2 * 3.141592;
+        tmp += 2 * M_PI;
     }
+    tmp *= UV_PERIOD_NS / 2 * M_PI;
     return(tmp);
 }
 
@@ -335,6 +337,12 @@ int RawEventToEventCal(
                         [MODULES_PER_FIN]
                         [APDS_PER_MODULE]
                         [CRYSTALS_PER_APD],
+        float time_offset_cal[SYSTEM_PANELS]
+                             [CARTRIDGES_PER_PANEL]
+                             [FINS_PER_CARTRIDGE]
+                             [MODULES_PER_FIN]
+                             [APDS_PER_MODULE]
+                             [CRYSTALS_PER_APD],
         int threshold,
         int nohit_threshold,
         int panel_id)
@@ -418,6 +426,10 @@ int RawEventToEventCal(
     if (!use_crystal[panel_id][rawevent.cartridge][fin][module][apd]) {
         return(-4);
     }
+
+    event.ft -= time_offset_cal[panel_id]
+                               [rawevent.cartridge]
+                               [fin][module][apd][crystal];
 
     event.crystal = ((((panel_id * CARTRIDGES_PER_PANEL + rawevent.cartridge)
                                  * FINS_PER_CARTRIDGE + fin)

@@ -98,6 +98,12 @@ int RawEventToEventCal(
                         [MODULES_PER_FIN]
                         [APDS_PER_MODULE]
                         [CRYSTALS_PER_APD],
+        float time_offset_cal[SYSTEM_PANELS]
+                             [CARTRIDGES_PER_PANEL]
+                             [FINS_PER_CARTRIDGE]
+                             [MODULES_PER_FIN]
+                             [APDS_PER_MODULE]
+                             [CRYSTALS_PER_APD],
         int threshold,
         int nohit_threshold,
         int panel_id);

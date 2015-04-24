@@ -16,6 +16,7 @@
 #include "daqboardmap.h"
 #include "daqpacket.h"
 #include "decoderlib.h"
+#include "cal_helper_functions.h"
 #include "chipevent.h"
 #include "sorting.h"
 #include "libInit_avdb.h"
@@ -39,6 +40,7 @@ void usage(void)
          << "       default = $ANADIR/nfo/DAQ_Board_Map.nfo\n"
          << " -calfile [calibration filename]\n"
          << " -uvfile [uv center filename]\n"
+         << " -tfile [time offset filename]\n"
          << endl;
     return;
 }
@@ -81,6 +83,8 @@ int main(int argc, char *argv[])
     bool cmap_spec_flag(false);
     string cmap_filename;
 
+    string time_offset_cal_filename;
+
     // Arguments not requiring input
     for (int ix = 1; ix < argc; ix++) {
         if (strcmp(argv[ix], "-v") == 0) {
@@ -108,6 +112,9 @@ int main(int argc, char *argv[])
         }
         if (strcmp(argv[ix], "-uvfile") == 0) {
             uv_filename = string(argv[ix + 1]);
+        }
+        if(strcmp(argv[ix], "-tfile") == 0) {
+            time_offset_cal_filename = string(argv[ix + 1]);
         }
         if (strcmp(argv[ix], "-cmap") == 0) {
             cmap_spec_flag = true;
@@ -253,6 +260,30 @@ int main(int argc, char *argv[])
     }
 
 
+
+    if (verbose) {
+        cout << "Reading Input crystal calibration file\n";
+    }
+    float time_offset_cal[SYSTEM_PANELS]
+            [CARTRIDGES_PER_PANEL]
+            [FINS_PER_CARTRIDGE]
+            [MODULES_PER_FIN]
+            [APDS_PER_MODULE]
+            [CRYSTALS_PER_APD] = {{{{{{0}}}}}};
+
+    if (time_offset_cal_filename != "") {
+        int cal_read_status(ReadPerCrystalCal(
+                time_offset_cal_filename,time_offset_cal));
+        if (cal_read_status < 0) {
+            cerr << "Error in reading input calibration file: "
+                 << cal_read_status << endl;
+            cerr << "Exiting.." << endl;
+            return(-3);
+        }
+    }
+
+
+
     if (verbose) {
         cout << " threshold :: " << threshold << endl;
     }
@@ -387,6 +418,7 @@ int main(int argc, char *argv[])
                                                             crystal_x,
                                                             crystal_y,
                                                             use_crystal,
+                                                            time_offset_cal,
                                                             threshold,
                                                             nohit_threshold,
                                                             panel_id);
