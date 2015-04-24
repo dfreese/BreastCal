@@ -10,6 +10,9 @@ class EventCal;
 #include <string>
 #include "Syspardef.h"
 
+#define UV_PERIOD_NS 1020.040816
+#define CT_TICK_PERIOD 83.33333333
+
 void getfinmodule(
         int panel,
         int chip,
@@ -36,6 +39,8 @@ int RawEventToModuleDat(
         int threshold,
         int nohit_threshold,
         int panel_id);
+
+bool InEnergyWindow(const EventCal & event, float low, float high);
 
 float EventCalTimeDiff(const EventCal & arg1, const EventCal & arg2);
 

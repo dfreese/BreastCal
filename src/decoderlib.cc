@@ -17,9 +17,6 @@
 #define BYTESPERCOMMON 12 // ( 4 commons per module * 3 values per common )
 #define VALUESPERSPATIAL 4
 
-#define UV_PERIOD_NS 1020.040816
-#define CT_TICK_PERIOD 83.33333333
-
 void getfinmodule(
         int panel,
         int chip,
@@ -243,6 +240,14 @@ int RawEventToModuleDat(
     event.pos = rawevent.pos;
 
     return(0);
+}
+
+bool InEnergyWindow(const EventCal & event, float low, float high) {
+    if ((event.E < low) || (event.E > high)) {
+        return(false);
+    } else {
+        return(true);
+    }
 }
 
 /*!
