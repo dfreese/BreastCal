@@ -37,6 +37,9 @@ int RawEventToModuleDat(
         int nohit_threshold,
         int panel_id);
 
+float EventCalTimeDiff(const EventCal & arg1, const EventCal & arg2);
+
+bool EventCalLessThan(EventCal arg1, EventCal arg2);
 
 int RawEventToEventCal(
         const chipevent & rawevent,

@@ -18,6 +18,7 @@
 #define VALUESPERSPATIAL 4
 
 #define UV_PERIOD_NS 1020.040816
+#define CT_TICK_PERIOD 83.33333333
 
 void getfinmodule(
         int panel,
@@ -244,6 +245,33 @@ int RawEventToModuleDat(
     return(0);
 }
 
+/*!
+ * Return arg1-arg2 in nanoseconds based on course or fine timestamp
+ */
+float EventCalTimeDiff(const EventCal & arg1, const EventCal & arg2) {
+    // Assume all events that are within 4 course timestamps should be compared
+    // on the basis of fine timestamps rather than by course time stamp.
+    if (std::abs(arg1.ct - arg2.ct) <= 4) {
+        float difference = arg1.ft - arg2.ft;
+        if (difference > 4.0 * CT_TICK_PERIOD) {
+            difference -= UV_PERIOD_NS;
+        }
+        if (difference < -4.0 * CT_TICK_PERIOD) {
+            difference += UV_PERIOD_NS;
+        }
+        return(difference);
+    } else {
+        return((arg1.ct - arg2.ct) * UV_PERIOD_NS);
+    }
+}
+
+bool EventCalLessThan(EventCal arg1, EventCal arg2) {
+    if (EventCalTimeDiff(arg1, arg2) < 0) {
+        return(true);
+    } else {
+        return(false);
+    }
+}
 
 float FineCalc(short u, short v, float u_cent, float v_cent) {
     float tmp = TMath::ATan2((float) u - u_cent, (float) v - v_cent);
