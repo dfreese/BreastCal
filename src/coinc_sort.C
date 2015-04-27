@@ -76,8 +76,7 @@ int main(int argc, char *argv[])
     // Arguments not requiring input
     for (int ix = 1; ix < argc; ix++) {
         if (strcmp(argv[ix], "-v") == 0) {
-            verbose = 1;
-            cout << " Running verbose mode " << endl;
+            verbose = true;
         }
     }
     // Arguments requiring input
@@ -122,6 +121,9 @@ int main(int argc, char *argv[])
         return(-1);
     }
 
+    if (verbose) {
+        cout << "Reading Left File" << endl;
+    }
 
     ifstream dataFile;
     dataFile.open(filename_left.c_str(), ios::in | ios::binary);
@@ -143,6 +145,11 @@ int main(int argc, char *argv[])
         return(-2);
     }
     dataFile.close();
+
+
+    if (verbose) {
+        cout << "Reading Right File" << endl;
+    }
 
     dataFile.open(filename_right.c_str(), ios::in | ios::binary);
     if (!dataFile.good()) {
@@ -176,6 +183,15 @@ int main(int argc, char *argv[])
     output_events.reserve((int) (0.5 * 0.5 * (events_left.size() +
                                               events_right.size())));
 
+
+    cout << "Time Window: " << time_window << "ns\n"
+         << "Energy Window: " << energy_gate_low << "keV to "
+         << energy_gate_high << "keV\n";
+
+
+    if (verbose) {
+        cout << "Sorting Coincidences" << endl;
+    }
 
     while(iterator_left != events_left.end() &&
           iterator_right != events_right.end())
@@ -260,12 +276,20 @@ int main(int argc, char *argv[])
         // 4. If there is more than one event, drop all events, go to 1.
     }
 
+    if (verbose) {
+        cout << "Writing Out Coincidences" << endl;
+    }
+
     std::ofstream output_stream;
     output_stream.open(filename_output.c_str(), std::ios::binary);
 
     output_stream.write((char *)&output_events[0],
                         sizeof(EventCoinc) * output_events.size());
     output_stream.close();
+
+    cout << "Events Processed - Left: " << events_left.size()
+         << "  Right: " << events_right.size() << "\n"
+         << "Coincidences: " << output_events.size() << "\n";
 
     return(0);
 }
