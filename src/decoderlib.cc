@@ -460,9 +460,22 @@ int RawEventToEventCal(
         return(-4);
     }
 
-    event.ft -= time_offset_cal[panel_id]
-                               [rawevent.cartridge]
-                               [fin][module][apd][crystal];
+    if (panel_id == 0) {
+        event.ft -= time_offset_cal[panel_id]
+                                   [rawevent.cartridge]
+                                   [fin][module][apd][crystal];
+        if (event.ft < 0) {
+            event.ft += UV_PERIOD_NS;
+        }
+    } else if (panel_id == 1) {
+        event.ft += time_offset_cal[panel_id]
+                                   [rawevent.cartridge]
+                                   [fin][module][apd][crystal];
+        if (event.ft >= UV_PERIOD_NS) {
+            event.ft -= UV_PERIOD_NS;
+        }
+    }
+
 
     event.crystal = ((((panel_id * CARTRIDGES_PER_PANEL + rawevent.cartridge)
                                  * FINS_PER_CARTRIDGE + fin)
