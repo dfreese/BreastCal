@@ -188,6 +188,9 @@ int main(int argc, char *argv[])
          << "Energy Window: " << energy_gate_low << "keV to "
          << energy_gate_high << "keV\n";
 
+    long dropped_single(0);
+    long dropped_multiple(0);
+    long dropped_energy_window(0);
 
     if (verbose) {
         cout << "Sorting Coincidences" << endl;
@@ -204,6 +207,7 @@ int main(int argc, char *argv[])
                                 energy_gate_high))
             {
                 iterator_left++;
+                dropped_energy_window++;
             } else {
                 break;
             }
@@ -214,6 +218,7 @@ int main(int argc, char *argv[])
                                 energy_gate_high))
             {
                 iterator_right++;
+                dropped_energy_window++;
             } else {
                 break;
             }
@@ -221,6 +226,9 @@ int main(int argc, char *argv[])
         if (iterator_left == events_left.end() ||
                 iterator_right == events_right.end())
         {
+            // Drop the rest as singles.
+            dropped_single += events_left.end() - iterator_left
+                            + events_right.end() - iterator_right;
             break;
         }
 
@@ -238,24 +246,30 @@ int main(int argc, char *argv[])
         // 2. Find all other events within time window
         int events_in_time_window_left(0);
         while(EventCalTimeDiff(*iterator_left, *current_event) < time_window) {
-            if (InEnergyWindow(*(iterator_left++),
+            if (InEnergyWindow(*(iterator_left),
                                energy_gate_low,
                                energy_gate_high))
             {
                 events_in_time_window_left++;
+            } else {
+                dropped_energy_window++;
             }
+            iterator_left++;
             if (iterator_left == events_left.end()) {
                 break;
             }
         }
         int events_in_time_window_right(0);
         while(EventCalTimeDiff(*iterator_right, *current_event) < time_window) {
-            if (InEnergyWindow(*(iterator_right++),
+            if (InEnergyWindow(*(iterator_right),
                                energy_gate_low,
                                energy_gate_high))
             {
                 events_in_time_window_right++;
+            } else {
+                dropped_energy_window++;
             }
+            iterator_right++;
             if (iterator_right == events_right.end()) {
                 break;
             }
@@ -272,6 +286,14 @@ int main(int argc, char *argv[])
                 event = MakeCoinc(*pair_event, *current_event);
             }
             output_events.push_back(event);
+        } else if ((events_in_time_window_left == 0) ||
+                   (events_in_time_window_right == 0))
+        {
+            dropped_single += events_in_time_window_left +
+                              events_in_time_window_right;
+        } else {
+            dropped_multiple += events_in_time_window_left +
+                                events_in_time_window_right;
         }
         // 4. If there is more than one event, drop all events, go to 1.
     }
@@ -287,8 +309,13 @@ int main(int argc, char *argv[])
                         sizeof(EventCoinc) * output_events.size());
     output_stream.close();
 
-    cout << "Events Processed - Left: " << events_left.size()
-         << "  Right: " << events_right.size() << "\n"
+    cout << "Events Processed:\n"
+         << "  Left - " << events_left.size() << "\n"
+         << "  Right - " << events_right.size() << "\n"
+         << "Events Dropped:\n"
+         << "  Energy - " << dropped_energy_window << "\n"
+         << "  Single - " << dropped_single << "\n"
+         << "  Multiple - " << dropped_multiple << "\n"
          << "Coincidences: " << output_events.size() << "\n";
 
     return(0);
