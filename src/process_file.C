@@ -275,7 +275,7 @@ int main(int argc, Char_t *argv[])
     TVector *uu_c[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE];
     TVector *vv_c[CARTRIDGES_PER_PANEL][FINS_PER_CARTRIDGE];
     int read_uv_status(0);
-    if (read_uv_from_calibration_file) {
+    if (!read_uv_from_calibration_file) {
         read_uv_status = ReadUVCenters(input_file, uu_c, vv_c);
     } else {
         read_uv_status = ReadUVCenters(calibration_file, uu_c, vv_c);
