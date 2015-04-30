@@ -10,8 +10,8 @@ class EventCal;
 #include <string>
 #include "Syspardef.h"
 
-#define UV_PERIOD_NS 1020.040816
-#define CT_TICK_PERIOD 83.33333333
+#define UV_PERIOD_NS 1020.40816326
+#define CT_TICK_PERIOD 83.3333333333
 
 void getfinmodule(
         int panel,

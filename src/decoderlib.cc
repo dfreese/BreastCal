@@ -278,12 +278,21 @@ bool EventCalLessThan(EventCal arg1, EventCal arg2) {
     }
 }
 
+bool EventCalLessThanOnlyCt(EventCal arg1, EventCal arg2) {
+    if (arg1.ct < arg2.ct) {
+        return(true);
+    } else {
+        return(false);
+    }
+}
+
 float FineCalc(short u, short v, float u_cent, float v_cent) {
     float tmp = TMath::ATan2((float) u - u_cent, (float) v - v_cent);
     if (tmp < 0.0) {
         tmp += 2 * M_PI;
     }
-    tmp *= UV_PERIOD_NS / (2 * M_PI);
+    tmp /= 2 * M_PI;
+    tmp *= UV_PERIOD_NS;
     return(tmp);
 }
 
