@@ -29,9 +29,8 @@ struct EventCal {
     float ft;
     // Calibrated Energy of the event
     float E;
-    // The denominator for the anger logic in adc values.  This is the sum of
-    // four 12-bit values, which can be placed in a short.
-    short anger_denom;
+    // The denominator for the anger logic in adc values
+    float anger_denom;
     // The x and y positions of the event within the flood histogram
     float x;
     float y;

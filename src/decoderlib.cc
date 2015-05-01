@@ -412,10 +412,10 @@ int RawEventToEventCal(
 
     event.ct = rawevent.ct;
 
-    short a = rawevent.a - module_pedestals[0];
-    short b = rawevent.b - module_pedestals[1];
-    short c = rawevent.c - module_pedestals[2];
-    short d = rawevent.d - module_pedestals[3];
+    float a = (float) rawevent.a - module_pedestals[0];
+    float b = (float) rawevent.b - module_pedestals[1];
+    float c = (float) rawevent.c - module_pedestals[2];
+    float d = (float) rawevent.d - module_pedestals[3];
 
     short module = rawevent.module;
     short fin = 0;
@@ -445,8 +445,8 @@ int RawEventToEventCal(
 
 
     event.anger_denom = a + b + c + d;
-    event.x = float(c + d - (b + a)) / float(event.anger_denom);
-    event.y = float(a + d - (b + c)) / float(event.anger_denom);
+    event.x = (c + d - (b + a)) / (event.anger_denom);
+    event.y = (a + d - (b + c)) / (event.anger_denom);
     if (apd == 1) {
         event.y *= -1;
         event.ft = FineCalc(rawevent.u2h,
