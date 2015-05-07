@@ -9,20 +9,38 @@
 #include "CoincEvent.h"
 #include <string>
 
-#define COARSEDIFF 10
+void usage() {
+    cout << "merge_coinc [-v -h] -fl [left filename] -fr [right filename]\n"
+         << "\n"
+         << "Options:\n"
+         << "  -a : write out coincidence event to an ascii file as well\n"
+         << "  -c : specify course window in coarse timestamp units\n"
+         << "  -d : specify the delay for a delayed window coincidence\n"
+         << "  -of: specify the output filename instead of default\n"
+         << endl;
+}
 
-int main(int argc, Char_t *argv[])
+int main(int argc, char ** argv)
 {
+    if (argc == 1) {
+        usage();
+        return(0);
+    }
     string filename_left;
     string filename_right;
     string filename_output;
     Int_t verbose = 0;
     Int_t ascii= 0;
     Int_t DELAY = 0;
+    Int_t COARSEDIFF = 10;
     CoincEvent * evt = new CoincEvent();
     Bool_t outfilespec = kFALSE;
 
     for(int ix = 1; ix < argc; ix++) {
+        if(strcmp(argv[ix], "-h") == 0) {
+            usage();
+            return(0);
+        }
         if(strcmp(argv[ix], "-v") == 0) {
             cout << "Verbose Mode " << endl;
             verbose = 1;
@@ -30,6 +48,11 @@ int main(int argc, Char_t *argv[])
         if(strcmp(argv[ix], "-a") == 0) {
             cout << "Ascii output file generated" << endl;
             ascii = 1;
+        }
+        if(strcmp(argv[ix], "-c") == 0) {
+            COARSEDIFF = atoi(argv[ix+1]);
+            cout << "Coarse timestamp window =  " << COARSEDIFF << endl;
+            ix++;
         }
         if(strcmp(argv[ix], "-d") == 0) {
             DELAY = atoi( argv[ix+1]);
@@ -47,8 +70,6 @@ int main(int argc, Char_t *argv[])
             outfilespec = kTRUE;
         }
     }
-
-    Int_t evts=0;
 
     if (verbose) {
         cout << "Opening file " << filename_left << endl;
@@ -118,6 +139,8 @@ int main(int argc, Char_t *argv[])
 
     long dropped_single(0);
 
+    Int_t coincidence_events=0;
+
     while ((car_ri < entries_car_r) && (car_li < entries_car_l)) {
         car_r->GetEntry(car_ri);
         car_l->GetEntry(car_li);
@@ -164,7 +187,7 @@ int main(int argc, Char_t *argv[])
             evt->dtf*=1e9;
             evt->dtf/=(2*TMath::Pi()*UVFREQUENCY);
             if (((EL->ft > -1) && (ER->ft > -1)) && (ER->pos == EL->pos)) {
-                evts++;
+                coincidence_events++;
                 merged->Fill();
                 if (ascii) {
                     asciiout << evt->dtc << " "
@@ -207,8 +230,8 @@ int main(int argc, Char_t *argv[])
         }
     }
 
-    cout << "Filled tree with " << evts << " events ( car_li = " << car_li;
-    cout << "; car_ri = " << car_ri << " )" << endl;
+    cout << "Filled tree with " << coincidence_events << " events"
+         << "  (car_li = " << car_li << "; car_ri = " << car_ri << ")" << endl;
     cout << "Dropped:\n" << "  Single - " << dropped_single << endl;
 
     merged->Write();
