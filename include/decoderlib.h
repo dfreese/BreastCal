@@ -26,6 +26,7 @@ int DecodePacketByteStream(const std::vector<char> & packet_byte_stream,
 int PacketToRawEvents(
         const DaqPacket & packet_info,
         std::vector<chipevent> & raw_events,
+        int panel_id,
         int cartridge_id,
         int sourcepos = 0);
 
@@ -113,8 +114,7 @@ int RawEventToEventCal(
                              [APDS_PER_MODULE]
                              [CRYSTALS_PER_APD],
         int threshold,
-        int nohit_threshold,
-        int panel_id);
+        int nohit_threshold);
 
 int ReadPedestalFile(const std::string & filename,
                      float pedestals[CARTRIDGES_PER_PANEL]

@@ -122,6 +122,7 @@ int DecodePacketByteStream(
 int PacketToRawEvents(
         const DaqPacket & packet_info,
         std::vector<chipevent> & raw_events,
+        int panel_id,
         int cartridge_id,
         int sourcepos)
 {
@@ -134,6 +135,7 @@ int PacketToRawEvents(
             rawevent.ct = packet_info.timestamp;
             rawevent.chip = packet_info.rena + 2 * packet_info.fpga
                     + packet_info.daq_board * RENAS_PER_FOURUPBOARD;
+            rawevent.panel = panel_id;
             rawevent.cartridge = cartridge_id;
             rawevent.module = module;
 
@@ -296,21 +298,113 @@ float FineCalc(short u, short v, float u_cent, float v_cent) {
     return(tmp);
 }
 
+int MinDistance(
+        float x,
+        float y,
+        float * loc_x,
+        float * loc_y,
+        int num)
+{
+    float min(FLT_MAX);
+    int min_idx(-1);
+
+    for (int ii = 0; ii < num; ii++) {
+        float dist = std::pow(loc_x[ii] - x, 2) +
+                     std::pow(loc_y[ii] - y, 2);
+        if (dist < min) {
+            min_idx = ii;
+            min = dist;
+        }
+    }
+    return(min_idx);
+}
+
+int MinDistanceIndex(
+        float x,
+        float y,
+        float * loc_x,
+        float * loc_y,
+        int * index,
+        int num)
+{
+    float min(FLT_MAX);
+    int min_idx(-1);
+
+    for (int ii = 0; ii < num; ii++) {
+        float dist = std::pow(loc_x[index[ii]] - x, 2) +
+                     std::pow(loc_y[index[ii]] - y, 2);
+        if (dist < min) {
+            min_idx = index[ii];
+            min = dist;
+        }
+    }
+    return(min_idx);
+}
+
+int central_four_crystals[4] = {27, 28, 35, 36};
+int upper_left_crystals[25] = {0, 1, 2, 3, 4,
+                               8, 9, 10, 11, 12,
+                               16, 17, 18, 19, 13,
+                               24, 25, 26, 27, 28};
+int lower_left_crystals[25] = {3, 4, 5, 6, 7,
+                               11, 12, 13, 14, 15,
+                               19, 20, 21, 22, 23,
+                               27, 28, 29, 30, 31};
+int upper_right_crystals[25] = {32, 33, 34, 35, 36,
+                                40, 41, 42, 43, 44,
+                                48, 49, 50, 51, 52,
+                                56, 57, 58, 59, 60};
+int lower_right_crystals[25] = {35, 36, 37, 38, 39,
+                                43, 44, 45, 46, 47,
+                                51, 52, 53, 54, 55,
+                                59, 60, 61, 62, 63};
+
+int GetCrystalIDQuadrants(
+        float x,
+        float y,
+        float loc_x[CRYSTALS_PER_APD],
+        float loc_y[CRYSTALS_PER_APD])
+{
+    int crystal_id(-1);
+
+    if ((std::abs(x) > 1) || (std::abs(y) > 1)) {
+        return(-2);
+    }
+    int quadrant_crystal =
+            MinDistanceIndex(x, y, loc_x, loc_y, central_four_crystals, 4);
+    if (quadrant_crystal == central_four_crystals[0]) {
+        crystal_id =
+                MinDistanceIndex(x, y, loc_x, loc_y, upper_left_crystals, 25);
+    } else if (quadrant_crystal == central_four_crystals[1]) {
+        crystal_id =
+                MinDistanceIndex(x, y, loc_x, loc_y, lower_left_crystals, 25);
+    } else if (quadrant_crystal == central_four_crystals[2]) {
+        crystal_id =
+                MinDistanceIndex(x, y, loc_x, loc_y, upper_right_crystals, 25);
+    } else if (quadrant_crystal == central_four_crystals[3]) {
+        crystal_id =
+                MinDistanceIndex(x, y, loc_x, loc_y, lower_right_crystals, 25);
+    } else {
+        return(-3);
+    }
+    return(crystal_id);
+}
+
 int GetCrystalID(
         float x,
         float y,
         float loc_x[CRYSTALS_PER_APD],
         float loc_y[CRYSTALS_PER_APD])
 {
-    double min(DBL_MAX);
+    float min(FLT_MAX);
     int crystal_id(-1);
 
-    if ((TMath::Abs(x) > 1) || (TMath::Abs(y) > 1)) {
+    if ((std::abs(x) > 1) || (std::abs(y) > 1)) {
         return(-2);
     }
     for (int crystal = 0; crystal < CRYSTALS_PER_APD; crystal++) {
-        double dist = TMath::Power(loc_x[crystal] - x, 2) +
-                      TMath::Power(loc_y[crystal] - y, 2);
+        float dist = std::pow(loc_x[crystal] - x, 2) +
+                     std::pow(loc_y[crystal] - y, 2);
         if (dist < min) {
             crystal_id = crystal;
             min = dist;
@@ -386,11 +480,10 @@ int RawEventToEventCal(
                              [APDS_PER_MODULE]
                              [CRYSTALS_PER_APD],
         int threshold,
-        int nohit_threshold,
-        int panel_id)
+        int nohit_threshold)
 {
     float * module_pedestals =
-            pedestals[panel_id][rawevent.cartridge]
+            pedestals[rawevent.panel][rawevent.cartridge]
                      [rawevent.chip][rawevent.module];
 
     int apd = -1;
@@ -419,29 +512,29 @@ int RawEventToEventCal(
 
     short module = rawevent.module;
     short fin = 0;
-    getfinmodule(panel_id,
+    getfinmodule(rawevent.panel,
                  rawevent.chip,
                  rawevent.module,
                  module,
                  fin);
 
     float * apd_spat_gain =
-            gain_spat[panel_id][rawevent.cartridge][fin][module][apd];
+            gain_spat[rawevent.panel][rawevent.cartridge][fin][module][apd];
 
     float * apd_spat_eres =
-            eres_spat[panel_id][rawevent.cartridge][fin][module][apd];
+            eres_spat[rawevent.panel][rawevent.cartridge][fin][module][apd];
 
     float * apd_crystal_x =
-            crystal_x[panel_id][rawevent.cartridge][fin][module][apd];
+            crystal_x[rawevent.panel][rawevent.cartridge][fin][module][apd];
 
     float * apd_crystal_y =
-            crystal_y[panel_id][rawevent.cartridge][fin][module][apd];
+            crystal_y[rawevent.panel][rawevent.cartridge][fin][module][apd];
 
     float module_centers_u =
-            centers_u[panel_id][rawevent.cartridge][fin][module][apd];
+            centers_u[rawevent.panel][rawevent.cartridge][fin][module][apd];
 
     float module_centers_v =
-            centers_v[panel_id][rawevent.cartridge][fin][module][apd];
+            centers_v[rawevent.panel][rawevent.cartridge][fin][module][apd];
 
 
     event.anger_denom = a + b + c + d;
@@ -461,23 +554,25 @@ int RawEventToEventCal(
     }
 
     int crystal = GetCrystalID(event.x, event.y, apd_crystal_x, apd_crystal_y);
+//    int crystal_quad = GetCrystalIDQuadrants(event.x, event.y,
+//                                        apd_crystal_x, apd_crystal_y);
 
     if (crystal < 0) {
         return(-3);
     }
-    if (!use_crystal[panel_id][rawevent.cartridge][fin][module][apd]) {
+    if (!use_crystal[rawevent.panel][rawevent.cartridge][fin][module][apd]) {
         return(-4);
     }
 
-    if (panel_id == 0) {
-        event.ft -= time_offset_cal[panel_id]
+    if (rawevent.panel == 0) {
+        event.ft -= time_offset_cal[rawevent.panel]
                                    [rawevent.cartridge]
                                    [fin][module][apd][crystal];
         if (event.ft < 0) {
             event.ft += UV_PERIOD_NS;
         }
-    } else if (panel_id == 1) {
-        event.ft += time_offset_cal[panel_id]
+    } else if (rawevent.panel == 1) {
+        event.ft += time_offset_cal[rawevent.panel]
                                    [rawevent.cartridge]
                                    [fin][module][apd][crystal];
         if (event.ft >= UV_PERIOD_NS) {
@@ -486,7 +581,8 @@ int RawEventToEventCal(
     }
 
 
-    event.crystal = ((((panel_id * CARTRIDGES_PER_PANEL + rawevent.cartridge)
+    event.crystal = ((((rawevent.panel
+                                 * CARTRIDGES_PER_PANEL + rawevent.cartridge)
                                  * FINS_PER_CARTRIDGE + fin)
                                  * MODULES_PER_FIN + module)
                                  * APDS_PER_MODULE + apd)

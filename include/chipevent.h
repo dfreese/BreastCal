@@ -4,6 +4,7 @@
 struct chipevent {
     long ct;
     short chip;
+    short panel;
     short cartridge;
     short module;
     short com1;

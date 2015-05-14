@@ -41,6 +41,7 @@ void usage(void)
          << " -calfile [calibration filename]\n"
          << " -uvfile [uv center filename]\n"
          << " -tfile [time offset filename]\n"
+         << " -ds : disable sort"
          << endl;
     return;
 }
@@ -71,15 +72,16 @@ int main(int argc, char *argv[])
 
     string time_offset_cal_filename;
 
+    bool disable_sort_flag(false);
+
     // Arguments not requiring input
     for (int ix = 1; ix < argc; ix++) {
         if (strcmp(argv[ix], "-v") == 0) {
             verbose = 1;
             cout << " Running verbose mode " << endl;
         }
-        if (strcmp(argv[ix], "-t") == 0) {
-            threshold = atoi(argv[ix+1]);
-            ix++;
+        if (strcmp(argv[ix], "-d") == 0) {
+            disable_sort_flag = true;
         }
     }
     // Arguments requiring input
@@ -387,6 +389,7 @@ int main(int argc, char *argv[])
             std::vector<chipevent> raw_events;
             int packet_status(PacketToRawEvents(packet_info,
                                                 raw_events,
+                                                panel_id,
                                                 cartridge_id));
 
             for (size_t ii = 0; ii < raw_events.size(); ii++) {
@@ -406,8 +409,7 @@ int main(int argc, char *argv[])
                                                             use_crystal,
                                                             time_offset_cal,
                                                             threshold,
-                                                            nohit_threshold,
-                                                            panel_id);
+                                                            nohit_threshold);
 
                 if (calibration_status >= 0) {
                     totaltriggers[raw_events.at(ii).cartridge]
@@ -437,7 +439,9 @@ int main(int argc, char *argv[])
         }
     }
 
-    insertion_sort(output_events, EventCalLessThan);
+    if (!disable_sort_flag) {
+        insertion_sort(output_events, EventCalLessThan);
+    }
 
     output_stream.write((char *)&output_events[0],
                         sizeof(EventCal) * output_events.size());
