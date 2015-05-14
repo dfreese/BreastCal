@@ -3,6 +3,7 @@
 #include "chipevent.h"
 #include "ModuleDat.h"
 #include "EventCal.h"
+#include "calibrationdata.h"
 #include <fstream>
 #include <sstream>
 #include <iostream>
@@ -393,8 +394,8 @@ int GetCrystalIDQuadrants(
 int GetCrystalID(
         float x,
         float y,
-        float loc_x[CRYSTALS_PER_APD],
-        float loc_y[CRYSTALS_PER_APD])
+        const float loc_x[CRYSTALS_PER_APD],
+        const float loc_y[CRYSTALS_PER_APD])
 {
     float min(FLT_MAX);
     int crystal_id(-1);
@@ -416,75 +417,13 @@ int GetCrystalID(
 int RawEventToEventCal(
         const chipevent & rawevent,
         EventCal & event,
-        float pedestals[SYSTEM_PANELS]
-                       [CARTRIDGES_PER_PANEL]
-                       [RENAS_PER_CARTRIDGE]
-                       [MODULES_PER_RENA]
-                       [CHANNELS_PER_MODULE],
-        float centers_u[SYSTEM_PANELS]
-                       [CARTRIDGES_PER_PANEL]
-                       [FINS_PER_CARTRIDGE]
-                       [MODULES_PER_FIN]
-                       [APDS_PER_MODULE],
-        float centers_v[SYSTEM_PANELS]
-                       [CARTRIDGES_PER_PANEL]
-                       [FINS_PER_CARTRIDGE]
-                       [MODULES_PER_FIN]
-                       [APDS_PER_MODULE],
-        float gain_spat[SYSTEM_PANELS]
-                       [CARTRIDGES_PER_PANEL]
-                       [FINS_PER_CARTRIDGE]
-                       [MODULES_PER_FIN]
-                       [APDS_PER_MODULE]
-                       [CRYSTALS_PER_APD],
-        float gain_comm[SYSTEM_PANELS]
-                       [CARTRIDGES_PER_PANEL]
-                       [FINS_PER_CARTRIDGE]
-                       [MODULES_PER_FIN]
-                       [APDS_PER_MODULE]
-                       [CRYSTALS_PER_APD],
-        float eres_spat[SYSTEM_PANELS]
-                       [CARTRIDGES_PER_PANEL]
-                       [FINS_PER_CARTRIDGE]
-                       [MODULES_PER_FIN]
-                       [APDS_PER_MODULE]
-                       [CRYSTALS_PER_APD],
-        float eres_comm[SYSTEM_PANELS]
-                       [CARTRIDGES_PER_PANEL]
-                       [FINS_PER_CARTRIDGE]
-                       [MODULES_PER_FIN]
-                       [APDS_PER_MODULE]
-                       [CRYSTALS_PER_APD],
-        float crystal_x[SYSTEM_PANELS]
-                       [CARTRIDGES_PER_PANEL]
-                       [FINS_PER_CARTRIDGE]
-                       [MODULES_PER_FIN]
-                       [APDS_PER_MODULE]
-                       [CRYSTALS_PER_APD],
-        float crystal_y[SYSTEM_PANELS]
-                       [CARTRIDGES_PER_PANEL]
-                       [FINS_PER_CARTRIDGE]
-                       [MODULES_PER_FIN]
-                       [APDS_PER_MODULE]
-                       [CRYSTALS_PER_APD],
-        bool use_crystal[SYSTEM_PANELS]
-                        [CARTRIDGES_PER_PANEL]
-                        [FINS_PER_CARTRIDGE]
-                        [MODULES_PER_FIN]
-                        [APDS_PER_MODULE]
-                        [CRYSTALS_PER_APD],
-        float time_offset_cal[SYSTEM_PANELS]
-                             [CARTRIDGES_PER_PANEL]
-                             [FINS_PER_CARTRIDGE]
-                             [MODULES_PER_FIN]
-                             [APDS_PER_MODULE]
-                             [CRYSTALS_PER_APD],
+        const CalibrationData &calibration,
         int threshold,
         int nohit_threshold)
 {
-    float * module_pedestals =
-            pedestals[rawevent.panel][rawevent.cartridge]
-                     [rawevent.chip][rawevent.module];
+    const float * module_pedestals =
+            calibration.pedestals[rawevent.panel][rawevent.cartridge]
+                                 [rawevent.chip][rawevent.module];
 
     int apd = -1;
     if ((rawevent.com1h - module_pedestals[5]) < threshold) {
@@ -518,23 +457,29 @@ int RawEventToEventCal(
                  module,
                  fin);
 
-    float * apd_spat_gain =
-            gain_spat[rawevent.panel][rawevent.cartridge][fin][module][apd];
+    const float * apd_spat_gain =
+            calibration.gain_spat[rawevent.panel]
+            [rawevent.cartridge][fin][module][apd];
 
-    float * apd_spat_eres =
-            eres_spat[rawevent.panel][rawevent.cartridge][fin][module][apd];
+    const float * apd_spat_eres =
+            calibration.eres_spat[rawevent.panel]
+            [rawevent.cartridge][fin][module][apd];
 
-    float * apd_crystal_x =
-            crystal_x[rawevent.panel][rawevent.cartridge][fin][module][apd];
+    const float * apd_crystal_x =
+            calibration.crystal_x[rawevent.panel]
+            [rawevent.cartridge][fin][module][apd];
 
-    float * apd_crystal_y =
-            crystal_y[rawevent.panel][rawevent.cartridge][fin][module][apd];
+    const float * apd_crystal_y =
+            calibration.crystal_y[rawevent.panel]
+            [rawevent.cartridge][fin][module][apd];
 
-    float module_centers_u =
-            centers_u[rawevent.panel][rawevent.cartridge][fin][module][apd];
+    const float module_centers_u =
+            calibration.centers_u[rawevent.panel]
+            [rawevent.cartridge][fin][module][apd];
 
-    float module_centers_v =
-            centers_v[rawevent.panel][rawevent.cartridge][fin][module][apd];
+    const float module_centers_v =
+            calibration.centers_v[rawevent.panel]
+            [rawevent.cartridge][fin][module][apd];
 
 
     event.anger_denom = a + b + c + d;
@@ -560,21 +505,21 @@ int RawEventToEventCal(
     if (crystal < 0) {
         return(-3);
     }
-    if (!use_crystal[rawevent.panel][rawevent.cartridge][fin][module][apd]) {
+    if (!calibration.use_crystal[rawevent.panel][rawevent.cartridge][fin][module][apd]) {
         return(-4);
     }
 
     if (rawevent.panel == 0) {
-        event.ft -= time_offset_cal[rawevent.panel]
-                                   [rawevent.cartridge]
-                                   [fin][module][apd][crystal];
+        event.ft -= calibration.time_offset_cal[rawevent.panel]
+                                               [rawevent.cartridge]
+                                               [fin][module][apd][crystal];
         if (event.ft < 0) {
             event.ft += UV_PERIOD_NS;
         }
     } else if (rawevent.panel == 1) {
-        event.ft += time_offset_cal[rawevent.panel]
-                                   [rawevent.cartridge]
-                                   [fin][module][apd][crystal];
+        event.ft += calibration.time_offset_cal[rawevent.panel]
+                                               [rawevent.cartridge]
+                                               [fin][module][apd][crystal];
         if (event.ft >= UV_PERIOD_NS) {
             event.ft -= UV_PERIOD_NS;
         }
@@ -724,48 +669,7 @@ int WritePedestalFile(
 
 int ReadCalibrationFile(
         const std::string & filename,
-        bool use_crystal[SYSTEM_PANELS]
-                        [CARTRIDGES_PER_PANEL]
-                        [FINS_PER_CARTRIDGE]
-                        [MODULES_PER_FIN]
-                        [APDS_PER_MODULE]
-                        [CRYSTALS_PER_APD],
-        float gain_spat[SYSTEM_PANELS]
-                       [CARTRIDGES_PER_PANEL]
-                       [FINS_PER_CARTRIDGE]
-                       [MODULES_PER_FIN]
-                       [APDS_PER_MODULE]
-                       [CRYSTALS_PER_APD],
-        float gain_comm[SYSTEM_PANELS]
-                       [CARTRIDGES_PER_PANEL]
-                       [FINS_PER_CARTRIDGE]
-                       [MODULES_PER_FIN]
-                       [APDS_PER_MODULE]
-                       [CRYSTALS_PER_APD],
-        float eres_spat[SYSTEM_PANELS]
-                       [CARTRIDGES_PER_PANEL]
-                       [FINS_PER_CARTRIDGE]
-                       [MODULES_PER_FIN]
-                       [APDS_PER_MODULE]
-                       [CRYSTALS_PER_APD],
-        float eres_comm[SYSTEM_PANELS]
-                       [CARTRIDGES_PER_PANEL]
-                       [FINS_PER_CARTRIDGE]
-                       [MODULES_PER_FIN]
-                       [APDS_PER_MODULE]
-                       [CRYSTALS_PER_APD],
-        float crystal_x[SYSTEM_PANELS]
-                       [CARTRIDGES_PER_PANEL]
-                       [FINS_PER_CARTRIDGE]
-                       [MODULES_PER_FIN]
-                       [APDS_PER_MODULE]
-                       [CRYSTALS_PER_APD],
-        float crystal_y[SYSTEM_PANELS]
-                       [CARTRIDGES_PER_PANEL]
-                       [FINS_PER_CARTRIDGE]
-                       [MODULES_PER_FIN]
-                       [APDS_PER_MODULE]
-                       [CRYSTALS_PER_APD])
+        CalibrationData & calibration)
 {
     std::ifstream calibration_filestream;
 
@@ -838,15 +742,36 @@ int ReadCalibrationFile(
     } else {
         std::copy(use_crystal_read.begin(),
                   use_crystal_read.end(),
-                  &use_crystal[0][0][0][0][0][0]);
-        std::copy(crystal_x_read.begin(), crystal_x_read.end(), &crystal_x[0][0][0][0][0][0]);
-        std::copy(crystal_y_read.begin(), crystal_y_read.end(), &crystal_y[0][0][0][0][0][0]);
-        std::copy(gain_spat_read.begin(), gain_spat_read.end(), &gain_spat[0][0][0][0][0][0]);
-        std::copy(gain_comm_read.begin(), gain_comm_read.end(), &gain_comm[0][0][0][0][0][0]);
-        std::copy(eres_spat_read.begin(), eres_spat_read.end(), &eres_spat[0][0][0][0][0][0]);
-        std::copy(eres_comm_read.begin(), eres_comm_read.end(), &eres_comm[0][0][0][0][0][0]);
+                  &calibration.use_crystal[0][0][0][0][0][0]);
+        std::copy(crystal_x_read.begin(),
+                  crystal_x_read.end(),
+                  &calibration.crystal_x[0][0][0][0][0][0]);
+        std::copy(crystal_y_read.begin(),
+                  crystal_y_read.end(),
+                  &calibration.crystal_y[0][0][0][0][0][0]);
+        std::copy(gain_spat_read.begin(),
+                  gain_spat_read.end(),
+                  &calibration.gain_spat[0][0][0][0][0][0]);
+        std::copy(gain_comm_read.begin(),
+                  gain_comm_read.end(),
+                  &calibration.gain_comm[0][0][0][0][0][0]);
+        std::copy(eres_spat_read.begin(),
+                  eres_spat_read.end(),
+                  &calibration.eres_spat[0][0][0][0][0][0]);
+        std::copy(eres_comm_read.begin(),
+                  eres_comm_read.end(),
+                  &calibration.eres_comm[0][0][0][0][0][0]);
         return(0);
     }
+}
+
+int ReadUVCirclesFile(
+        const std::string &filename,
+        CalibrationData & calibration)
+{
+    return(ReadUVCirclesFile(filename,
+                             calibration.centers_u,
+                             calibration.centers_v));
 }
 
 int ReadUVCirclesFile(
@@ -909,6 +834,13 @@ int ReadUVCirclesFile(
                   &circles_v[0][0][0][0][0]);
         return(0);
     }
+}
+
+int ReadPedestalFile(
+        const std::string &filename,
+        CalibrationData & calibration)
+{
+    return(ReadPedestalFile(filename, calibration.pedestals));
 }
 
 int ReadPedestalFile(

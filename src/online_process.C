@@ -22,6 +22,7 @@
 #include "libInit_avdb.h"
 #include "myrootlib.h"
 #include "Syspardef.h"
+#include "calibrationdata.h"
 
 using namespace std;
 
@@ -146,13 +147,17 @@ int main(int argc, char *argv[])
         return(-2);
     }
 
+    // The structure which contains all of the information to generate a
+    // calibrated event from a raw packet.
+    CalibrationData calibration;
+
     float pedestals[SYSTEM_PANELS]
                    [CARTRIDGES_PER_PANEL]
                    [RENAS_PER_CARTRIDGE]
                    [MODULES_PER_RENA]
                    [CHANNELS_PER_MODULE] = {{{{{0}}}}};
 
-    int read_ped_status(ReadPedestalFile(pedvaluefilename, pedestals));
+    int read_ped_status(ReadPedestalFile(pedvaluefilename, calibration));
 
     if (read_ped_status < 0) {
         cerr << "Error reading Pedestal Value File: "
@@ -161,63 +166,7 @@ int main(int argc, char *argv[])
         return(-3);
     }
 
-    bool use_crystal[SYSTEM_PANELS]
-                     [CARTRIDGES_PER_PANEL]
-                     [FINS_PER_CARTRIDGE]
-                     [MODULES_PER_FIN]
-                     [APDS_PER_MODULE]
-                     [CRYSTALS_PER_APD] = {{{{{{false}}}}}};
-
-    float gain_spat[SYSTEM_PANELS]
-                   [CARTRIDGES_PER_PANEL]
-                   [FINS_PER_CARTRIDGE]
-                   [MODULES_PER_FIN]
-                   [APDS_PER_MODULE]
-                   [CRYSTALS_PER_APD] = {{{{{{0}}}}}};
-
-    float gain_comm[SYSTEM_PANELS]
-                   [CARTRIDGES_PER_PANEL]
-                   [FINS_PER_CARTRIDGE]
-                   [MODULES_PER_FIN]
-                   [APDS_PER_MODULE]
-                   [CRYSTALS_PER_APD] = {{{{{{0}}}}}};
-
-    float eres_spat[SYSTEM_PANELS]
-                   [CARTRIDGES_PER_PANEL]
-                   [FINS_PER_CARTRIDGE]
-                   [MODULES_PER_FIN]
-                   [APDS_PER_MODULE]
-                   [CRYSTALS_PER_APD] = {{{{{{0}}}}}};
-
-    float eres_comm[SYSTEM_PANELS]
-                   [CARTRIDGES_PER_PANEL]
-                   [FINS_PER_CARTRIDGE]
-                   [MODULES_PER_FIN]
-                   [APDS_PER_MODULE]
-                   [CRYSTALS_PER_APD] = {{{{{{0}}}}}};
-
-    float crystal_x[SYSTEM_PANELS]
-                   [CARTRIDGES_PER_PANEL]
-                   [FINS_PER_CARTRIDGE]
-                   [MODULES_PER_FIN]
-                   [APDS_PER_MODULE]
-                   [CRYSTALS_PER_APD] = {{{{{{0}}}}}};
-
-    float crystal_y[SYSTEM_PANELS]
-                   [CARTRIDGES_PER_PANEL]
-                   [FINS_PER_CARTRIDGE]
-                   [MODULES_PER_FIN]
-                   [APDS_PER_MODULE]
-                   [CRYSTALS_PER_APD] = {{{{{{0}}}}}};
-
-    int read_cal_status(ReadCalibrationFile(cal_filename,
-                                            use_crystal,
-                                            gain_spat,
-                                            gain_comm,
-                                            eres_spat,
-                                            eres_comm,
-                                            crystal_x,
-                                            crystal_y));
+    int read_cal_status(ReadCalibrationFile(cal_filename, calibration));
 
     if (read_cal_status < 0) {
         cerr << "Calibration file: \"" << cal_filename
@@ -225,21 +174,7 @@ int main(int argc, char *argv[])
         return(-4);
     }
 
-    float circles_u[SYSTEM_PANELS]
-                   [CARTRIDGES_PER_PANEL]
-                   [FINS_PER_CARTRIDGE]
-                   [MODULES_PER_FIN]
-                   [APDS_PER_MODULE] = {{{{{0}}}}};
-
-    float circles_v[SYSTEM_PANELS]
-                   [CARTRIDGES_PER_PANEL]
-                   [FINS_PER_CARTRIDGE]
-                   [MODULES_PER_FIN]
-                   [APDS_PER_MODULE] = {{{{{0}}}}};
-
-    int read_uv_status(ReadUVCirclesFile(uv_filename,
-                                         circles_u,
-                                         circles_v));
+    int read_uv_status(ReadUVCirclesFile(uv_filename, calibration));
 
     if (read_uv_status < 0) {
         cerr << "UV Circle Centers file: \"" << uv_filename
@@ -252,16 +187,10 @@ int main(int argc, char *argv[])
     if (verbose) {
         cout << "Reading Input crystal calibration file\n";
     }
-    float time_offset_cal[SYSTEM_PANELS]
-            [CARTRIDGES_PER_PANEL]
-            [FINS_PER_CARTRIDGE]
-            [MODULES_PER_FIN]
-            [APDS_PER_MODULE]
-            [CRYSTALS_PER_APD] = {{{{{{0}}}}}};
 
     if (time_offset_cal_filename != "") {
         int cal_read_status(ReadPerCrystalCal(
-                time_offset_cal_filename,time_offset_cal));
+                time_offset_cal_filename,calibration.time_offset_cal));
         if (cal_read_status < 0) {
             cerr << "Error in reading input calibration file: "
                  << cal_read_status << endl;
@@ -370,9 +299,11 @@ int main(int argc, char *argv[])
 
             int panel_id;
             int cartridge_id;
-            int address_status(daq_board_map.getPanelCartridgeNumber(packet_info.backend_address,
-                                                                     panel_id,
-                                                                     cartridge_id));
+            int address_status(
+                        daq_board_map.getPanelCartridgeNumber(
+                            packet_info.backend_address,
+                            panel_id,
+                            cartridge_id));
 
             if (address_status < 0) {
                 droppedPckCnt++;
@@ -397,17 +328,7 @@ int main(int argc, char *argv[])
 
                 int calibration_status = RawEventToEventCal(raw_events.at(ii),
                                                             calibrated_event,
-                                                            pedestals,
-                                                            circles_u,
-                                                            circles_v,
-                                                            gain_spat,
-                                                            gain_comm,
-                                                            eres_spat,
-                                                            eres_comm,
-                                                            crystal_x,
-                                                            crystal_y,
-                                                            use_crystal,
-                                                            time_offset_cal,
+                                                            calibration,
                                                             threshold,
                                                             nohit_threshold);
 

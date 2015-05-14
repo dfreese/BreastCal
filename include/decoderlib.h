@@ -3,6 +3,7 @@
 
 struct DaqPacket;
 struct chipevent;
+struct CalibrationData;
 class ModuleDat;
 class EventCal;
 
@@ -50,69 +51,7 @@ bool EventCalLessThan(EventCal arg1, EventCal arg2);
 int RawEventToEventCal(
         const chipevent & rawevent,
         EventCal & event,
-        float pedestals[SYSTEM_PANELS]
-                       [CARTRIDGES_PER_PANEL]
-                       [RENAS_PER_CARTRIDGE]
-                       [MODULES_PER_RENA]
-                       [CHANNELS_PER_MODULE],
-        float centers_u[SYSTEM_PANELS]
-                       [CARTRIDGES_PER_PANEL]
-                       [FINS_PER_CARTRIDGE]
-                       [MODULES_PER_FIN]
-                       [APDS_PER_MODULE],
-        float centers_v[SYSTEM_PANELS]
-                       [CARTRIDGES_PER_PANEL]
-                       [FINS_PER_CARTRIDGE]
-                       [MODULES_PER_FIN]
-                       [APDS_PER_MODULE],
-        float gain_spat[SYSTEM_PANELS]
-                       [CARTRIDGES_PER_PANEL]
-                       [FINS_PER_CARTRIDGE]
-                       [MODULES_PER_FIN]
-                       [APDS_PER_MODULE]
-                       [CRYSTALS_PER_APD],
-        float gain_comm[SYSTEM_PANELS]
-                       [CARTRIDGES_PER_PANEL]
-                       [FINS_PER_CARTRIDGE]
-                       [MODULES_PER_FIN]
-                       [APDS_PER_MODULE]
-                       [CRYSTALS_PER_APD],
-        float eres_spat[SYSTEM_PANELS]
-                       [CARTRIDGES_PER_PANEL]
-                       [FINS_PER_CARTRIDGE]
-                       [MODULES_PER_FIN]
-                       [APDS_PER_MODULE]
-                       [CRYSTALS_PER_APD],
-        float eres_comm[SYSTEM_PANELS]
-                       [CARTRIDGES_PER_PANEL]
-                       [FINS_PER_CARTRIDGE]
-                       [MODULES_PER_FIN]
-                       [APDS_PER_MODULE]
-                       [CRYSTALS_PER_APD],
-        float crystal_x[SYSTEM_PANELS]
-                       [CARTRIDGES_PER_PANEL]
-                       [FINS_PER_CARTRIDGE]
-                       [MODULES_PER_FIN]
-                       [APDS_PER_MODULE]
-                       [CRYSTALS_PER_APD],
-        float crystal_y[SYSTEM_PANELS]
-                       [CARTRIDGES_PER_PANEL]
-                       [FINS_PER_CARTRIDGE]
-                       [MODULES_PER_FIN]
-                       [APDS_PER_MODULE]
-                       [CRYSTALS_PER_APD],
-        bool use_crystal[SYSTEM_PANELS]
-                        [CARTRIDGES_PER_PANEL]
-                        [FINS_PER_CARTRIDGE]
-                        [MODULES_PER_FIN]
-                        [APDS_PER_MODULE]
-                        [CRYSTALS_PER_APD],
-        float time_offset_cal[SYSTEM_PANELS]
-                             [CARTRIDGES_PER_PANEL]
-                             [FINS_PER_CARTRIDGE]
-                             [MODULES_PER_FIN]
-                             [APDS_PER_MODULE]
-                             [CRYSTALS_PER_APD],
+        const CalibrationData & calibration,
         int threshold,
         int nohit_threshold);
 
@@ -137,48 +76,11 @@ int WritePedestalFile(const std::string & filename,
 
 int ReadCalibrationFile(
         const std::string & filename,
-        bool use_crystal[SYSTEM_PANELS]
-                        [CARTRIDGES_PER_PANEL]
-                        [FINS_PER_CARTRIDGE]
-                        [MODULES_PER_FIN]
-                        [APDS_PER_MODULE]
-                        [CRYSTALS_PER_APD],
-        float gain_spat[SYSTEM_PANELS]
-                       [CARTRIDGES_PER_PANEL]
-                       [FINS_PER_CARTRIDGE]
-                       [MODULES_PER_FIN]
-                       [APDS_PER_MODULE]
-                       [CRYSTALS_PER_APD],
-        float gain_comm[SYSTEM_PANELS]
-                       [CARTRIDGES_PER_PANEL]
-                       [FINS_PER_CARTRIDGE]
-                       [MODULES_PER_FIN]
-                       [APDS_PER_MODULE]
-                       [CRYSTALS_PER_APD],
-        float eres_spat[SYSTEM_PANELS]
-                       [CARTRIDGES_PER_PANEL]
-                       [FINS_PER_CARTRIDGE]
-                       [MODULES_PER_FIN]
-                       [APDS_PER_MODULE]
-                       [CRYSTALS_PER_APD],
-        float eres_comm[SYSTEM_PANELS]
-                       [CARTRIDGES_PER_PANEL]
-                       [FINS_PER_CARTRIDGE]
-                       [MODULES_PER_FIN]
-                       [APDS_PER_MODULE]
-                       [CRYSTALS_PER_APD],
-        float crystal_x[SYSTEM_PANELS]
-                       [CARTRIDGES_PER_PANEL]
-                       [FINS_PER_CARTRIDGE]
-                       [MODULES_PER_FIN]
-                       [APDS_PER_MODULE]
-                       [CRYSTALS_PER_APD],
-        float crystal_y[SYSTEM_PANELS]
-                       [CARTRIDGES_PER_PANEL]
-                       [FINS_PER_CARTRIDGE]
-                       [MODULES_PER_FIN]
-                       [APDS_PER_MODULE]
-                       [CRYSTALS_PER_APD]);
+        CalibrationData & calibration);
+
+int ReadUVCirclesFile(
+        const std::string &filename,
+        CalibrationData & calibration);
 
 int ReadUVCirclesFile(
         const std::string & filename,
@@ -192,6 +94,10 @@ int ReadUVCirclesFile(
                        [FINS_PER_CARTRIDGE]
                        [MODULES_PER_FIN]
                        [APDS_PER_MODULE]);
+
+int ReadPedestalFile(
+        const std::string &filename,
+        CalibrationData & calibration);
 
 int ReadPedestalFile(
         const std::string & filename,
