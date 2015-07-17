@@ -10,7 +10,7 @@
 # note source files that start with a capital letter are just a bunch of functions and don't have a "main {} "
 
 #ROOTMACRODIR=$(HOME)/root/macros
-ROOTMACRODIR=/home/products/RootMacros/macros
+ROOTMACRODIR=/products/RootMacros/macros
 ROOTMACRODIR_LIB=$(ROOTMACRODIR)/lib
 ROOTMACRODIR_INC=$(ROOTMACRODIR)/include
 
