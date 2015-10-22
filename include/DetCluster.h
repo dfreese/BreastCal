@@ -4,10 +4,10 @@
 
 
 struct bin {
-  Int_t x;
-  Int_t y;
-  Float_t val;
-  Int_t pixels;
+    Int_t x;
+    Int_t y;
+    Float_t val;
+    Int_t pixels;
 };
 
 Int_t ClusterSize(TH2F *hist, Int_t xbin, Int_t ybin, bin *maxbin);
