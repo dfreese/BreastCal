@@ -41,12 +41,7 @@ function waitsome ()
 {
     # waits untill all jobs are done from a list submitted as $1;
 
-    local jobs=${2:-0}
-    #if [ -z "$2" ] ; then
-    #  jobs=1;
-    # else
-    #  jobs=$2;
-    # fi
+    local jobs=${1:-0}
 
     log " JOBS TO WAIT FOR :: " $jobs
 
@@ -55,22 +50,30 @@ function waitsome ()
 
     while [ $finished -lt $jobs ] ; do
         local index=0;
-        for ii in ${pids[@]}; do
-            #  echo "job ${ii} index $index array length : ${#pids[@]} . Array: ${pids[*]}" ;
-            if [ ! -d /proc/${ii} ]; then 
-                #           echo "${ii} done ! ( index $index ) " ; 
+        for pid in ${pids[@]}; do
+            # echo "job $pid index $index array length : ${#pids[@]} . Array: ${pids[*]}" ;
+            kill -0 $pid 2> /dev/null
+            if [ $? -eq 1 ]; then 
+                # echo "$pid done ! ( index $index ) " ; 
                 (( finished++ )); 
                 unset pids[$index];
                 pids=("${pids[@]}")
-                #          pids=${pids[@]//${ii}/}
-                #           echo " after unsetting: ${pids[*]}"
+                # echo " after unsetting: ${pids[*]}"
                 continue
             fi;
             (( index++ )); 
         done;
-        #  echo " Finished jobs :: " $finished " ( pids = " ${pids[@]} " )" 
+        # echo " Finished jobs :: " $finished " ( pids = " ${pids[@]} " )" 
         sleep 2
     done;
+}
+
+##############################################################################################################
+function waitone ()
+{
+    while kill -0 $1; do
+        sleep 0.5
+    done
 }
 
 ##############################################################################################################
@@ -80,7 +83,7 @@ function waitall ()
     # waits untill all jobs are done from a list submitted as $1;
     # pids=$1;
     log " WAITALL :: NEED TO WAIT FOR ${#pids[@]} jobs to finish with IDs :: ${pids[*]}"
-    waitsome $1 ${#pids[@]} 
+    waitsome ${#pids[@]} 
 }
 
 ##############################################################################################################
@@ -128,16 +131,26 @@ function usage()
     echo "       -l: do -c -s -m -t"
     echo "       -ci: individually calibrate all decoded files"
     echo "       -si: individually sort and energy gate calibrated files"
+    echo "       -pi: individually calibrate, sort, and energy gate files"
     echo "       -mi: individually merge and coincidence sort egated files"
     echo "       -chi: chain together individually merged files"
-    echo "       -i: do -ci -si -mi -chi"
+    echo "       -i: do -pi -mi -chi"
+    echo "       -ai: do -d -g -cal -i -t"
     echo "       -h: display this help"
     echo "       -C [] : number of cores"
+    echo "       -el [] : set the low energy window, default $energy_low"
+    echo "       -eh [] : set the high energy window, default $energy_high"
+    echo "       -tt [] : set the trigger threshold, default $trigger_threshold"
+    echo "       -dt [] : set the double trigger threshold, default $double_trigger_threshold"
 }
 
 ##############################################################################################################
 
-CORES=2
+CORES=4
+energy_low=400
+energy_high=700
+trigger_threshold=-700
+double_trigger_threshold=-700
 STARTTIME=`date +%s`
 verbose=0
 dodecode=0
@@ -152,17 +165,18 @@ doindividualmerge=0
 doindividualegate=0
 doindividualchain=0
 doindividualprocess=0
-
+setupfolders=0
+dopedestals=0
 
 while [ $# -gt 0 ];
 do
     case "$1" in
 	-v) verbose=1;;
-	-d) dodecode=1;;
-        -g) dosegmentation=1;;
-        -cal) docalccalibrate=1;;
+	-d) dodecode=1; setupfolders=1; dopedestals=1;;
+    -g) dosegmentation=1;;
+    -cal) docalccalibrate=1;;
 	-c) docalibrate=1;;
-        -cc) dodecodedcalibrate=1;;
+    -cc) dodecodedcalibrate=1;;
     -pi) doindividualprocess=1;;
     -ci) doindividualcal=1;;
 	-s) dosort=1;;
@@ -172,13 +186,16 @@ do
     -mi) doindividualmerge=1;;
     -chi) doindividualchain=1;;
     -i) doindividualprocess=1; doindividualmerge=1; doindividualchain=1;;
+    -ai) dodecode=1; setupfolders=1; dopedestals=1; dosegmentation=1; docalccalibrate=1; doindividualprocess=1; doindividualmerge=1; doindividualchain=1; dotimecal=1;;
 	-t) dotimecal=1;;
-	-a) dodecode=1;dosegmentation=1;docalccalibrate=1;docalibrate=1;dosort=1;domerge=1;dotimecal=1;;
-        -u) docalccalibrate=1;docalibrate=1;dosort=1;;
-        -l) docalibrate=1;dosort=1;domerge=1;dotimecal=1;;
+	-a) dodecode=1;dosegmentation=1;docalccalibrate=1;docalibrate=1;dosort=1;domerge=1;dotimecal=1;setupfolders=1;dopedestals=1;;
+    -u) docalccalibrate=1;docalibrate=1;dosort=1;;
+    -l) docalibrate=1;dosort=1;domerge=1;dotimecal=1;;
 	-h) usage ; exit; break;;
 	-C) CORES=$2;shift;;
-	-dgcal) dodecode=1;dosegmentation=1;docalccalibrate=1;;
+	-el) energy_low=$2;shift;;
+	-eh) energy_high=$2;shift;;
+	-dgcal) dodecode=1;dosegmentation=1;docalccalibrate=1;setupfolders=1;dopedestals=1;;
 	*) usage; break;;
     esac
     shift
@@ -187,122 +204,82 @@ done;
 echo "NUMBER OF CORES:: " $CORES
 
 
+################################################################################
+if [[ $setupfolders -eq 1 ]]; then
+    echo "Setting up folders"
+    if [ ! -d Left ]; then
+        mkdir Left
+    fi
+
+    files=$(ls -1 ./PED*L*dat 2> /dev/null)
+    for file in $files; do
+        mv $file ./Left/
+    done
+
+    files=$(ls -1 ./DAQ*L*dat 2> /dev/null)
+    for file in $files; do
+        mv $file ./Left/
+    done
+
+    if [ ! -d Right ]; then
+        mkdir Right
+    fi
+
+    files=$(ls -1 ./PED*R*dat 2> /dev/null)
+    for file in $files; do
+        mv $file ./Right/
+    done
+
+    files=$(ls -1 ./DAQ*R*dat 2> /dev/null)
+    for file in $files; do
+        mv $file ./Right/
+    done
+fi
+
+################################################################################
+# Right now, only take the first pedestal file, and decode it to use with the
+# decoding the data files.  This will need to change if something more
+# complicated needs to be done.
+
+if [[ $dopedestals -eq 1 ]]; then
+    log "Decoding pedestals"
+    for k in Left Right; do
+        cd $k
+        ls -tr ./PED*dat > pedfiles
+        ped_data_file=$(head -n 1 pedfiles)
+        cmd="decoder -p -f $ped_data_file -cmap ../DAQ_Board_Map.nfo &> $ped_data_file.decoder.out" 
+        echo $cmd
+        eval $cmd
+        cd ..
+    done
+fi
+
 #############################################################################################################
 
 if [[ $dodecode -eq 1 ]]; then
     log "Decoding data"
-    mkfolder Left
-    mkfolder Right
-
     for k in Left Right; do
         cd $k
         # get 'L' or 'R' from k
         KK=${k:0:1}
-        if [ -e ../PED*${KK}*dat ]; then 
-			mv ../PED*${KK}*dat . ; 
-		fi
-		ls -tr ./PED*dat > pedfiles
-        #FIXME WILL BE PT***** FOR PT SOURCE DATA
-		if [ -e ../DAQ*${KK}*dat ]; then mv ../DAQ*${KK}*dat . ; fi
 		ls -tr ./DAQ*dat > daqfiles
 
-        if [ `wc -l ./pedfiles | awk '{print $1}'` -eq `wc -l ./daqfiles | awk '{print $1}'` ]; then 
-            # equal number of pedfiles as datafiles
-            paste daqfiles pedfiles  > files
-        else 
-            # echo "different"; 
-	     pedcount=0; 
-	     maxped=`wc -l pedfiles | awk '{print $1}'`
-            if [ -e files ] ; then 
-                rm files;
-            fi;
-            while read data; do 
-                echo -n $data" " >> files; 
-#potential failure if #files > 9 ??
-		  if  [ `basename $data .dat | rev | cut -f1 -d'_'` -eq 0   ]; then (( pedcount++ ))  ; fi;  
-		  if [ $pedcount -gt $maxped ]; then
-		      pedcount=$maxped
-		  fi;
-                PEDFILE=`sed -n "${pedcount}p" ./pedfiles`; 
-                echo $PEDFILE  >> files;
-            done < ./daqfiles
-        fi;
+        pedfile=$(ls -1r ./*.ped | head -n 1)
 
-        # converting binary output to ROOT file format
-        for c in `seq 1 100`; do 
-            if [ -e pedconv_$c.out ] ; then 
-                rm pedconv_$c.out
-            fi;
-        done;
-
-        echo -n " Converting pedfiles @ "
-        timing $STARTTIME
-        RUNNINGJOBS=0;
-	j=0;
-	for i in `cat pedfiles`; do 
-	    if [ $RUNNINGJOBS -lt $CORES ]; then 
-		(( j++ ));
- #   echo " SUBMITTING JOB "
-		pedconv $i pedconv_$j.out &
-		pids+=($!);
-		(( RUNNINGJOBS++ ));
-	    else 
-#    echo " RUNNINGJOBS : $RUNNINGJOBS"
-                waitsome $pids 1
-                RUNNINGJOBS=${#pids[@]}
-#    echo " PEDCONV LOOP RUNNINGJOBS after waitsome : $RUNNINGJOBS"
-		(( j++ )) ;
-		pedconv $i pedconv_$j.out &
+        files=$(cat daqfiles)
+        for file in $files; do
+            while [ ${#pids[@]} -ge $CORES ]; do
+                waitsome 1
+            done
+            cmd="decoder -pedfile $pedfile -f $file -uv -t $trigger_threshold -n $double_trigger_threshold -cmap ../DAQ_Board_Map.nfo &> $file.decode.out &"
+            echo $cmd
+            eval $cmd
             pids+=($!);
-            (( RUNNINGJOBS++ ));
-	    fi;
-        done;
-
-        # pedestal correction, parsing and fine time calculation
-
-        waitall $pids
-
-        echo -n " pedestal decoding done @ "
-
-
-        timing $STARTTIME
-
-        RUNNINGJOBS=0
-
-        NOHIT=-50;
-
-        while read data ped ; do 
-            PTCHAR=${data:0:1}
-            if [ "$PTCHAR" == "PT" ] ; then 
-                pos=`echo $data | cut -f1 -d 'u' |  sed 's/.*[^0-9]\([0-9]\+\)[^0-9]*$/\1/'`
-            else
-                pos=0;
-            fi;
-
-            if [ $RUNNINGJOBS -ge $CORES ]; then 
-                waitsome $pids 1
-                RUNNINGJOBS=${#pids[@]}
-            fi
-            echo -n " SUBMITTING JOB "
-            echo "${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 -pos $pos -n $NOHIT; "
-            ${CODEVERSION}decoder -pedfile $ped.ped -f $data -uv -t -400 -pos $pos -n  $NOHIT -cmap "../DAQ_Board_Map.nfo" > $data.conv.out &
-            pids+=($!);
-            (( RUNNINGJOBS++ ));
-        done < files;
-
-        waitall $pids
-
-        echo -n " decoding done. Time:: "
-        timing $STARTTIME 
-        log " PIDS = ${pids[@]} "
-
-        TIMECHECK=0
-        RUNNINGJOBS=0;
-        #echo " PIDS before calibration : ${#pids[@]} :: ${pids[@]} "
-
-        cd ..
-    done;
-fi;
+        done
+        waitall
+        cd ../
+    done
+fi
 
 
 #############################################################################################################
@@ -313,24 +290,29 @@ if [[ $dosegmentation -eq 1 ]]; then
         KK=${k:0:1}
         BASE=`ls DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
         ls DAQ*${KK}0*root | cut -d _ -f 5 | sort -n | awk -v FBASE=$BASE '{print FBASE"0_"$1}' > filelist
-        chain_parsed -f filelist -o ${BASE}.root
-        check ${?} "chain_parsed ${BASE}.root"; 
-        getfloods -f ${BASE}.root
-        check ${?} "getfloods -f  ${BASE}.root"; 
 
-        RUNNINGJOBS=0;
+        cmd="chain_parsed -f filelist -o ${BASE}.root &> ${BASE}.root.chain_parsed.out"
+        echo $cmd
+        eval $cmd
+        check ${?} $cmd
+
+        cmd="getfloods -f ${BASE}.root &> ${BASE}.root.getfloods.out"
+        echo $cmd
+        eval $cmd
+        check ${?} $cmd
+
         for cartridge in `seq 0 $((NUM_CARTRIDGES_PER_PANEL-1))`; do
             for fin in `seq 0 7`; do 
-                if [ $RUNNINGJOBS -ge $CORES ]; then 
-                    waitsome $pids 1
-                    RUNNINGJOBS=${#pids[@]}
-                fi
-                echo "anafloods_psf_v2 -f ${BASE}.root -c $cartridge -l $fin &"
-                anafloods_psf_v2 -f ${BASE}.root -c $cartridge -l $fin &
+                while [ ${#pids[@]} -ge $CORES ]; do
+                    waitsome 1
+                done
+                cmd="anafloods_psf_v2 -f ${BASE}.root -c $cartridge -l $fin &> ${BASE}.root.anafloods_c${cartridge}f${fin}.out &"
+                echo $cmd
+                eval $cmd
                 pids+=($!);
-                (( RUNNINGJOBS++ ));
             done;
         done;
+        waitall
         cd ..
     done;
 fi
@@ -346,8 +328,10 @@ if [[ $docalccalibrate -eq 1 ]]; then
         mkdir CHIPDATA
         mv *peaks.txt ./CHIPDATA
 	    mv *peaks.failed.txt ./CHIPDATA
-        enecal -f ${BASE}.root
-        check ${?} "enecal -f  ${BASE}.root"; 
+        cmd="enecal -f ${BASE}.root &> ${BASE}.root.enecal.out"
+        echo $cmd
+        eval $cmd
+        check ${?} $cmd
         cd ..
     done;
 fi
@@ -361,8 +345,10 @@ if [[ $docalibrate -eq 1 ]]; then
         cd $k
         KK=${k:0:1}
         BASE=`ls DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
-        calibrate -f ${BASE}.root
-        check ${?} "calibrate -f  ${BASE}.root"; 
+        cmd="calibrate -f ${BASE}.root &> ${BASE}.root.calibrate.out"
+        echo $cmd
+        eval $cmd
+        check ${?} $cmd
         cd ..
     done;
 fi
@@ -372,28 +358,24 @@ fi
 
 if [[ $dodecodedcalibrate -eq 1 ]]; then
     for k in Left Right; do
-#    for k in Left; do
         cd $k
         KK=${k:0:1}
         BASE=`ls DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
         ls -tr ./DAQ*${KK}*dat.root > daqfiles
-        RUNNINGJOBS=0;
         for daq_file in `cat daqfiles`; do 
-            if [ $RUNNINGJOBS -ge $CORES ]; then 
-                waitsome $pids 1
-                RUNNINGJOBS=${#pids[@]}
-            fi
-            calibrate -f ${daq_file} -c ${BASE}.par.root -noplots -q &
+            while [ ${#pids[@]} -ge $CORES ]; do
+                waitsome 1
+            done
+            cmd="calibrate -f ${daq_file} -c ${BASE}.par.root -noplots -q &> ${daq_file}.calibrate.out &"
+            echo $cmd
+            eval $cmd
             pids+=($!);
-            (( RUNNINGJOBS++ ));
-	    echo $daq_file
+            echo $daq_file
         done;
 
         # calibration
 
-        waitall $pids
-
-        RUNNINGJOBS=0
+        waitall
 
         chain_cal -f ${BASE}0 -n `wc -l daqfiles | awk '{print $1}'` -of ${BASE}.cal.root     
 
@@ -416,23 +398,18 @@ if [[ $doindividualprocess -eq 1 ]]; then
         KK=${k:0:1}
         BASE=`ls DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
         ls -tr ./DAQ*${KK}*dat.root > daqfiles
-        RUNNINGJOBS=0;
-        for daq_file in `cat daqfiles`; do 
-            if [ $RUNNINGJOBS -ge $CORES ]; then 
-                waitsome $pids 1
-                RUNNINGJOBS=${#pids[@]}
-            fi
-            log "process_file -f ${daq_file} -calf ${BASE}.par.root -s -eg -el 450 -eh 650 &"
-            process_file -f ${daq_file} -calf ${BASE}.par.root -s -eg -el 450 -eh 650 &
-            pids+=($!);
-            (( RUNNINGJOBS++ ));
-        done;
-        waitall $pids
-        RUNNINGJOBS=0
 
-        waitall $pids
-        RUNNINGJOBS=0
-        cd ..
+        for daq_file in `cat daqfiles`; do 
+            while [ ${#pids[@]} -ge $CORES ]; do
+                waitsome 1
+            done
+            cmd="process_file -f ${daq_file} -calf ${BASE}.par.root -s -eg -el $energy_low -eh $energy_high &> ${daq_file}.process_file.out &"
+            echo $cmd
+            eval $cmd
+            pids+=($!);
+        done;
+        waitall
+        cd ../
     done;
 fi
 
@@ -445,22 +422,18 @@ if [[ $doindividualcal -eq 1 ]]; then
         KK=${k:0:1}
         BASE=`ls DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
         ls -tr ./DAQ*${KK}*dat.root > daqfiles
-        RUNNINGJOBS=0;
         for daq_file in `cat daqfiles`; do 
-            if [ $RUNNINGJOBS -ge $CORES ]; then 
-                waitsome $pids 1
-                RUNNINGJOBS=${#pids[@]}
-            fi
-            calibrate -f ${daq_file} -c ${BASE}.par.root -noplots -q &
+            while [ ${#pids[@]} -ge $CORES ]; do
+                waitsome 1
+            done
+            cmd="calibrate -f ${daq_file} -c ${BASE}.par.root -noplots -q &> ${daq_file}.calibrate.out &"
+            echo $cmd
+            eval $cmd
             pids+=($!);
-            (( RUNNINGJOBS++ ));
             echo $daq_file
         done;
-        waitall $pids
-        RUNNINGJOBS=0
+        waitall
 
-        waitall $pids
-        RUNNINGJOBS=0
         cd ..
     done;
 fi
@@ -476,23 +449,20 @@ if [[ $doindividualsort -eq 1 ]]; then
         KK=${k:0:1}
         BASE=`ls DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
         ls -tr ./DAQ*${KK}*dat.root > daqfiles
-        RUNNINGJOBS=0;
 
         ls -tr ./DAQ*${KK}*dat.cal.root > calfiles
         for daq_file in `cat calfiles`; do 
-            if [ $RUNNINGJOBS -ge $CORES ]; then 
-                waitsome $pids 1
-                RUNNINGJOBS=${#pids[@]}
-            fi
-            log "sort_file -f ${daq_file} -eg -v &"
-            sort_file -f ${daq_file} -eg -v &
+            while [ ${#pids[@]} -ge $CORES ]; do
+                waitsome 1
+            done
+            cmd="sort_file -f ${daq_file} -eg -v &> ${daq_file}.sort.out &"
+            echo $cmd
+            eval $cmd
             pids+=($!);
-            (( RUNNINGJOBS++ ));
             echo $daq_file
         done;
 
-        waitall $pids
-        RUNNINGJOBS=0
+        waitall
         cd ..
     done;
 fi
@@ -507,23 +477,21 @@ if [[ $doindividualegate -eq 1 ]]; then
     for k in Left Right; do
         cd $k
         KK=${k:0:1}
-        RUNNINGJOBS=0;
 
         ls -tr ./DAQ*${KK}*dat.cal.sort.root > sortedfiles
         for daq_file in `cat sortedfiles`; do 
-            if [ $RUNNINGJOBS -ge $CORES ]; then 
-                waitsome $pids 1
-                RUNNINGJOBS=${#pids[@]}
-            fi
+            while [ ${#pids[@]} -ge $CORES ]; do
+                waitsome 1
+            done
+
             echo $daq_file
-            log "egate_file -f ${daq_file} -el 400 -eh 700 -v &"
-            egate_file -f ${daq_file} -el 400 -eh 700 -v &
+            cmd="egate_file -f ${daq_file} -el $energy_low -eh $energy_high -v &> ${daq_file}.egate.out &"
+            echo $cmd
+            eval $cmd
             pids+=($!);
-            (( RUNNINGJOBS++ ));
         done;
 
-        waitall $pids
-        RUNNINGJOBS=0
+        waitall
         cd ..
     done;
 fi
@@ -536,27 +504,25 @@ if [[ $doindividualmerge -eq 1 ]]; then
         cd Left
         KK=${k:0:1}
         BASE=`ls DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
-        RUNNINGJOBS=0;
-        ls -tr DAQ*${KK}*dat.cal.sort.egate.root > ../calfiles
+        ls -tr DAQ*${KK}*cal.sort.egate.root > ../calfiles
         cd ..
 
         for daq_file in `cat calfiles`; do 
-            if [ $RUNNINGJOBS -ge $CORES ]; then 
-                waitsome $pids 1
-                RUNNINGJOBS=${#pids[@]}
-            fi
+            while [ ${#pids[@]} -ge $CORES ]; do
+                waitsome 1
+            done
             right_file=./Right/`echo $daq_file | sed 's/L0/R0/g'`
             if [ -e $right_file ]; then
                 output_file=`echo $daq_file | sed 's/_L0//g'`
-                log "merge_coinc -fl ./Left/$daq_file -fr $right_file -of $output_file &"
-                merge_coinc -fl ./Left/$daq_file -fr $right_file -of $output_file &  
+
+                cmd="merge_coinc -fl ./Left/$daq_file -fr $right_file -of $output_file &> $output_file.merge_coinc.out &"
+                echo $cmd
+                eval $cmd
                 pids+=($!);
-                (( RUNNINGJOBS++ ));
             fi
         done
     done
 fi
-
 
 
 #############################################################################################################
@@ -565,10 +531,11 @@ if [[ $doindividualchain -eq 1 ]]; then
     cd Left
     BASE=`ls DAQ*L0*root | head -n 1 | cut -d L -f 1`
     cd ../
-    ls -tr DAQ_Data_*.dat.cal.sort.egate.root > mergedfiles
+    ls -tr DAQ_Data_*.cal.sort.egate.root > mergedfiles
 
-    log "chain_list -f mergedfiles -of ${BASE}_all.merged.root -c merged"
-    chain_list -f mergedfiles -of ${BASE}_all.merged.root -c merged
+    cmd="chain_list -v -f mergedfiles -of ${BASE}all.merged.root -c merged &> ${BASE}all.merged.root.chain_list.out"
+    echo $cmd
+    eval $cmd
 fi
 
 #############################################################################################################
@@ -601,8 +568,6 @@ if [[ $dosort -eq 1 ]]; then
     #echo $TOTIME
     #echo $SPLITTIME
 
-    RUNNINGJOBS=0
-
     for k in Left Right; do
         cd $k
         KK=${k:0:1}
@@ -610,20 +575,20 @@ if [[ $dosort -eq 1 ]]; then
         # note:: in the future, we may have up to 3 L's : L0 L1 and L3
         while [ $i -le 0 ] ; do
             BASE=`ls ./DAQ*${KK}${i}*root | head -n 1 | cut -d ${KK} -f 1`${KK} 
-            if [ $RUNNINGJOBS -ge $CORES ]; then 
-                waitsome $pids 1
-                RUNNINGJOBS=${#pids[@]}
-            fi
-            merge_4up -f ./${BASE}.cal.root -nc ${SPLITS} -ts ${SPLITTIME} -lt ${TOTIME} > merge_4up.${KK}${i}.out   &
-            check $? "merge_4up panel ${k}${i}"
+            while [ ${#pids[@]} -ge $CORES ]; do
+                waitsome 1
+            done
+            cmd="merge_4up -f ./${BASE}.cal.root -nc ${SPLITS} -ts ${SPLITTIME} -lt ${TOTIME} &> merge_4up.${KK}${i}.out   &"
+            echo $cmd
+            eval $cmd
+            check $? $cmd
             pids+=($!);
-            (( RUNNINGJOBS++ ));
             (( i++ ));
         done;
         cd ..
     done;
 
-    waitall $pids
+    waitall
 
 fi
 
@@ -645,23 +610,23 @@ if [[ $domerge -eq 1 ]]; then
     # counting from zero
     (( LEFTSPLITS-- )) ;
 
-    RUNNINGJOBS=0;
     for i in `seq 0 $LEFTSPLITS` ; do 
-        if [ $RUNNINGJOBS -ge $CORES ]; then 
-            waitsome $pids 1
-            RUNNINGJOBS=${#pids[@]}
-        fi
-        merge_coinc -fl ./Left/${BASE}_L.cal_part${i}.root -fr ./Right/${BASE}_R.cal_part${i}.root -of  ./${BASE}_part${i}.root &  
+        while [ ${#pids[@]} -ge $CORES ]; do
+            waitsome 1
+        done
+        cmd="merge_coinc -fl ./Left/${BASE}_L.cal_part${i}.root -fr ./Right/${BASE}_R.cal_part${i}.root -of  ./${BASE}_part${i}.root &> ./${BASE}_part${i}.root.merge_coinc.out &"  
+        echo $cmd
+        eval $cmd
         pids+=($!);
-        (( RUNNINGJOBS++ ));
     done;
 
-    waitall $pids
+    waitall
 
     # This is confusing, but the argument to "-n" gets augmented by one in chain_merged.C
 
-    chain_merged -f ${BASE} -n ${LEFTSPLITS}
-
+    cmd="chain_merged -f ${BASE} -n ${LEFTSPLITS} &> ${BASE}.chain_merged.out"
+    echo $cmd
+    eval $cmd
 fi;
 
 
@@ -669,21 +634,31 @@ fi;
 
 if [[ $dotimecal -eq 1 ]]; then
     BASE=`ls *all.merged.root | cut -d _ -f 1-3`
-    merge_ana -f ${BASE}_all.merged.root
-    log "TIMING CALIBRATION"
-    T_CAL_STARTTIME=`date +%s`
-    cal_apd_offset -f ${BASE}_all.merged.ana.root 
-    echo -n "CAL_APD_OFFSET: "
-    timing ${T_CAL_STARTTIME}
-    cal_crystal_offset2 -f ${BASE}_all.merged.ana.apdoffcal.root -ft 60 -dp
-    echo -n "CAL_CRYSTAL_OFFSET: "
-    timing ${T_CAL_STARTTIME}
-    cal_edep -f ${BASE}_all.merged.ana.apdoffcal.crystaloffcal.root  -ft 40
-    echo -n "CAL_EDEP: "
-    timing ${T_CAL_STARTTIME}
-    cal_crystal_offset2  -f ${BASE}_all.merged.ana.apdoffcal.crystaloffcal.edepcal.root  -ft 30 -dp
-    echo -n "CAL_CRYSTAL_OFFSET: "
-    timing ${T_CAL_STARTTIME}
+
+    input_file="${BASE}_all.merged.root"
+    cmd="merge_ana -f $input_file &> $input_file.merge_ana.out"
+    echo $cmd
+    eval $cmd
+
+    input_file="${BASE}_all.merged.ana.root"
+    cmd="cal_apd_offset -f $input_file &> $input_file.cal_apd_offset.out"
+    echo $cmd
+    eval $cmd
+
+    input_file="${BASE}_all.merged.ana.apdoffcal.root"
+    cmd="cal_crystal_offset2 -f $input_file -ft 60 -dp &> $input_file.cal_crystal_offset2.out"
+    echo $cmd
+    eval $cmd
+
+    input_file="${BASE}_all.merged.ana.apdoffcal.crystaloffcal.root"
+    cmd="cal_edep -f $input_file -ft 40 &> $input_file.cal_edep.out"
+    echo $cmd
+    eval $cmd
+
+    input_file="${BASE}_all.merged.ana.apdoffcal.crystaloffcal.edepcal.root"
+    cmd="cal_crystal_offset2  -f $input_file -ft 30 -dp &> $input_file.cal_crystal_offset2.out"
+    echo $cmd
+    eval $cmd
 fi
 #############################################################################################################
 ## ONLY STEP TO DO:  format_recon -f ${BASE}_all.merged.ana.apdoffcal.crystaloffcal.edepcal.crystaloffcal.root -p 64.262 -t 20
