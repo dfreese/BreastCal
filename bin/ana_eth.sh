@@ -134,6 +134,7 @@ function usage()
     echo "       -pi: individually calibrate, sort, and energy gate files"
     echo "       -mi: individually merge and coincidence sort egated files"
     echo "       -chi: chain together individually merged files"
+    echo "       -ri: individually coincidence merge/chain/time cal random coinc files"
     echo "       -i: do -pi -mi -chi"
     echo "       -ai: do -d -g -cal -i -t"
     echo "       -h: display this help"
@@ -185,6 +186,7 @@ do
 	-m) domerge=1;;
     -mi) doindividualmerge=1;;
     -chi) doindividualchain=1;;
+    -ri) doindividualrandmerge=1;;
     -i) doindividualprocess=1; doindividualmerge=1; doindividualchain=1;;
     -ai) dodecode=1; setupfolders=1; dopedestals=1; dosegmentation=1; docalccalibrate=1; doindividualprocess=1; doindividualmerge=1; doindividualchain=1; dotimecal=1;;
 	-t) dotimecal=1;;
@@ -524,6 +526,78 @@ if [[ $doindividualmerge -eq 1 ]]; then
     done
 fi
 
+#############################################################################################################
+# This part does random coincidences
+
+if [[ $doindividualrandmerge -eq 1 ]]; then
+
+    mkdir RANDOMS;
+
+    for k in Left; do
+        cd Left
+        KK=${k:0:1}
+        BASE=`ls DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
+        ls -tr DAQ*${KK}*cal.sort.egate.root > ../RANDOMS/calfiles
+        cd ..
+
+        for daq_file in `cat ./RANDOMS/calfiles`; do 
+            while [ ${#pids[@]} -ge $CORES ]; do
+                waitsome 1
+            done
+            right_file=./Right/`echo $daq_file | sed 's/L0/R0/g'`
+            if [ -e $right_file ]; then
+                output_file=./RANDOMS/`echo $daq_file | sed 's/_L0//g'`
+		
+		# Added delay of 300 to merge_coinc so it's doing randoms coinc
+                cmd="merge_coinc -fl ./Left/$daq_file -fr $right_file -of $output_file -d 300 &> $output_file.merge_coinc.out &"
+                echo $cmd
+                eval $cmd
+                pids+=($!);
+            fi
+        done
+    done
+
+    # Individualchainportion for randoms
+    cd Left
+    BASE1=`ls DAQ*L0*root | head -n 1 | cut -d L -f 1`
+    cd ../RANDOMS
+    ls -tr DAQ_Data_*.cal.sort.egate.root > mergedfiles
+
+    cmd="chain_list -v -f mergedfiles -of ${BASE1}all.merged.root -c merged &> ${BASE1}all.merged.root.chain_list.out"
+    echo $cmd
+    eval $cmd
+
+    # Timecal portion for randoms
+
+    BASE2=`ls *all.merged.root | cut -d _ -f 1-3`
+
+    input_file="${BASE2}_all.merged.root"
+    cmd="merge_ana -r -f $input_file &> $input_file.merge_ana.out"
+    echo $cmd
+    eval $cmd
+
+    input_file="${BASE2}_all.merged.randoms.root"
+    cmd="cal_apd_offset -f $input_file &> $input_file.cal_apd_offset.out"
+    echo $cmd
+    eval $cmd
+
+    input_file="${BASE2}_all.merged.randoms.apdoffcal.root"
+    cmd="cal_crystal_offset2 -f $input_file -ft 100000 -dp &> $input_file.cal_crystal_offset2.out"
+    echo $cmd
+    eval $cmd
+
+    input_file="${BASE2}_all.merged.randoms.apdoffcal.crystaloffcal.root"
+    cmd="cal_edep -f $input_file -ft 100000 &> $input_file.cal_edep.out"
+    echo $cmd
+    eval $cmd
+
+    input_file="${BASE2}_all.merged.randoms.apdoffcal.crystaloffcal.edepcal.root"
+    cmd="cal_crystal_offset2  -f $input_file -ft 100000 -dp &> $input_file.cal_crystal_offset2.out"
+    echo $cmd
+    eval $cmd
+
+    cd ..
+fi
 
 #############################################################################################################
 
