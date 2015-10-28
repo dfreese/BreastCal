@@ -31,7 +31,8 @@
 
 // Fixed size dimensions of array or collections stored in the TTree if any.
 
-class Sel_GetEhis : public TSelector {
+class Sel_GetEhis : public TSelector
+{
 
 public :
     TTree          *fChain;   //!pointer to the analyzed TTree or TChain
@@ -70,7 +71,7 @@ public :
 
     //Classes
     PixelCal *fCrysCal;
-    PPeaks *fPPeaks;  
+    PPeaks *fPPeaks;
 
     // List of branches
     TBranch        *b_eventdata_fUniqueID;   //!
@@ -98,18 +99,17 @@ public :
     time_t seconds;
 
 
-    Sel_GetEhis(TTree * /*tree*/ =0) : 
-        fChain(0) 
-    { 
+    Sel_GetEhis(TTree * /*tree*/ =0) :
+        fChain(0) {
         fCrysCal = 0 ;
         fPPeaks = 0;
         verbose = kFALSE;
         fFileBase = "dummy";
-        for (Int_t cc=0;cc<CARTRIDGES_PER_PANEL;cc++){
-            for (Int_t f=0;f<FINS_PER_CARTRIDGE;f++){
-                for (Int_t m=0;m<MODULES_PER_FIN;m++){
-                    for (Int_t j=0;j<APDS_PER_MODULE;j++){
-                        for (Int_t k=0;k<XTALS_PER_APD;k++){
+        for (Int_t cc=0; cc<CARTRIDGES_PER_PANEL; cc++) {
+            for (Int_t f=0; f<FINS_PER_CARTRIDGE; f++) {
+                for (Int_t m=0; m<MODULES_PER_FIN; m++) {
+                    for (Int_t j=0; j<APDS_PER_MODULE; j++) {
+                        for (Int_t k=0; k<XTALS_PER_APD; k++) {
                             fEhist[cc][f][m][j][k] = 0;
                             fEhist_com[cc][f][m][j][k] = 0;
                         }
@@ -121,21 +121,26 @@ public :
 
 
 
-    virtual void   SetFileBase( const Char_t* name ) { fFileBase = name ;}
+    virtual void   SetFileBase( const Char_t* name ) {
+        fFileBase = name ;
+    }
     void SetPixelCal(PixelCal *pixcal ) {
         cout << " Setting fCrysCal ... " ;
-        fCrysCal = pixcal; cout << " Done. " << endl;
-    } 
+        fCrysCal = pixcal;
+        cout << " Done. " << endl;
+    }
     PixelCal *GetPixelCal(void) {
         return fCrysCal;
     }
-    void SetPPeaks(PPeaks *ppeak ){
+    void SetPPeaks(PPeaks *ppeak ) {
         cout << " Setting fPPeaks ... " ;
         fPPeaks = ppeak;
         cout << " Done. " << endl;
-    } 
-    void SetVerbose(Bool_t v) {verbose=v;}
-    //#ifdef IFOUNDIT 
+    }
+    void SetVerbose(Bool_t v) {
+        verbose=v;
+    }
+    //#ifdef IFOUNDIT
     Int_t WriteHists(TFile *rfile);
     Int_t FitApdEhis(Int_t c, Int_t f, Int_t i, Int_t j);
     Int_t FitAll(void) ;
@@ -146,7 +151,9 @@ public :
     //#endif
 
     virtual ~Sel_GetEhis() { }
-    virtual Int_t   Version() const { return 2; }
+    virtual Int_t   Version() const {
+        return 2;
+    }
     virtual void    Begin(TTree *tree);
     virtual void    SlaveBegin(TTree *tree);
     virtual void    Init(TTree *tree);
@@ -155,10 +162,18 @@ public :
     virtual Int_t   GetEntry(Long64_t entry, Int_t getall = 0) {
         return fChain ? fChain->GetTree()->GetEntry(entry, getall) : 0;
     }
-    virtual void    SetOption(const char *option) { fOption = option; }
-    virtual void    SetObject(TObject *obj) { fObject = obj; }
-    virtual void    SetInputList(TList *input) { fInput = input; }
-    virtual TList  *GetOutputList() const { return fOutput; }
+    virtual void    SetOption(const char *option) {
+        fOption = option;
+    }
+    virtual void    SetObject(TObject *obj) {
+        fObject = obj;
+    }
+    virtual void    SetInputList(TList *input) {
+        fInput = input;
+    }
+    virtual TList  *GetOutputList() const {
+        return fOutput;
+    }
     virtual void    SlaveTerminate();
     virtual void    Terminate();
 
@@ -180,7 +195,9 @@ void Sel_GetEhis::Init(TTree *tree)
     // (once per file to be processed).
 
     // Set branch addresses and branch pointers
-    if (!tree) return;
+    if (!tree) {
+        return;
+    }
     fChain = tree;
     fChain->SetMakeClass(1);
 

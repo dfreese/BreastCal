@@ -337,7 +337,7 @@ int WritePedestalFile(
                 file_stream << std::setfill(' ') << std::setw(9)
                         << events[c][r][i];
                 for (int jjj=0; jjj<CHANNELS_PER_MODULE; jjj++) {
-                    file_stream << std::setprecision(0)
+                    file_stream << std::setprecision(1)
                                 << std::fixed << std::setw(7);
                     file_stream << mean[c][r][i][jjj];
 

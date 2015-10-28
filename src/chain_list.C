@@ -31,32 +31,36 @@ int main(int argc, char *argv[]){
     string outfilename;
     bool outputfilespec(false);
 
-    int verbose=0;
+    bool verbose(false);
 
-    for (int i=0;i<argc;i++) {
-        if (strncmp(argv[i],"-f",2)==0) {
-            file_list_name = string(argv[i + 1]);
-            i++;
-        }
-        if (strncmp(argv[i],"-of",3)==0) {
-            outfilename = string(argv[i + 1]);
-            outputfilespec=true;
-            i++;
-        }
-        if (strncmp(argv[i],"-v",2)==0) { 
-            verbose=1;
-            cout << " Verbose mode. ";        
-        }
+    if (argc == 1) {
+        usage();
+        return(0);
+    }
+
+    for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-h") == 0) {
             usage();
             return(0);
         }
-        if (strncmp(argv[i],"-c",2)==0) {
-            chain_name = string(argv[i + 1]);
-            i++;
+        if (strncmp(argv[i],"-v",2)==0) { 
+            verbose = true;
+            cout << " Verbose mode. ";        
         }
     }
-    cout << endl;
+
+    for (int i = 1; i < (argc-1); i++) {
+        if (strncmp(argv[i],"-f",2)==0) {
+            file_list_name = string(argv[i + 1]);
+        }
+        if (strncmp(argv[i],"-of",3)==0) {
+            outfilename = string(argv[i + 1]);
+            outputfilespec = true;
+        }
+        if (strncmp(argv[i],"-c",2)==0) {
+            chain_name = string(argv[i + 1]);
+        }
+    }
 
     if (!outputfilespec) {
         cerr << "Chained TFile name not specified.  Exiting" << endl;
