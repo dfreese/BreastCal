@@ -1,0 +1,325 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <vector>
+#include <string>
+#include "TROOT.h"
+#include "TFile.h"
+#include "TTree.h"
+#include "Util.h"
+#include "ModuleCal.h"
+#include "cal_helper_functions.h"
+#include "Syspardef.h"
+
+using namespace std;
+
+void usage(void)
+{
+    cout << "coinc_sort (-v) -l [left filename] -r [right filename] -o [output]\n"
+         << " -t [time window (ns)]: time window in ns, default = 20\n"
+         << " -el [low energy window]: default 400keV\n"
+         << " -eh [low energy window]: default 700keV\n"
+         << endl;
+    return;
+}
+
+// EventCoinc MakeCoinc(
+//         const EventCal & event_left,
+//         const EventCal & event_right)
+// {
+//     EventCoinc event;
+//     event.dtc = event_left.ct - event_right.ct;
+//     event.dtf = event_left.ft - event_right.ft;
+//     if (event.dtf < UV_PERIOD_NS / -2.0) {
+//         event.dtf += UV_PERIOD_NS;
+//     }
+//     if (event.dtf > UV_PERIOD_NS / 2.0) {
+//         event.dtf -= UV_PERIOD_NS;
+//     }
+//     event.E1 = event_left.E;
+//     event.E2 = event_right.E;
+//     event.crystal1 = event_left.crystal;
+//     event.crystal2 = event_right.crystal;
+//     return(event);
+// }
+
+int main(int argc, char *argv[])
+{
+    if (argc == 1) {
+        usage();
+        return(0);
+    }
+
+    bool verbose(false);
+    string filename_left;
+    string filename_right;
+    string filename_output;
+    string tree_name = "SCalTree";
+    string branch_name = "Time Sorted Data";
+    float time_window(20);
+
+    float energy_gate_high(700);
+    float energy_gate_low(400);
+
+    // Arguments not requiring input
+    for (int ix = 1; ix < argc; ix++) {
+        if (strcmp(argv[ix], "-v") == 0) {
+            verbose = true;
+        }
+    }
+    // Arguments requiring input
+    for (int ix = 1; ix < (argc - 1); ix++) {
+        if (strcmp(argv[ix], "-t") == 0) {
+            time_window = atoi(argv[ix + 1]);
+        }
+        if (strcmp(argv[ix], "-l") == 0) {
+            filename_left = string(argv[ix + 1]);
+        }
+        if (strcmp(argv[ix], "-r") == 0) {
+            filename_right = string(argv[ix + 1]);
+        }
+        if (strcmp(argv[ix], "-o") == 0) {
+            filename_output = string(argv[ix + 1]);
+        }
+        if(strcmp(argv[ix], "-eh") == 0) {
+            stringstream ss;
+            ss << argv[ix + 1];
+            ss >> energy_gate_high;
+        }
+        if(strcmp(argv[ix], "-el") == 0) {
+            stringstream ss;
+            ss << argv[ix + 1];
+            ss >> energy_gate_low;
+        }
+    }
+
+    if (filename_left == "") {
+        printf("Please Specify Left Filename !!\n");
+        usage();
+        return(-1);
+    }
+    if (filename_right == "") {
+        printf("Please Specify Right Filename !!\n");
+        usage();
+        return(-1);
+    }
+    if (filename_output == "") {
+        printf("Please Specify Output Filename !!\n");
+        usage();
+        return(-1);
+    }
+
+    if (verbose) {
+        cout << "Reading Left File" << endl;
+    }
+
+    if (verbose) {
+        cout << " Opening file " << filename_left << endl;
+    }
+    TFile *file_left = new TFile(filename_left.c_str());
+    if (!file_left || file_left->IsZombie()) {
+        cerr << "problems opening file " << filename_left
+             << "\n.Exiting" << endl;
+        return(-1);
+    }
+
+    TTree * tree_left = (TTree *) file_left->Get(tree_name.c_str());
+    if (!tree_left) {
+        cerr << "problems opening tree " << tree_name << "\n.Exiting" << endl;
+        return(-2);
+    }
+    ModuleCal * event_left = 0;
+
+    if (tree_left->SetBranchAddress(branch_name.c_str(), &event_left) < 0) {
+        cerr << "problems opening branch " << tree_name << "\n.Exiting" << endl;
+        return(-3);
+    }
+
+    long entries = tree_left->GetEntries();
+
+    // Read the full input data file into memory
+
+
+    std::vector<ModuleCal> events_left(entries);
+    for (long ii = 0; ii < entries; ii++) {
+        tree_left->GetEntry(ii);
+        events_left[ii] = *event_left;
+    }
+
+    return(0);
+
+    // if (verbose) {
+    //     cout << "Reading Right File" << endl;
+    // }
+    //
+    // dataFile.open(filename_right.c_str(), ios::in | ios::binary);
+    // if (!dataFile.good()) {
+    //     cerr << "Cannot open file \"" << filename_right
+    //          << "\" for read operation." << endl;
+    //     cerr << "Exiting." << endl;
+    //     return(-1);
+    // }
+    //
+    // // Read the full input data file into memory
+    // dataFile.seekg(0, std::ios::end);
+    // dataFileSize = dataFile.tellg();
+    // dataFile.seekg(0, std::ios::beg);
+    //
+    // std::vector<EventCal> events_right(dataFileSize / sizeof(EventCal));
+    // if (!dataFile.read((char*) events_right.data(), dataFileSize)) {
+    //     cerr << "Right File read failed" << endl;
+    //     return(-3);
+    // }
+    // dataFile.close();
+    //
+    //
+    // std::vector<EventCal>::iterator iterator_left(events_left.begin());
+    // std::vector<EventCal>::iterator iterator_right(events_right.begin());
+    // std::vector<EventCal>::iterator current_event;
+    // std::vector<EventCal>::iterator pair_event;
+    // bool current_on_left;
+    //
+    //
+    // std::vector<EventCoinc> output_events;
+    // output_events.reserve((int) (0.5 * 0.5 * (events_left.size() +
+    //                                           events_right.size())));
+    //
+    //
+    // cout << "Time Window: " << time_window << "ns\n"
+    //      << "Energy Window: " << energy_gate_low << "keV to "
+    //      << energy_gate_high << "keV\n";
+    //
+    // long dropped_single(0);
+    // long dropped_multiple(0);
+    // long dropped_energy_window(0);
+    //
+    // if (verbose) {
+    //     cout << "Sorting Coincidences" << endl;
+    // }
+    //
+    // while(iterator_left != events_left.end() &&
+    //       iterator_right != events_right.end())
+    // {
+    //     // 1. Find first event within energy window
+    //     // Initialize each iterator to an event within the energy window first
+    //     while (iterator_left != events_left.end()) {
+    //         if (!InEnergyWindow(*iterator_left,
+    //                             energy_gate_low,
+    //                             energy_gate_high))
+    //         {
+    //             iterator_left++;
+    //             dropped_energy_window++;
+    //         } else {
+    //             break;
+    //         }
+    //     }
+    //     while (iterator_right != events_right.end()) {
+    //         if (!InEnergyWindow(*iterator_right,
+    //                             energy_gate_low,
+    //                             energy_gate_high))
+    //         {
+    //             iterator_right++;
+    //             dropped_energy_window++;
+    //         } else {
+    //             break;
+    //         }
+    //     }
+    //     if (iterator_left == events_left.end() ||
+    //             iterator_right == events_right.end())
+    //     {
+    //         // Drop the rest as singles.
+    //         dropped_single += events_left.end() - iterator_left
+    //                         + events_right.end() - iterator_right;
+    //         break;
+    //     }
+    //
+    //     // Check to see if the left or right side is first
+    //     if (EventCalLessThan(*iterator_left, *iterator_right)) {
+    //         current_event = iterator_left;
+    //         pair_event = iterator_right;
+    //         current_on_left = true;
+    //     } else {
+    //         current_event = iterator_right;
+    //         pair_event = iterator_left;
+    //         current_on_left = false;
+    //     }
+    //
+    //     // 2. Find all other events within time window
+    //     int events_in_time_window_left(0);
+    //     while(EventCalTimeDiff(*iterator_left, *current_event) < time_window) {
+    //         if (InEnergyWindow(*(iterator_left),
+    //                            energy_gate_low,
+    //                            energy_gate_high))
+    //         {
+    //             events_in_time_window_left++;
+    //         } else {
+    //             dropped_energy_window++;
+    //         }
+    //         iterator_left++;
+    //         if (iterator_left == events_left.end()) {
+    //             break;
+    //         }
+    //     }
+    //     int events_in_time_window_right(0);
+    //     while(EventCalTimeDiff(*iterator_right, *current_event) < time_window) {
+    //         if (InEnergyWindow(*(iterator_right),
+    //                            energy_gate_low,
+    //                            energy_gate_high))
+    //         {
+    //             events_in_time_window_right++;
+    //         } else {
+    //             dropped_energy_window++;
+    //         }
+    //         iterator_right++;
+    //         if (iterator_right == events_right.end()) {
+    //             break;
+    //         }
+    //     }
+    //
+    //     // 3. Pair events if there is only one event within energy window on other side, pair
+    //     if ((events_in_time_window_left == 1) &&
+    //         (events_in_time_window_right == 1))
+    //     {
+    //         EventCoinc event;
+    //         if (current_on_left) {
+    //             event = MakeCoinc(*current_event, *pair_event);
+    //         } else {
+    //             event = MakeCoinc(*pair_event, *current_event);
+    //         }
+    //         output_events.push_back(event);
+    //     } else if ((events_in_time_window_left == 0) ||
+    //                (events_in_time_window_right == 0))
+    //     {
+    //         dropped_single += events_in_time_window_left +
+    //                           events_in_time_window_right;
+    //     } else {
+    //         dropped_multiple += events_in_time_window_left +
+    //                             events_in_time_window_right;
+    //     }
+    //     // 4. If there is more than one event, drop all events, go to 1.
+    // }
+    //
+    // if (verbose) {
+    //     cout << "Writing Out Coincidences" << endl;
+    // }
+    //
+    // std::ofstream output_stream;
+    // output_stream.open(filename_output.c_str(), std::ios::binary);
+    //
+    // output_stream.write((char *)&output_events[0],
+    //                     sizeof(EventCoinc) * output_events.size());
+    // output_stream.close();
+    //
+    // cout << "Events Processed:\n"
+    //      << "  Left - " << events_left.size() << "\n"
+    //      << "  Right - " << events_right.size() << "\n"
+    //      << "Events Dropped:\n"
+    //      << "  Energy - " << dropped_energy_window << "\n"
+    //      << "  Single - " << dropped_single << "\n"
+    //      << "  Multiple - " << dropped_multiple << "\n"
+    //      << "Coincidences: " << output_events.size() << "\n";
+    //
+    // return(0);
+}
