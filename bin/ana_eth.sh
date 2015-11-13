@@ -5,7 +5,7 @@
 NUM_CARTRIDGES_PER_PANEL=3;
 
 ##############################################################################################################
-    
+
 ##############################################################################################################
 
 function mkfolder ()
@@ -28,9 +28,9 @@ function timing ()
 ##############################################################################################################
 
 function pedconv ()
-{  
-    decoder -p -f $1 -cmap "../DAQ_Board_Map.nfo" > $2 ; 
-    check ${?} "converting pedfile ${1}"; 
+{
+    decoder -p -f $1 -cmap "../DAQ_Board_Map.nfo" > $2 ;
+    check ${?} "converting pedfile ${1}";
     #    sleep 10
 }
 
@@ -53,17 +53,17 @@ function waitsome ()
         for pid in ${pids[@]}; do
             # echo "job $pid index $index array length : ${#pids[@]} . Array: ${pids[*]}" ;
             kill -0 $pid 2> /dev/null
-            if [ $? -eq 1 ]; then 
-                # echo "$pid done ! ( index $index ) " ; 
-                (( finished++ )); 
+            if [ $? -eq 1 ]; then
+                # echo "$pid done ! ( index $index ) " ;
+                (( finished++ ));
                 unset pids[$index];
                 pids=("${pids[@]}")
                 # echo " after unsetting: ${pids[*]}"
                 continue
             fi;
-            (( index++ )); 
+            (( index++ ));
         done;
-        # echo " Finished jobs :: " $finished " ( pids = " ${pids[@]} " )" 
+        # echo " Finished jobs :: " $finished " ( pids = " ${pids[@]} " )"
         sleep 2
     done;
 }
@@ -83,7 +83,7 @@ function waitall ()
     # waits untill all jobs are done from a list submitted as $1;
     # pids=$1;
     log " WAITALL :: NEED TO WAIT FOR ${#pids[@]} jobs to finish with IDs :: ${pids[*]}"
-    waitsome ${#pids[@]} 
+    waitsome ${#pids[@]}
 }
 
 ##############################################################################################################
@@ -93,14 +93,27 @@ function check ()
 {
     RET=$1;
     #    echo " RETURN CODE :: ${RET} "
-    if [ ${RET} != 0 ] ; then  
-        echo " =========================================" 
-        echo " ............ WARNING ...................." 
+    if [ ${RET} != 0 ] ; then
+        echo " ========================================="
+        echo " ............ WARNING ...................."
         echo " Program failed at $2 ";
         echo " ========================================="
         exit
     fi
 
+}
+
+##############################################################################################################
+
+function notify ()
+{
+    RET=$1;
+    if [ ${RET} != 0 ] ; then
+        echo " ========================================="
+        echo " ............ WARNING ...................."
+        echo " Program failed at $2 ";
+        echo " ========================================="
+    fi
 }
 
 ##############################################################################################################
@@ -162,7 +175,7 @@ domerge=0
 dotimecal=0
 doindividualcal=0
 doindividualsort=0
-doindividualmerge=0 
+doindividualmerge=0
 doindividualegate=0
 doindividualchain=0
 doindividualprocess=0
@@ -247,11 +260,18 @@ if [[ $dopedestals -eq 1 ]]; then
     log "Decoding pedestals"
     for k in Left Right; do
         cd $k
+
+        panel_id=0
+        if [ $k == "Right" ]; then
+            panel_id=1;
+        fi
+
         ls -tr ./PED*dat > pedfiles
         ped_data_file=$(head -n 1 pedfiles)
-        cmd="decoder -p -f $ped_data_file -cmap ../DAQ_Board_Map.nfo &> $ped_data_file.decoder.out" 
+        cmd="decoder -p -f $ped_data_file -cmap ../DAQ_Board_Map.nfo -pid $panel_id &> $ped_data_file.decoder.out"
         echo $cmd
         eval $cmd
+        check $? $cmd
         cd ..
     done
 fi
@@ -265,6 +285,10 @@ if [[ $dodecode -eq 1 ]]; then
         # get 'L' or 'R' from k
         KK=${k:0:1}
 		ls -tr ./DAQ*dat > daqfiles
+        panel_id=0
+        if [ $k == "Right" ]; then
+            panel_id=1;
+        fi
 
         pedfile=$(ls -1r ./*.ped | head -n 1)
 
@@ -273,9 +297,10 @@ if [[ $dodecode -eq 1 ]]; then
             while [ ${#pids[@]} -ge $CORES ]; do
                 waitsome 1
             done
-            cmd="decoder -pedfile $pedfile -f $file -uv -t $trigger_threshold -n $double_trigger_threshold -cmap ../DAQ_Board_Map.nfo &> $file.decode.out &"
+            cmd="decoder -pedfile $pedfile -f $file -uv -t $trigger_threshold -n $double_trigger_threshold -cmap ../DAQ_Board_Map.nfo -pid $panel_id &> $file.decode.out &"
             echo $cmd
             eval $cmd
+            notify $? $cmd
             pids+=($!);
         done
         waitall
@@ -291,7 +316,7 @@ if [[ $dosegmentation -eq 1 ]]; then
         cd $k
         KK=${k:0:1}
         BASE=`ls DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
-        ls DAQ*${KK}0*root | cut -d _ -f 5 | sort -n | awk -v FBASE=$BASE '{print FBASE"0_"$1}' > filelist
+        ls DAQ*${KK}0*dat.root | cut -d _ -f 5 | sort -n | awk -v FBASE=$BASE '{print FBASE"0_"$1}' > filelist
 
         cmd="chain_parsed -f filelist -o ${BASE}.root &> ${BASE}.root.chain_parsed.out"
         echo $cmd
@@ -304,13 +329,14 @@ if [[ $dosegmentation -eq 1 ]]; then
         check ${?} $cmd
 
         for cartridge in `seq 0 $((NUM_CARTRIDGES_PER_PANEL-1))`; do
-            for fin in `seq 0 7`; do 
+            for fin in `seq 0 7`; do
                 while [ ${#pids[@]} -ge $CORES ]; do
                     waitsome 1
                 done
                 cmd="anafloods_psf_v2 -f ${BASE}.root -c $cartridge -l $fin &> ${BASE}.root.anafloods_c${cartridge}f${fin}.out &"
                 echo $cmd
                 eval $cmd
+                notify $? $cmd
                 pids+=($!);
             done;
         done;
@@ -364,7 +390,7 @@ if [[ $dodecodedcalibrate -eq 1 ]]; then
         KK=${k:0:1}
         BASE=`ls DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
         ls -tr ./DAQ*${KK}*dat.root > daqfiles
-        for daq_file in `cat daqfiles`; do 
+        for daq_file in `cat daqfiles`; do
             while [ ${#pids[@]} -ge $CORES ]; do
                 waitsome 1
             done
@@ -379,7 +405,7 @@ if [[ $dodecodedcalibrate -eq 1 ]]; then
 
         waitall
 
-        chain_cal -f ${BASE}0 -n `wc -l daqfiles | awk '{print $1}'` -of ${BASE}.cal.root     
+        chain_cal -f ${BASE}0 -n `wc -l daqfiles | awk '{print $1}'` -of ${BASE}.cal.root
 
         cd ..
     done;
@@ -401,13 +427,14 @@ if [[ $doindividualprocess -eq 1 ]]; then
         BASE=`ls DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
         ls -tr ./DAQ*${KK}*dat.root > daqfiles
 
-        for daq_file in `cat daqfiles`; do 
+        for daq_file in `cat daqfiles`; do
             while [ ${#pids[@]} -ge $CORES ]; do
                 waitsome 1
             done
             cmd="process_file -f ${daq_file} -calf ${BASE}.par.root -s -eg -el $energy_low -eh $energy_high &> ${daq_file}.process_file.out &"
             echo $cmd
             eval $cmd
+            notify $? $cmd
             pids+=($!);
         done;
         waitall
@@ -424,7 +451,7 @@ if [[ $doindividualcal -eq 1 ]]; then
         KK=${k:0:1}
         BASE=`ls DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
         ls -tr ./DAQ*${KK}*dat.root > daqfiles
-        for daq_file in `cat daqfiles`; do 
+        for daq_file in `cat daqfiles`; do
             while [ ${#pids[@]} -ge $CORES ]; do
                 waitsome 1
             done
@@ -453,7 +480,7 @@ if [[ $doindividualsort -eq 1 ]]; then
         ls -tr ./DAQ*${KK}*dat.root > daqfiles
 
         ls -tr ./DAQ*${KK}*dat.cal.root > calfiles
-        for daq_file in `cat calfiles`; do 
+        for daq_file in `cat calfiles`; do
             while [ ${#pids[@]} -ge $CORES ]; do
                 waitsome 1
             done
@@ -481,7 +508,7 @@ if [[ $doindividualegate -eq 1 ]]; then
         KK=${k:0:1}
 
         ls -tr ./DAQ*${KK}*dat.cal.sort.root > sortedfiles
-        for daq_file in `cat sortedfiles`; do 
+        for daq_file in `cat sortedfiles`; do
             while [ ${#pids[@]} -ge $CORES ]; do
                 waitsome 1
             done
@@ -509,7 +536,7 @@ if [[ $doindividualmerge -eq 1 ]]; then
         ls -tr DAQ*${KK}*cal.sort.egate.root > ../calfiles
         cd ..
 
-        for daq_file in `cat calfiles`; do 
+        for daq_file in `cat calfiles`; do
             while [ ${#pids[@]} -ge $CORES ]; do
                 waitsome 1
             done
@@ -520,6 +547,7 @@ if [[ $doindividualmerge -eq 1 ]]; then
                 cmd="merge_coinc -fl ./Left/$daq_file -fr $right_file -of $output_file &> $output_file.merge_coinc.out &"
                 echo $cmd
                 eval $cmd
+                notify $? $cmd
                 pids+=($!);
             fi
         done
@@ -540,14 +568,14 @@ if [[ $doindividualrandmerge -eq 1 ]]; then
         ls -tr DAQ*${KK}*cal.sort.egate.root > ../RANDOMS/calfiles
         cd ..
 
-        for daq_file in `cat ./RANDOMS/calfiles`; do 
+        for daq_file in `cat ./RANDOMS/calfiles`; do
             while [ ${#pids[@]} -ge $CORES ]; do
                 waitsome 1
             done
             right_file=./Right/`echo $daq_file | sed 's/L0/R0/g'`
             if [ -e $right_file ]; then
                 output_file=./RANDOMS/`echo $daq_file | sed 's/_L0//g'`
-		
+
 		# Added delay of 300 to merge_coinc so it's doing randoms coinc
                 cmd="merge_coinc -fl ./Left/$daq_file -fr $right_file -of $output_file -d 300 &> $output_file.merge_coinc.out &"
                 echo $cmd
@@ -610,6 +638,7 @@ if [[ $doindividualchain -eq 1 ]]; then
     cmd="chain_list -v -f mergedfiles -of ${BASE}all.merged.root -c merged &> ${BASE}all.merged.root.chain_list.out"
     echo $cmd
     eval $cmd
+    check $? $cmd
 fi
 
 #############################################################################################################
@@ -638,7 +667,7 @@ if [[ $dosort -eq 1 ]]; then
         cd ..
     done;
 
-    #echo $SPLITS 
+    #echo $SPLITS
     #echo $TOTIME
     #echo $SPLITTIME
 
@@ -648,7 +677,7 @@ if [[ $dosort -eq 1 ]]; then
         i=0;
         # note:: in the future, we may have up to 3 L's : L0 L1 and L3
         while [ $i -le 0 ] ; do
-            BASE=`ls ./DAQ*${KK}${i}*root | head -n 1 | cut -d ${KK} -f 1`${KK} 
+            BASE=`ls ./DAQ*${KK}${i}*root | head -n 1 | cut -d ${KK} -f 1`${KK}
             while [ ${#pids[@]} -ge $CORES ]; do
                 waitsome 1
             done
@@ -679,16 +708,16 @@ if [[ $domerge -eq 1 ]]; then
         exit -99;
     fi;
 
-    BASE=` ls -1 ./Left/DAQ*part*root | head -n 1 | cut -d / -f 3 | cut -d _ -f 1-3` 
+    BASE=` ls -1 ./Left/DAQ*part*root | head -n 1 | cut -d / -f 3 | cut -d _ -f 1-3`
 
     # counting from zero
     (( LEFTSPLITS-- )) ;
 
-    for i in `seq 0 $LEFTSPLITS` ; do 
+    for i in `seq 0 $LEFTSPLITS` ; do
         while [ ${#pids[@]} -ge $CORES ]; do
             waitsome 1
         done
-        cmd="merge_coinc -fl ./Left/${BASE}_L.cal_part${i}.root -fr ./Right/${BASE}_R.cal_part${i}.root -of  ./${BASE}_part${i}.root &> ./${BASE}_part${i}.root.merge_coinc.out &"  
+        cmd="merge_coinc -fl ./Left/${BASE}_L.cal_part${i}.root -fr ./Right/${BASE}_R.cal_part${i}.root -of  ./${BASE}_part${i}.root &> ./${BASE}_part${i}.root.merge_coinc.out &"
         echo $cmd
         eval $cmd
         pids+=($!);
@@ -713,29 +742,34 @@ if [[ $dotimecal -eq 1 ]]; then
     cmd="merge_ana -f $input_file &> $input_file.merge_ana.out"
     echo $cmd
     eval $cmd
+    check $? $cmd
 
     input_file="${BASE}_all.merged.ana.root"
     cmd="cal_apd_offset -f $input_file &> $input_file.cal_apd_offset.out"
     echo $cmd
     eval $cmd
+    check $? $cmd
 
     input_file="${BASE}_all.merged.ana.apdoffcal.root"
     cmd="cal_crystal_offset2 -f $input_file -ft 60 -dp &> $input_file.cal_crystal_offset2.out"
     echo $cmd
     eval $cmd
+    check $? $cmd
 
     input_file="${BASE}_all.merged.ana.apdoffcal.crystaloffcal.root"
     cmd="cal_edep -f $input_file -ft 40 &> $input_file.cal_edep.out"
     echo $cmd
     eval $cmd
+    check $? $cmd
 
     input_file="${BASE}_all.merged.ana.apdoffcal.crystaloffcal.edepcal.root"
     cmd="cal_crystal_offset2  -f $input_file -ft 30 -dp &> $input_file.cal_crystal_offset2.out"
     echo $cmd
     eval $cmd
+    check $? $cmd
 fi
 #############################################################################################################
 ## ONLY STEP TO DO:  format_recon -f ${BASE}_all.merged.ana.apdoffcal.crystaloffcal.edepcal.crystaloffcal.root -p 64.262 -t 20
 ## -p :: paneldistance in mm
-## -t :: fine time window, e.g: -t 2- ::   -20 < ft < 20 
+## -t :: fine time window, e.g: -t 2- ::   -20 < ft < 20
 ############################################################################################################
