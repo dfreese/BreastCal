@@ -45,6 +45,7 @@ void usage(void)
     cout << " -uvo : calculate uv centers only" << endl;
     cout << " -o : optional outputfilename " <<endl;
     cout << " -cmap [DAQBOARD_FILE] : specify which DAQ BOARD nfo file to use rather than the default in $ANADIR/nfo" << endl;
+    cout << " -pid [panel_id]: keep only events related to this panel id" << endl;
     return;
 }
 
@@ -78,6 +79,7 @@ int main(int argc, char *argv[])
     bool calculate_uv_pedestals_flag(false);
     int calculate_uv_panel_id(0);
     int uvthreshold = -1000;
+    int file_panel_id = -1;
 
     bool calculate_uv_centers_only_flag(false);
 
@@ -144,6 +146,9 @@ int main(int argc, char *argv[])
         }
         if (strcmp(argv[ix], "-pos") == 0) {
             sourcepos = atoi(argv[ix + 1]);
+        }
+        if (strcmp(argv[ix], "-pid") == 0) {
+            file_panel_id = atoi(argv[ix + 1]);
         }
         if (strcmp(argv[ix], "-cmap") == 0) {
             cmapspec = true;
@@ -354,6 +359,8 @@ int main(int argc, char *argv[])
     double uv_pedestal_rms[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA][4]= {{{{0}}}};
     int uv_pedestal_events[CARTRIDGES_PER_PANEL][RENAS_PER_CARTRIDGE][MODULES_PER_RENA]= {{{0}}};
 
+    int panel_counts[2] = {0};
+
     char cc;
     while (dataFile.get(cc)) {
         packBuffer.push_back(cc);
@@ -414,6 +421,17 @@ int main(int argc, char *argv[])
                 packBuffer.clear();
                 continue;
             }
+            if (panel_id != file_panel_id && file_panel_id != -1) {
+                droppedPckCnt++;
+                droppedOutOfRange++;
+                if (verbose) {
+                    cout << "Dropped: Invalid Address Byte" << endl;
+                }
+                packBuffer.clear();
+                continue;
+            }
+            panel_counts[panel_id]++;
+
 
             total_raw_events += packet_info.no_modules_triggered;
 
@@ -709,6 +727,9 @@ int main(int argc, char *argv[])
         cout << " totalPckCnt = " << totalPckCnt << endl;
         cout << " droppedPckCnt = " << droppedPckCnt << endl;
     }
+
+    cout << "Left Panel:  " << panel_counts[0] << endl;
+    cout << "Right Panel: " << panel_counts[1] << endl;
 
     return(0);
 }
