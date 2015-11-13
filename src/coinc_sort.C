@@ -10,13 +10,16 @@
 #include "TTree.h"
 #include "Util.h"
 #include "ModuleCal.h"
+#include "CoincEvent.h"
 #include "cal_helper_functions.h"
 #include "Syspardef.h"
+#include <cmath>
+
+#define UV_PERIOD_NS 1020.40816326
 
 using namespace std;
 
-void usage(void)
-{
+void usage(void) {
     cout << "coinc_sort (-v) -l [left filename] -r [right filename] -o [output]\n"
          << " -t [time window (ns)]: time window in ns, default = 20\n"
          << " -el [low energy window]: default 400keV\n"
@@ -25,25 +28,146 @@ void usage(void)
     return;
 }
 
-// EventCoinc MakeCoinc(
-//         const EventCal & event_left,
-//         const EventCal & event_right)
-// {
-//     EventCoinc event;
-//     event.dtc = event_left.ct - event_right.ct;
-//     event.dtf = event_left.ft - event_right.ft;
-//     if (event.dtf < UV_PERIOD_NS / -2.0) {
-//         event.dtf += UV_PERIOD_NS;
-//     }
-//     if (event.dtf > UV_PERIOD_NS / 2.0) {
-//         event.dtf -= UV_PERIOD_NS;
-//     }
-//     event.E1 = event_left.E;
-//     event.E2 = event_right.E;
-//     event.crystal1 = event_left.crystal;
-//     event.crystal2 = event_right.crystal;
-//     return(event);
-// }
+/*!
+ * \brief Calculate the time between two calibrated events
+ *
+ * Calculate the time difference between two calibrated events.  If ct_only is
+ * true, the returned value is simply the difference of the coarse timestamps
+ * scaled by the ct_period_ns.  Otherwise, the functions considers both
+ * timestamps.  First, if abs(ct1-ct2) < compare_on_ft_ct_window is true, the
+ * events are assumed to be within the same period of the uv circle.  Then the
+ * difference between the fine timestamps is calculated and wrapped to
+ * [-uv_period_ns / 2, uv_period_ns / 2) and returned.
+ *
+ * \param arg1 The reference event that is subtracted from
+ * \param arg2 The event subtracted from the reference
+ * \param ct_diff The window on which to assume events are on the same uv circle
+ * \param uv_period_ns The period of the uv circle in nanoseconds
+ * \param ct_period_ns The period in nanoseconds of each coarse timestamp tick
+ * \param ct_only Only compare events on coarse timestamps, not fine.
+ *
+ * \return The time difference in nanoseconds
+ */
+float ModuleCalTimeDiff(
+        const ModuleCal & arg1,
+        const ModuleCal & arg2,
+        int ct_diff = 4,
+        float uv_period_ns = UV_PERIOD_NS,
+        float ct_period_ns = (1.0e3 / 12),
+        bool ct_only = false)
+{
+    // Assume all events that are within ct_only course timestamps should be
+    // compared on the basis of fine timestamps rather than by course timestamp.
+    // Example: ct_diff = 4 causes a window of 73.5% of the uv_period_ns at
+    // 980kHz uv and a 12MHz ct clock.
+    if ((std::abs(arg1.ct - arg2.ct) > ct_diff) | ct_only) {
+        return((arg1.ct - arg2.ct) * ct_period_ns);
+    }
+    float difference = arg1.ft - arg2.ft;
+    // At this point we assume that the distribution of fine timestamp
+    // differences should be from two points within one period of each other
+    // however, since we are subtracting, the center of the distribution
+    // should be at 0 +/- uv_period_ns / 2.
+    while (difference >= uv_period_ns / 2) {
+        difference -= uv_period_ns;
+    }
+    while (difference < -uv_period_ns / 2) {
+        difference += uv_period_ns;
+    }
+    return(difference);
+}
+
+/*!
+ * \brief Calculate if time(event 1) < time(event 2)
+ *
+ * Effectively returns (EventCalTimeDiff(arg1, arg2) < 0)
+ *
+ * \param arg1 The reference event that is compared
+ * \param arg2 The event compared against the reference
+ * \param ct_diff The window on which to assume events are on the same uv circle
+ * \param uv_period_ns The period of the uv circle in nanoseconds
+ * \param ct_only Only compare events on coarse timestamps, not fine.
+ *
+ * \return bool indicating if time(event 1) < time(event 2)
+ */
+bool ModuleCalLessThan(
+        const ModuleCal & arg1,
+        const ModuleCal & arg2,
+        int ct_diff = 4,
+        float uv_period_ns = UV_PERIOD_NS,
+        bool ct_only = false)
+{
+    if ((std::abs(arg1.ct - arg2.ct) > ct_diff) | ct_only) {
+        return(arg1.ct < arg2.ct);
+    }
+    float difference = arg1.ft - arg2.ft;
+    // At this point we assume that the distribution of fine timestamp
+    // differences should be from two points within one period of each other
+    // however, since we are subtracting, the center of the distribution
+    // should be at 0 +/- uv_period_ns / 2.
+    while (difference > uv_period_ns / 2) {
+        difference -= uv_period_ns;
+    }
+    while (difference < -uv_period_ns / 2) {
+        difference += uv_period_ns;
+    }
+    return(difference < 0);
+}
+
+bool InEnergyWindow(
+        const ModuleCal & event,
+        float energy_gate_low,
+        float energy_gate_high)
+{
+    if (event.Ecal > energy_gate_high || event.Ecal < energy_gate_low) {
+        return(false);
+    } else {
+        return(true);
+    }
+}
+
+CoincEvent MakeCoinc(
+        const ModuleCal & event_left,
+        const ModuleCal & event_right)
+{
+    CoincEvent event;
+    event.ct = event_left.ct;
+    event.dtc = event_left.ct - event_right.ct;
+    event.dtf = event_left.ft - event_right.ft;
+    while (event.dtf < UV_PERIOD_NS / -2.0) {
+        event.dtf += UV_PERIOD_NS;
+    }
+    while (event.dtf > UV_PERIOD_NS / 2.0) {
+        event.dtf -= UV_PERIOD_NS;
+    }
+    event.E1 = event_left.Ecal;
+    event.Ec1 = event_left.Ec;
+    event.Ech1 = event_left.Ech;
+    event.ft1 = event_left.ft;
+    event.E2 = event_right.Ecal;
+    event.Ec2 = event_right.Ec;
+    event.Ech2 = event_right.Ech;
+    event.ft2 = event_right.ft;
+    event.x1 = event_left.x;
+    event.y1 = event_left.y;
+    event.x2 = event_right.x;
+    event.y2 = event_right.y;
+    event.chip1 = event_left.chip;
+    event.fin1 = event_left.fin;
+    event.m1 = event_left.m;
+    event.apd1 = event_left.apd;
+    event.crystal1 = event_left.id;
+    event.chip2 = event_right.chip;
+    event.fin2 = event_right.fin;
+    event.m2 = event_right.m;
+    event.apd2 = event_right.apd;
+    event.crystal2 = event_right.id;
+    event.cartridge1 = event_left.cartridge;
+    event.cartridge2 = event_right.cartridge;
+    event.pos = event_left.pos;
+
+    return(event);
+}
 
 int main(int argc, char *argv[])
 {
@@ -140,186 +264,211 @@ int main(int argc, char *argv[])
     long entries = tree_left->GetEntries();
 
     // Read the full input data file into memory
-
-
     std::vector<ModuleCal> events_left(entries);
     for (long ii = 0; ii < entries; ii++) {
         tree_left->GetEntry(ii);
         events_left[ii] = *event_left;
+        events_left[ii].ft *= (UV_PERIOD_NS / (2 * M_PI));
     }
 
-    return(0);
 
-    // if (verbose) {
-    //     cout << "Reading Right File" << endl;
-    // }
-    //
-    // dataFile.open(filename_right.c_str(), ios::in | ios::binary);
-    // if (!dataFile.good()) {
-    //     cerr << "Cannot open file \"" << filename_right
-    //          << "\" for read operation." << endl;
-    //     cerr << "Exiting." << endl;
-    //     return(-1);
-    // }
-    //
-    // // Read the full input data file into memory
-    // dataFile.seekg(0, std::ios::end);
-    // dataFileSize = dataFile.tellg();
-    // dataFile.seekg(0, std::ios::beg);
-    //
-    // std::vector<EventCal> events_right(dataFileSize / sizeof(EventCal));
-    // if (!dataFile.read((char*) events_right.data(), dataFileSize)) {
-    //     cerr << "Right File read failed" << endl;
-    //     return(-3);
-    // }
-    // dataFile.close();
-    //
-    //
-    // std::vector<EventCal>::iterator iterator_left(events_left.begin());
-    // std::vector<EventCal>::iterator iterator_right(events_right.begin());
-    // std::vector<EventCal>::iterator current_event;
-    // std::vector<EventCal>::iterator pair_event;
-    // bool current_on_left;
-    //
-    //
-    // std::vector<EventCoinc> output_events;
-    // output_events.reserve((int) (0.5 * 0.5 * (events_left.size() +
-    //                                           events_right.size())));
-    //
-    //
-    // cout << "Time Window: " << time_window << "ns\n"
-    //      << "Energy Window: " << energy_gate_low << "keV to "
-    //      << energy_gate_high << "keV\n";
-    //
-    // long dropped_single(0);
-    // long dropped_multiple(0);
-    // long dropped_energy_window(0);
-    //
-    // if (verbose) {
-    //     cout << "Sorting Coincidences" << endl;
-    // }
-    //
-    // while(iterator_left != events_left.end() &&
-    //       iterator_right != events_right.end())
-    // {
-    //     // 1. Find first event within energy window
-    //     // Initialize each iterator to an event within the energy window first
-    //     while (iterator_left != events_left.end()) {
-    //         if (!InEnergyWindow(*iterator_left,
-    //                             energy_gate_low,
-    //                             energy_gate_high))
-    //         {
-    //             iterator_left++;
-    //             dropped_energy_window++;
-    //         } else {
-    //             break;
-    //         }
-    //     }
-    //     while (iterator_right != events_right.end()) {
-    //         if (!InEnergyWindow(*iterator_right,
-    //                             energy_gate_low,
-    //                             energy_gate_high))
-    //         {
-    //             iterator_right++;
-    //             dropped_energy_window++;
-    //         } else {
-    //             break;
-    //         }
-    //     }
-    //     if (iterator_left == events_left.end() ||
-    //             iterator_right == events_right.end())
-    //     {
-    //         // Drop the rest as singles.
-    //         dropped_single += events_left.end() - iterator_left
-    //                         + events_right.end() - iterator_right;
-    //         break;
-    //     }
-    //
-    //     // Check to see if the left or right side is first
-    //     if (EventCalLessThan(*iterator_left, *iterator_right)) {
-    //         current_event = iterator_left;
-    //         pair_event = iterator_right;
-    //         current_on_left = true;
-    //     } else {
-    //         current_event = iterator_right;
-    //         pair_event = iterator_left;
-    //         current_on_left = false;
-    //     }
-    //
-    //     // 2. Find all other events within time window
-    //     int events_in_time_window_left(0);
-    //     while(EventCalTimeDiff(*iterator_left, *current_event) < time_window) {
-    //         if (InEnergyWindow(*(iterator_left),
-    //                            energy_gate_low,
-    //                            energy_gate_high))
-    //         {
-    //             events_in_time_window_left++;
-    //         } else {
-    //             dropped_energy_window++;
-    //         }
-    //         iterator_left++;
-    //         if (iterator_left == events_left.end()) {
-    //             break;
-    //         }
-    //     }
-    //     int events_in_time_window_right(0);
-    //     while(EventCalTimeDiff(*iterator_right, *current_event) < time_window) {
-    //         if (InEnergyWindow(*(iterator_right),
-    //                            energy_gate_low,
-    //                            energy_gate_high))
-    //         {
-    //             events_in_time_window_right++;
-    //         } else {
-    //             dropped_energy_window++;
-    //         }
-    //         iterator_right++;
-    //         if (iterator_right == events_right.end()) {
-    //             break;
-    //         }
-    //     }
-    //
-    //     // 3. Pair events if there is only one event within energy window on other side, pair
-    //     if ((events_in_time_window_left == 1) &&
-    //         (events_in_time_window_right == 1))
-    //     {
-    //         EventCoinc event;
-    //         if (current_on_left) {
-    //             event = MakeCoinc(*current_event, *pair_event);
-    //         } else {
-    //             event = MakeCoinc(*pair_event, *current_event);
-    //         }
-    //         output_events.push_back(event);
-    //     } else if ((events_in_time_window_left == 0) ||
-    //                (events_in_time_window_right == 0))
-    //     {
-    //         dropped_single += events_in_time_window_left +
-    //                           events_in_time_window_right;
-    //     } else {
-    //         dropped_multiple += events_in_time_window_left +
-    //                             events_in_time_window_right;
-    //     }
-    //     // 4. If there is more than one event, drop all events, go to 1.
-    // }
-    //
-    // if (verbose) {
-    //     cout << "Writing Out Coincidences" << endl;
-    // }
-    //
-    // std::ofstream output_stream;
-    // output_stream.open(filename_output.c_str(), std::ios::binary);
-    //
-    // output_stream.write((char *)&output_events[0],
-    //                     sizeof(EventCoinc) * output_events.size());
-    // output_stream.close();
-    //
-    // cout << "Events Processed:\n"
-    //      << "  Left - " << events_left.size() << "\n"
-    //      << "  Right - " << events_right.size() << "\n"
-    //      << "Events Dropped:\n"
-    //      << "  Energy - " << dropped_energy_window << "\n"
-    //      << "  Single - " << dropped_single << "\n"
-    //      << "  Multiple - " << dropped_multiple << "\n"
-    //      << "Coincidences: " << output_events.size() << "\n";
-    //
-    // return(0);
+    if (verbose) {
+        cout << "Reading Right File" << endl;
+    }
+
+    if (verbose) {
+        cout << " Opening file " << filename_right << endl;
+    }
+    TFile * file_right = new TFile(filename_right.c_str());
+    if (!file_right || file_right->IsZombie()) {
+        cerr << "problems opening file " << filename_right
+             << "\n.Exiting" << endl;
+        return(-1);
+    }
+
+    TTree * tree_right = (TTree *) file_right->Get(tree_name.c_str());
+    if (!tree_right) {
+        cerr << "problems opening tree " << tree_name << "\n.Exiting" << endl;
+        return(-2);
+    }
+    ModuleCal * event_right = 0;
+
+    if (tree_right->SetBranchAddress(branch_name.c_str(), &event_right) < 0) {
+        cerr << "problems opening branch " << tree_name << "\n.Exiting" << endl;
+        return(-3);
+    }
+
+    entries = tree_right->GetEntries();
+
+    // Read the full input data file into memory
+    std::vector<ModuleCal> events_right(entries);
+    for (long ii = 0; ii < entries; ii++) {
+        tree_right->GetEntry(ii);
+        events_right[ii] = *event_right;
+        events_right[ii].ft *= (UV_PERIOD_NS / (2 * M_PI));
+    }
+
+    std::vector<ModuleCal>::iterator iterator_left(events_left.begin());
+    std::vector<ModuleCal>::iterator iterator_right(events_right.begin());
+    std::vector<ModuleCal>::iterator current_event;
+    std::vector<ModuleCal>::iterator pair_event;
+    bool current_on_left;
+
+
+    std::vector<CoincEvent> output_events;
+    output_events.reserve((int) (0.5 * 0.5 * (events_left.size() +
+                                              events_right.size())));
+
+
+    cout << "Time Window: " << time_window << "ns\n"
+         << "Energy Window: " << energy_gate_low << "keV to "
+         << energy_gate_high << "keV\n";
+
+    long dropped_single(0);
+    long dropped_multiple(0);
+    long dropped_energy_window(0);
+
+    if (verbose) {
+        cout << "Sorting Coincidences" << endl;
+    }
+
+    while(iterator_left != events_left.end() &&
+          iterator_right != events_right.end())
+    {
+        // 1. Find first event within energy window
+        // Initialize each iterator to an event within the energy window first
+        while (iterator_left != events_left.end()) {
+            if (!InEnergyWindow(*iterator_left,
+                                energy_gate_low,
+                                energy_gate_high))
+            {
+                iterator_left++;
+                dropped_energy_window++;
+            } else {
+                break;
+            }
+        }
+        while (iterator_right != events_right.end()) {
+            if (!InEnergyWindow(*iterator_right,
+                                energy_gate_low,
+                                energy_gate_high))
+            {
+                iterator_right++;
+                dropped_energy_window++;
+            } else {
+                break;
+            }
+        }
+        if (iterator_left == events_left.end() ||
+                iterator_right == events_right.end())
+        {
+            // Drop the rest as singles.
+            dropped_single += events_left.end() - iterator_left
+                            + events_right.end() - iterator_right;
+            break;
+        }
+
+        // Check to see if the left or right side is first
+        if (ModuleCalLessThan(*iterator_left, *iterator_right)) {
+            current_event = iterator_left;
+            pair_event = iterator_right;
+            current_on_left = true;
+        } else {
+            current_event = iterator_right;
+            pair_event = iterator_left;
+            current_on_left = false;
+        }
+
+        // 2. Find all other events within time window
+        int events_in_time_window_left(0);
+        while(ModuleCalTimeDiff(*iterator_left, *current_event) < time_window) {
+            if (InEnergyWindow(*(iterator_left),
+                               energy_gate_low,
+                               energy_gate_high))
+            {
+                events_in_time_window_left++;
+            } else {
+                dropped_energy_window++;
+            }
+            iterator_left++;
+            if (iterator_left == events_left.end()) {
+                break;
+            }
+        }
+        int events_in_time_window_right(0);
+        while(ModuleCalTimeDiff(*iterator_right, *current_event) < time_window) {
+            if (InEnergyWindow(*(iterator_right),
+                               energy_gate_low,
+                               energy_gate_high))
+            {
+                events_in_time_window_right++;
+            } else {
+                dropped_energy_window++;
+            }
+            iterator_right++;
+            if (iterator_right == events_right.end()) {
+                break;
+            }
+        }
+
+        // 3. Pair events if there is only one event within energy window on other side, pair
+        if ((events_in_time_window_left == 1) &&
+            (events_in_time_window_right == 1))
+        {
+            CoincEvent event;
+            if (current_on_left) {
+                event = MakeCoinc(*current_event, *pair_event);
+            } else {
+                event = MakeCoinc(*pair_event, *current_event);
+            }
+            output_events.push_back(event);
+        } else if ((events_in_time_window_left == 0) ||
+                   (events_in_time_window_right == 0))
+        {
+            dropped_single += events_in_time_window_left +
+                              events_in_time_window_right;
+        } else {
+            dropped_multiple += events_in_time_window_left +
+                                events_in_time_window_right;
+        }
+        // 4. If there is more than one event, drop all events, go to 1.
+    }
+
+    if (verbose) {
+        cout << "Writing Out Coincidences" << endl;
+    }
+    TFile * output_file = new TFile(filename_output.c_str(),"RECREATE");
+    if (output_file->IsZombie()) {
+        cerr << "Opening output file failed" << endl;
+        cerr << "Exiting" << endl;
+        return(-5);
+    }
+    TTree * output_tree =
+            new TTree("merged","Merged and Calibrated LYSO-PSAPD data ");
+
+    if (!output_tree) {
+        cerr << "Opening output tree failed" << endl;
+        cerr << "Exiting" << endl;
+        return(-5);
+    }
+
+    CoincEvent * output_event = 0;
+    output_tree->Branch("Event", &output_event);
+    for (size_t ii = 0; ii < output_events.size(); ii++) {
+        output_event = &output_events[ii];
+        output_tree->Fill();
+    }
+    output_tree->Write();
+    output_file->Close();
+
+    cout << "Events Processed:\n"
+         << "  Left - " << events_left.size() << "\n"
+         << "  Right - " << events_right.size() << "\n"
+         << "Events Dropped:\n"
+         << "  Energy - " << dropped_energy_window << "\n"
+         << "  Single - " << dropped_single << "\n"
+         << "  Multiple - " << dropped_multiple << "\n"
+         << "Coincidences: " << output_events.size() << "\n";
+
+    return(0);
 }
