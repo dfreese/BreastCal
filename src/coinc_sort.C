@@ -14,6 +14,7 @@
 #include "cal_helper_functions.h"
 #include "Syspardef.h"
 #include <cmath>
+#include <sorting.h>
 
 #define UV_PERIOD_NS 1020.40816326
 
@@ -307,6 +308,14 @@ int main(int argc, char *argv[])
         events_right[ii] = *event_right;
         events_right[ii].ft *= (UV_PERIOD_NS / (2 * M_PI));
     }
+
+
+    if (verbose) {
+        cout << "Sorting Events" << endl;
+    }
+    insertion_sort(events_left, ModuleCalLessThan, 4, (float) UV_PERIOD_NS, false);
+    insertion_sort(events_right, ModuleCalLessThan, 4, (float) UV_PERIOD_NS, false);
+    
 
     std::vector<ModuleCal>::iterator iterator_left(events_left.begin());
     std::vector<ModuleCal>::iterator iterator_right(events_right.begin());
