@@ -53,14 +53,14 @@ void usage(void) {
 float ModuleCalTimeDiff(
         const ModuleCal & arg1,
         const ModuleCal & arg2,
-        int ct_diff = 4,
+        int ct_diff = 5,
         float uv_period_ns = UV_PERIOD_NS,
         float ct_period_ns = (1.0e3 / 12),
         bool ct_only = false)
 {
     // Assume all events that are within ct_only course timestamps should be
     // compared on the basis of fine timestamps rather than by course timestamp.
-    // Example: ct_diff = 4 causes a window of 73.5% of the uv_period_ns at
+    // Example: ct_diff = 5 causes a window of 89.8% of the uv_period_ns at
     // 980kHz uv and a 12MHz ct clock.
     if ((std::abs(arg1.ct - arg2.ct) > ct_diff) | ct_only) {
         return((arg1.ct - arg2.ct) * ct_period_ns);
@@ -69,15 +69,24 @@ float ModuleCalTimeDiff(
     // At this point we assume that the distribution of fine timestamp
     // differences should be from two points within one period of each other
     // however, since we are subtracting, the center of the distribution
-    // should be at 0 +/- uv_period_ns / 2.
-    while (difference >= uv_period_ns / 2) {
+    // should be at 0 +/- uv_period_ns.
+    while (difference >= uv_period_ns) {
         difference -= uv_period_ns;
     }
-    while (difference < -uv_period_ns / 2) {
+    while (difference < -uv_period_ns) {
         difference += uv_period_ns;
     }
     return(difference);
 }
+
+bool ModuleCalLessThan(
+        const ModuleCal & arg1,
+        const ModuleCal & arg2)
+{
+    float difference = ModuleCalTimeDiff(arg1,arg2);
+    return(difference < 0);
+}
+
 
 /*!
  * \brief Calculate if time(event 1) < time(event 2)
@@ -95,24 +104,11 @@ float ModuleCalTimeDiff(
 bool ModuleCalLessThan(
         const ModuleCal & arg1,
         const ModuleCal & arg2,
-        int ct_diff = 4,
-        float uv_period_ns = UV_PERIOD_NS,
-        bool ct_only = false)
+        int ct_diff,
+        float uv_period_ns,
+        bool ct_only)
 {
-    if ((std::abs(arg1.ct - arg2.ct) > ct_diff) | ct_only) {
-        return(arg1.ct < arg2.ct);
-    }
-    float difference = arg1.ft - arg2.ft;
-    // At this point we assume that the distribution of fine timestamp
-    // differences should be from two points within one period of each other
-    // however, since we are subtracting, the center of the distribution
-    // should be at 0 +/- uv_period_ns / 2.
-    while (difference > uv_period_ns / 2) {
-        difference -= uv_period_ns;
-    }
-    while (difference < -uv_period_ns / 2) {
-        difference += uv_period_ns;
-    }
+    float difference = ModuleCalTimeDiff(arg1, arg2, ct_diff, uv_period_ns , ct_only);
     return(difference < 0);
 }
 
@@ -135,13 +131,7 @@ CoincEvent MakeCoinc(
     CoincEvent event;
     event.ct = event_left.ct;
     event.dtc = event_left.ct - event_right.ct;
-    event.dtf = event_left.ft - event_right.ft;
-    while (event.dtf < UV_PERIOD_NS / -2.0) {
-        event.dtf += UV_PERIOD_NS;
-    }
-    while (event.dtf > UV_PERIOD_NS / 2.0) {
-        event.dtf -= UV_PERIOD_NS;
-    }
+    event.dtf = ModuleCalTimeDiff(event_left, event_right);
     event.E1 = event_left.Ecal;
     event.Ec1 = event_left.Ec;
     event.Ech1 = event_left.Ech;
@@ -360,8 +350,8 @@ int main(int argc, char *argv[])
     if (verbose) {
         cout << "Sorting Events" << endl;
     }
-    insertion_sort(events_left, ModuleCalLessThan, 4, (float) UV_PERIOD_NS, false);
-    insertion_sort(events_right, ModuleCalLessThan, 4, (float) UV_PERIOD_NS, false);
+    insertion_sort(events_left, ModuleCalLessThan);
+    insertion_sort(events_right, ModuleCalLessThan);
 
 
     std::vector<ModuleCal>::iterator iterator_left(events_left.begin());
