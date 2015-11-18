@@ -126,8 +126,6 @@ int main(int argc, Char_t *argv[]) {
             output_per_crystal_energy_cal_filename = string(argv[ix + 1]);
         }
     }
-    rootlogon(verbose);
-    gStyle->SetOptStat(kTRUE);
 
     TCanvas *c1;
     c1 = (TCanvas*)gROOT->GetListOfCanvases()->FindObject("c1");
@@ -324,7 +322,7 @@ int main(int argc, Char_t *argv[]) {
                 c1->cd(2);
                 profehist[p][c]->Draw();
                 stringstream ps_name_stream;
-                ps_name_stream << "edep_P" << p << "C" << c << ".ps";
+                ps_name_stream << "edep_P" << p << "C" << c << ".pdf";
                 c1->Print(ps_name_stream.str().c_str());
             }
         }
@@ -409,9 +407,10 @@ int main(int argc, Char_t *argv[]) {
 
     if (write_out_time_res_plot_flag) {
         tres->Fit("gaus","","",-10,10);
+        gStyle->SetOptFit(0112);
         c1->Clear();
         tres->Draw();
-        string ps_tres_filename(filename + ".edepcal.tres.ps");
+        string ps_tres_filename(filebase + ".tres.edepcal.pdf");
         c1->Print(ps_tres_filename.c_str());
 
         if (verbose) {
