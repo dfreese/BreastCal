@@ -27,6 +27,7 @@ void usage(void) {
          << " -el [low energy window]: default 400keV\n"
          << " -eh [low energy window]: default 700keV\n"
          << " -rcal [filename]: read time calibration file\n"
+         << " -redcal [filename]: read in an energy dependence file\n"
          << endl;
     return;
 }
@@ -174,6 +175,9 @@ int main(int argc, char *argv[])
     bool read_per_crystal_correction(false);
     string input_crystal_cal_filename;
 
+    bool read_per_crystal_energy_correction(false);
+    string input_per_crystal_energy_cal_filename;
+
     // Arguments not requiring input
     for (int ix = 1; ix < argc; ix++) {
         if (strcmp(argv[ix], "-v") == 0) {
@@ -210,6 +214,10 @@ int main(int argc, char *argv[])
         if(strcmp(argv[ix], "-rcal") == 0) {
             read_per_crystal_correction = true;
             input_crystal_cal_filename = string(argv[ix + 1]);
+        }
+        if(strcmp(argv[ix], "-redcal") == 0) {
+            read_per_crystal_energy_correction = true;
+            input_per_crystal_energy_cal_filename = string(argv[ix + 1]);
         }
     }
 
@@ -250,6 +258,30 @@ int main(int argc, char *argv[])
         }
     }
 
+
+    if (verbose) {
+        cout << "Reading Input crystal energy calibration file\n";
+    }
+    float crystal_edep_cal[SYSTEM_PANELS]
+            [CARTRIDGES_PER_PANEL]
+            [FINS_PER_CARTRIDGE]
+            [MODULES_PER_FIN]
+            [APDS_PER_MODULE]
+            [CRYSTALS_PER_APD]
+            [2] = {{{{{{{0}}}}}}};
+
+    if (read_per_crystal_energy_correction) {
+        int cal_read_status(ReadPerCrystalEnergyCal(
+                input_per_crystal_energy_cal_filename, crystal_edep_cal));
+        if (cal_read_status < 0) {
+            cerr << "Error in reading input calibration file: "
+                 << cal_read_status << endl;
+            cerr << "Exiting.." << endl;
+            return(-4);
+        }
+    }
+
+
     if (verbose) {
         cout << "Reading Left File" << endl;
     }
@@ -284,9 +316,19 @@ int main(int argc, char *argv[])
         tree_left->GetEntry(ii);
         events_left[ii] = *event_left;
         events_left[ii].ft *= (UV_PERIOD_NS / (2 * M_PI));
+        // Apply a standard calibrated offset
         events_left[ii].ft -= crystal_cal[0][event_left->cartridge]
                                          [event_left->fin][event_left->m]
                                          [event_left->apd][event_left->id];
+        // Apply the Energy Dependent offset  This really should just be
+        // centered around 511keV.
+        events_left[ii].ft -= crystal_edep_cal[0]
+                [event_left->cartridge][event_left->fin][event_left->m]
+                [event_left->apd][event_left->id][0];
+        events_left[ii].ft -= event_left->Ecal * crystal_edep_cal[0]
+                [event_left->cartridge][event_left->fin][event_left->m]
+                [event_left->apd][event_left->id][1];
+        // Wrap the value to one UV period.
         while (events_left[ii].ft < 0) {
             events_left[ii].ft += UV_PERIOD_NS;
         }
@@ -333,6 +375,15 @@ int main(int argc, char *argv[])
         events_right[ii].ft += crystal_cal[1][event_right->cartridge]
                                           [event_right->fin][event_right->m]
                                           [event_right->apd][event_right->id];
+        // Apply the Energy Dependent offset  This really should just be
+        // centered around 511keV.
+        events_right[ii].ft += crystal_edep_cal[1]
+                [event_right->cartridge][event_right->fin][event_right->m]
+                [event_right->apd][event_right->id][0];
+        events_right[ii].ft += event_right->Ecal * crystal_edep_cal[1]
+                [event_right->cartridge][event_right->fin][event_right->m]
+                [event_right->apd][event_right->id][1];
+        // Wrap the value to one UV period.
         while (events_right[ii].ft < 0) {
             events_right[ii].ft += UV_PERIOD_NS;
         }
