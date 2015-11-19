@@ -68,7 +68,7 @@ float ModuleCalTimeDiff(
     // Add in a number of uv periods that hasn't already been compared with
     // using the fine timestamps.
     difference += uv_period_ns *
-            trunc(uv_period_ns / (ct_period_ns * (arg1.ct - arg2.ct)));
+            trunc((ct_period_ns * (arg1.ct - arg2.ct)) / uv_period_ns);
     return(difference);
 }
 
