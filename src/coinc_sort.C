@@ -23,6 +23,7 @@ using namespace std;
 void usage(void) {
     cout << "coinc_sort (-v) -l [left filename] -r [right filename] -o [output]\n"
          << " -t [time window (ns)]: time window in ns, default = 20\n"
+         << " -d [delayed window (ns)]: delay in the time window in ns, default = 0\n"
          << " -el [low energy window]: default 400keV\n"
          << " -eh [low energy window]: default 700keV\n"
          << " -rcal [filename]: read time calibration file\n"
@@ -31,51 +32,43 @@ void usage(void) {
 }
 
 /*!
- * \brief Calculate the time between two calibrated events
- *
- * Calculate the time difference between two calibrated events.  If ct_only is
- * true, the returned value is simply the difference of the coarse timestamps
- * scaled by the ct_period_ns.  Otherwise, the functions considers both
- * timestamps.  First, if abs(ct1-ct2) < compare_on_ft_ct_window is true, the
- * events are assumed to be within the same period of the uv circle.  Then the
- * difference between the fine timestamps is calculated and wrapped to
- * [-uv_period_ns / 2, uv_period_ns / 2) and returned.
- *
- * \param arg1 The reference event that is subtracted from
- * \param arg2 The event subtracted from the reference
- * \param ct_diff The window on which to assume events are on the same uv circle
- * \param uv_period_ns The period of the uv circle in nanoseconds
- * \param ct_period_ns The period in nanoseconds of each coarse timestamp tick
- * \param ct_only Only compare events on coarse timestamps, not fine.
- *
- * \return The time difference in nanoseconds
- */
+* \brief Calculate the time between two calibrated events
+*
+* Calculate the time difference between two calibrated events.  The ct_period_ns
+* is used to calculate how many full uv periods have transpired between the
+* events.  This is multiplied by uv_period_ns, and added to the difference of
+* the two fine timestamps.  The difference between the fine timestamps is
+* wrapped to (-uv_period_ns, uv_period_ns), to make safe the assumption that the
+* fine timestamps are compared along the same uv circle.
+*
+* \param arg1 The reference event that is subtracted from
+* \param arg2 The event subtracted from the reference
+* \param uv_period_ns The period of the uv circle in nanoseconds
+* \param ct_period_ns The period in nanoseconds of each coarse timestamp tick
+*
+* \return The time difference in nanoseconds
+*/
 float ModuleCalTimeDiff(
         const ModuleCal & arg1,
         const ModuleCal & arg2,
-        int ct_diff = 5,
         float uv_period_ns = UV_PERIOD_NS,
-        float ct_period_ns = (1.0e3 / 12),
-        bool ct_only = false)
+        float ct_period_ns = (1.0e3 / 12))
 {
-    // Assume all events that are within ct_only course timestamps should be
-    // compared on the basis of fine timestamps rather than by course timestamp.
-    // Example: ct_diff = 5 causes a window of 89.8% of the uv_period_ns at
-    // 980kHz uv and a 12MHz ct clock.
-    if ((std::abs(arg1.ct - arg2.ct) > ct_diff) | ct_only) {
-        return((arg1.ct - arg2.ct) * ct_period_ns);
-    }
+    // Assume the fine timestamps should always be compared as if they are in
+    // the same period, so wrap them to +/- this period after comparing.  This
+    // safe guards against the off chance that one ft value is not on
+    // [0, uv_period_ns).
     float difference = arg1.ft - arg2.ft;
-    // At this point we assume that the distribution of fine timestamp
-    // differences should be from two points within one period of each other
-    // however, since we are subtracting, the center of the distribution
-    // should be at 0 +/- uv_period_ns.
-    while (difference >= uv_period_ns) {
+    while (difference > uv_period_ns) {
         difference -= uv_period_ns;
     }
     while (difference < -uv_period_ns) {
         difference += uv_period_ns;
     }
+    // Add in a number of uv periods that hasn't already been compared with
+    // using the fine timestamps.
+    difference += uv_period_ns *
+            trunc(uv_period_ns / (ct_period_ns * (arg1.ct - arg2.ct)));
     return(difference);
 }
 
@@ -87,28 +80,25 @@ bool ModuleCalLessThan(
     return(difference < 0);
 }
 
-
 /*!
- * \brief Calculate if time(event 1) < time(event 2)
- *
- * Effectively returns (EventCalTimeDiff(arg1, arg2) < 0)
- *
- * \param arg1 The reference event that is compared
- * \param arg2 The event compared against the reference
- * \param ct_diff The window on which to assume events are on the same uv circle
- * \param uv_period_ns The period of the uv circle in nanoseconds
- * \param ct_only Only compare events on coarse timestamps, not fine.
- *
- * \return bool indicating if time(event 1) < time(event 2)
- */
+* \brief Calculate if time(event 1) < time(event 2)
+*
+* Effectively returns (ModuleCalTimeDiff(arg1, arg2) < 0)
+*
+* \param arg1 The reference event that is compared
+* \param arg2 The event compared against the reference
+* \param ct_diff The window on which to assume events are on the same uv circle
+* \param uv_period_ns The period of the uv circle in nanoseconds
+*
+* \return bool indicating if time(event 1) < time(event 2)
+*/
 bool ModuleCalLessThan(
         const ModuleCal & arg1,
         const ModuleCal & arg2,
         int ct_diff,
-        float uv_period_ns,
-        bool ct_only)
+        float uv_period_ns)
 {
-    float difference = ModuleCalTimeDiff(arg1, arg2, ct_diff, uv_period_ns , ct_only);
+    float difference = ModuleCalTimeDiff(arg1, arg2, ct_diff, uv_period_ns);
     return(difference < 0);
 }
 
@@ -131,7 +121,8 @@ CoincEvent MakeCoinc(
     CoincEvent event;
     event.ct = event_left.ct;
     event.dtc = event_left.ct - event_right.ct;
-    event.dtf = ModuleCalTimeDiff(event_left, event_right);
+    event.dtf = event_left.ft - event_right.ft;
+    // event.dtf = ModuleCalTimeDiff(event_left, event_right);
     event.E1 = event_left.Ecal;
     event.Ec1 = event_left.Ec;
     event.Ech1 = event_left.Ech;
@@ -175,6 +166,7 @@ int main(int argc, char *argv[])
     string tree_name = "SCalTree";
     string branch_name = "Time Sorted Data";
     float time_window(20);
+    float delayed_window(0);
 
     float energy_gate_high(700);
     float energy_gate_low(400);
@@ -192,6 +184,9 @@ int main(int argc, char *argv[])
     for (int ix = 1; ix < (argc - 1); ix++) {
         if (strcmp(argv[ix], "-t") == 0) {
             time_window = atoi(argv[ix + 1]);
+        }
+        if (strcmp(argv[ix], "-d") == 0) {
+            delayed_window = atof(argv[ix + 1]);
         }
         if (strcmp(argv[ix], "-l") == 0) {
             filename_left = string(argv[ix + 1]);
@@ -414,20 +409,26 @@ int main(int argc, char *argv[])
             break;
         }
 
+        float left_window_end;
+        float right_window_end;
         // Check to see if the left or right side is first
-        if (ModuleCalLessThan(*iterator_left, *iterator_right)) {
+        if (ModuleCalTimeDiff(*iterator_left, *iterator_right) < (-delayed_window)) {
             current_event = iterator_left;
             pair_event = iterator_right;
             current_on_left = true;
+            left_window_end = time_window;
+            right_window_end = time_window + delayed_window;
         } else {
             current_event = iterator_right;
             pair_event = iterator_left;
             current_on_left = false;
+            left_window_end = time_window - delayed_window;
+            right_window_end = time_window;
         }
 
         // 2. Find all other events within time window
         int events_in_time_window_left(0);
-        while(ModuleCalTimeDiff(*iterator_left, *current_event) < time_window) {
+        while (ModuleCalTimeDiff(*iterator_left, *current_event) < left_window_end) {
             if (InEnergyWindow(*(iterator_left),
                                energy_gate_low,
                                energy_gate_high))
@@ -442,7 +443,7 @@ int main(int argc, char *argv[])
             }
         }
         int events_in_time_window_right(0);
-        while(ModuleCalTimeDiff(*iterator_right, *current_event) < time_window) {
+        while (ModuleCalTimeDiff(*iterator_right, *current_event) < right_window_end) {
             if (InEnergyWindow(*(iterator_right),
                                energy_gate_low,
                                energy_gate_high))
