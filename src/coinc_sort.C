@@ -335,7 +335,7 @@ int main(int argc, char *argv[])
         tree_right->GetEntry(ii);
         events_right[ii] = *event_right;
         events_right[ii].ft *= (UV_PERIOD_NS / (2 * M_PI));
-        events_right[ii].ft -= crystal_cal[1][event_right->cartridge]
+        events_right[ii].ft += crystal_cal[1][event_right->cartridge]
                                           [event_right->fin][event_right->m]
                                           [event_right->apd][event_right->id];
         while (events_right[ii].ft < 0) {
