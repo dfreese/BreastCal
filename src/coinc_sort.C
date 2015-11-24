@@ -13,6 +13,7 @@
 #include "CoincEvent.h"
 #include "cal_helper_functions.h"
 #include "Syspardef.h"
+#include "Util.h"
 #include <cmath>
 #include <sorting.h>
 
@@ -23,7 +24,9 @@ using namespace std;
 void usage(void) {
     cout << "coinc_sort (-v) -l [left filename] -r [right filename] -o [output]\n"
          << " -t [time window (ns)]: time window in ns, default = 20\n"
-         << " -d [delayed window (ns)]: delay in the time window in ns, default = 0\n"
+         << " -d [delayed window (ns)]: delay in the time window in ns,\n"
+         << "    default = 0, can be a vector if put in quotes and separated by\n"
+         << "    spaces\n"
          << " -el [low energy window]: default 400keV\n"
          << " -eh [low energy window]: default 700keV\n"
          << " -rcal [filename]: read time calibration file\n"
@@ -122,8 +125,7 @@ CoincEvent MakeCoinc(
     CoincEvent event;
     event.ct = event_left.ct;
     event.dtc = event_left.ct - event_right.ct;
-    event.dtf = event_left.ft - event_right.ft;
-    // event.dtf = ModuleCalTimeDiff(event_left, event_right);
+    event.dtf = ModuleCalTimeDiff(event_left, event_right);
     event.E1 = event_left.Ecal;
     event.Ec1 = event_left.Ec;
     event.Ech1 = event_left.Ech;
@@ -167,7 +169,7 @@ int main(int argc, char *argv[])
     string tree_name = "SCalTree";
     string branch_name = "Time Sorted Data";
     float time_window(20);
-    float delayed_window(0);
+    std::vector<float> delayed_windows(1, 0);
 
     float energy_gate_high(700);
     float energy_gate_low(400);
@@ -190,7 +192,7 @@ int main(int argc, char *argv[])
             time_window = atoi(argv[ix + 1]);
         }
         if (strcmp(argv[ix], "-d") == 0) {
-            delayed_window = atof(argv[ix + 1]);
+            Util::string2Vec<float>(argv[ix + 1], delayed_windows);
         }
         if (strcmp(argv[ix], "-l") == 0) {
             filename_left = string(argv[ix + 1]);
@@ -399,14 +401,6 @@ int main(int argc, char *argv[])
     insertion_sort(events_left, ModuleCalLessThan);
     insertion_sort(events_right, ModuleCalLessThan);
 
-
-    std::vector<ModuleCal>::iterator iterator_left(events_left.begin());
-    std::vector<ModuleCal>::iterator iterator_right(events_right.begin());
-    std::vector<ModuleCal>::iterator current_event;
-    std::vector<ModuleCal>::iterator pair_event;
-    bool current_on_left;
-
-
     std::vector<CoincEvent> output_events;
     output_events.reserve((int) (0.5 * 0.5 * (events_left.size() +
                                               events_right.size())));
@@ -424,112 +418,134 @@ int main(int argc, char *argv[])
         cout << "Sorting Coincidences" << endl;
     }
 
-    while(iterator_left != events_left.end() &&
-          iterator_right != events_right.end())
+    for (size_t delay_idx = 0; delay_idx < delayed_windows.size(); delay_idx++)
     {
-        // 1. Find first event within energy window
-        // Initialize each iterator to an event within the energy window first
-        while (iterator_left != events_left.end()) {
-            if (!InEnergyWindow(*iterator_left,
-                                energy_gate_low,
-                                energy_gate_high))
+        float & delayed_window = delayed_windows[delay_idx];
+
+        if (verbose) {
+            if (delayed_window) {
+                cout << "Running with delayed window (ns): " << delayed_window << endl;
+            }
+        }
+
+        std::vector<ModuleCal>::iterator iterator_left = events_left.begin();
+        std::vector<ModuleCal>::iterator iterator_right = events_right.begin();
+
+        while(iterator_left != events_left.end() &&
+              iterator_right != events_right.end())
+        {
+            // 1. Find first event within energy window
+            // Initialize each iterator to an event within the energy window first
+            while (iterator_left != events_left.end()) {
+                if (!InEnergyWindow(*iterator_left,
+                                    energy_gate_low,
+                                    energy_gate_high))
+                {
+                    iterator_left++;
+                    dropped_energy_window++;
+                } else {
+                    break;
+                }
+            }
+            while (iterator_right != events_right.end()) {
+                if (!InEnergyWindow(*iterator_right,
+                                    energy_gate_low,
+                                    energy_gate_high))
+                {
+                    iterator_right++;
+                    dropped_energy_window++;
+                } else {
+                    break;
+                }
+            }
+            if (iterator_left == events_left.end() ||
+                    iterator_right == events_right.end())
             {
+                // Drop the rest as singles.
+                dropped_single += events_left.end() - iterator_left
+                                + events_right.end() - iterator_right;
+                break;
+            }
+
+            std::vector<ModuleCal>::iterator current_event;
+            std::vector<ModuleCal>::iterator pair_event;
+            bool current_on_left;
+            float left_window_end;
+            float right_window_end;
+            // Check to see if the left or right side is first
+            if (ModuleCalTimeDiff(*iterator_left, *iterator_right) < (-delayed_window)) {
+                current_event = iterator_left;
+                pair_event = iterator_right;
+                current_on_left = true;
+                left_window_end = time_window;
+                right_window_end = time_window + delayed_window;
+            } else {
+                current_event = iterator_right;
+                pair_event = iterator_left;
+                current_on_left = false;
+                left_window_end = time_window - delayed_window;
+                right_window_end = time_window;
+            }
+
+            // 2. Find all other events within time window
+            int events_in_time_window_left(0);
+            while (ModuleCalTimeDiff(*iterator_left, *current_event) < left_window_end) {
+                if (InEnergyWindow(*(iterator_left),
+                                   energy_gate_low,
+                                   energy_gate_high))
+                {
+                    events_in_time_window_left++;
+                } else {
+                    dropped_energy_window++;
+                }
                 iterator_left++;
-                dropped_energy_window++;
-            } else {
-                break;
+                if (iterator_left == events_left.end()) {
+                    break;
+                }
             }
-        }
-        while (iterator_right != events_right.end()) {
-            if (!InEnergyWindow(*iterator_right,
-                                energy_gate_low,
-                                energy_gate_high))
-            {
+            int events_in_time_window_right(0);
+            while (ModuleCalTimeDiff(*iterator_right, *current_event) < right_window_end) {
+                if (InEnergyWindow(*(iterator_right),
+                                   energy_gate_low,
+                                   energy_gate_high))
+                {
+                    events_in_time_window_right++;
+                } else {
+                    dropped_energy_window++;
+                }
                 iterator_right++;
-                dropped_energy_window++;
-            } else {
-                break;
+                if (iterator_right == events_right.end()) {
+                    break;
+                }
             }
-        }
-        if (iterator_left == events_left.end() ||
-                iterator_right == events_right.end())
-        {
-            // Drop the rest as singles.
-            dropped_single += events_left.end() - iterator_left
-                            + events_right.end() - iterator_right;
-            break;
-        }
 
-        float left_window_end;
-        float right_window_end;
-        // Check to see if the left or right side is first
-        if (ModuleCalTimeDiff(*iterator_left, *iterator_right) < (-delayed_window)) {
-            current_event = iterator_left;
-            pair_event = iterator_right;
-            current_on_left = true;
-            left_window_end = time_window;
-            right_window_end = time_window + delayed_window;
-        } else {
-            current_event = iterator_right;
-            pair_event = iterator_left;
-            current_on_left = false;
-            left_window_end = time_window - delayed_window;
-            right_window_end = time_window;
-        }
-
-        // 2. Find all other events within time window
-        int events_in_time_window_left(0);
-        while (ModuleCalTimeDiff(*iterator_left, *current_event) < left_window_end) {
-            if (InEnergyWindow(*(iterator_left),
-                               energy_gate_low,
-                               energy_gate_high))
+            // 3. Pair events if there is only one event within energy window on other side, pair
+            if ((events_in_time_window_left == 1) &&
+                (events_in_time_window_right == 1))
             {
-                events_in_time_window_left++;
-            } else {
-                dropped_energy_window++;
-            }
-            iterator_left++;
-            if (iterator_left == events_left.end()) {
-                break;
-            }
-        }
-        int events_in_time_window_right(0);
-        while (ModuleCalTimeDiff(*iterator_right, *current_event) < right_window_end) {
-            if (InEnergyWindow(*(iterator_right),
-                               energy_gate_low,
-                               energy_gate_high))
+                CoincEvent event;
+                if (current_on_left) {
+                    event = MakeCoinc(*current_event, *pair_event);
+                } else {
+                    event = MakeCoinc(*pair_event, *current_event);
+                }
+                // Since the window on the right side is ahead of the left, and dtf
+                // is calculated from ModuleCalTimeDiff(left, right), we add back in
+                // the delayed window to recenter the window around zero.  For non-
+                // randoms, delayed_window defaults to 0, so this has no effect.
+                event.dtf += delayed_window;
+                output_events.push_back(event);
+            } else if ((events_in_time_window_left == 0) ||
+                       (events_in_time_window_right == 0))
             {
-                events_in_time_window_right++;
+                dropped_single += events_in_time_window_left +
+                                  events_in_time_window_right;
             } else {
-                dropped_energy_window++;
+                dropped_multiple += events_in_time_window_left +
+                                    events_in_time_window_right;
             }
-            iterator_right++;
-            if (iterator_right == events_right.end()) {
-                break;
-            }
+            // 4. If there is more than one event, drop all events, go to 1.
         }
-
-        // 3. Pair events if there is only one event within energy window on other side, pair
-        if ((events_in_time_window_left == 1) &&
-            (events_in_time_window_right == 1))
-        {
-            CoincEvent event;
-            if (current_on_left) {
-                event = MakeCoinc(*current_event, *pair_event);
-            } else {
-                event = MakeCoinc(*pair_event, *current_event);
-            }
-            output_events.push_back(event);
-        } else if ((events_in_time_window_left == 0) ||
-                   (events_in_time_window_right == 0))
-        {
-            dropped_single += events_in_time_window_left +
-                              events_in_time_window_right;
-        } else {
-            dropped_multiple += events_in_time_window_left +
-                                events_in_time_window_right;
-        }
-        // 4. If there is more than one event, drop all events, go to 1.
     }
 
     if (verbose) {
