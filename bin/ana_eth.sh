@@ -148,6 +148,11 @@ function usage()
     echo "       -mi: individually merge and coincidence sort egated files"
     echo "       -chi: chain together individually merged files"
     echo "       -ri: individually coincidence merge/chain/time cal random coinc files"
+    echo "       -mn: invdividually coinc sort using updated method"
+    echo "       -tn: do time calibration for the new coinc sort method"
+    echo "       -ptmn: invdividually coinc sort using updated method again after time cal"
+    echo "       -rn: generate randoms using new coinc sort delayed window and time cal"
+    echo "       -n: do -mn -tn -ptmn -rn"
     echo "       -i: do -pi -mi -chi"
     echo "       -ai: do -d -g -cal -i -t"
     echo "       -h: display this help"
@@ -182,6 +187,17 @@ doindividualprocess=0
 setupfolders=0
 dopedestals=0
 
+do_merge_handle_multiples=0
+do_new_time_cal=0
+do_post_timecal_merge=0
+do_chain_individual_randoms=0
+do_post_timecal_randoms=0
+
+if [ $# -eq 0 ]; then
+    usage
+    exit 0
+fi
+
 while [ $# -gt 0 ];
 do
     case "$1" in
@@ -206,10 +222,17 @@ do
 	-a) dodecode=1;dosegmentation=1;docalccalibrate=1;docalibrate=1;dosort=1;domerge=1;dotimecal=1;setupfolders=1;dopedestals=1;;
     -u) docalccalibrate=1;docalibrate=1;dosort=1;;
     -l) docalibrate=1;dosort=1;domerge=1;dotimecal=1;;
+    -mn) do_merge_handle_multiples=1;doindividualchain=1;;
+    -tn) do_new_time_cal=1;;
+    -ptmn) do_post_timecal_merge=1;doindividualchain=1;;
+    -rn) do_post_timecal_randoms=1;do_chain_individual_randoms=1;;
+    -n) do_merge_handle_multiples=1;doindividualchain=1;do_new_time_cal=1;do_post_timecal_merge=1;doindividualchain=1;do_post_timecal_randoms=1;do_chain_individual_randoms=1;;
 	-h) usage ; exit; break;;
 	-C) CORES=$2;shift;;
 	-el) energy_low=$2;shift;;
 	-eh) energy_high=$2;shift;;
+    -tt) trigger_threshold=$2;shift;;
+    -dt) double_trigger_threshold=$2;shift;;
 	-dgcal) dodecode=1;dosegmentation=1;docalccalibrate=1;setupfolders=1;dopedestals=1;;
 	*) usage; break;;
     esac
@@ -529,30 +552,230 @@ fi
 #############################################################################################################
 
 if [[ $doindividualmerge -eq 1 ]]; then
-    for k in Left; do
-        cd Left
-        KK=${k:0:1}
-        BASE=`ls DAQ*${KK}0*root | head -n 1 | cut -d ${KK} -f 1`${KK}
-        ls -tr DAQ*${KK}*cal.sort.egate.root > ../calfiles
-        cd ..
+    cd Left
+    ls -tr DAQ*L*cal.sort.egate.root > ../calfiles
+    cd ..
 
-        for daq_file in `cat calfiles`; do
-            while [ ${#pids[@]} -ge $CORES ]; do
-                waitsome 1
-            done
-            right_file=./Right/`echo $daq_file | sed 's/L0/R0/g'`
-            if [ -e $right_file ]; then
-                output_file=`echo $daq_file | sed 's/_L0//g'`
-
-                cmd="merge_coinc -fl ./Left/$daq_file -fr $right_file -of $output_file &> $output_file.merge_coinc.out &"
-                echo $cmd
-                eval $cmd
-                notify $? $cmd
-                pids+=($!);
-            fi
+    for daq_file in `cat calfiles`; do
+        while [ ${#pids[@]} -ge $CORES ]; do
+            waitsome 1
         done
+        right_file=./Right/`echo $daq_file | sed 's/L0/R0/g'`
+        if [ -e $right_file ]; then
+            output_file=`echo $daq_file | sed 's/_L0//g'`
+
+            cmd="merge_coinc -fl ./Left/$daq_file -fr $right_file -of ./merged/$output_file &> ./merged/$output_file.merge_coinc.out &"
+            echo $cmd
+            eval $cmd
+            notify $? $cmd
+            pids+=($!);
+        fi
     done
+    waitall
 fi
+
+#############################################################################################################
+# This does a coincidence sorting method that correctly handles multiple events
+# by rejecting all events within the window if multiple are detected.  Events
+# are merged with a fine timestamp difference of +/-200ns.  There is no time
+# correction applied on the events at this time.  All of the files are put into
+# the "merged" folder.
+if [[ $do_merge_handle_multiples -eq 1 ]]; then
+    cd Left
+    ls -tr DAQ*L*cal.sort.egate.root > ../calfiles
+    cd ..
+
+    mkfolder merged
+
+    for daq_file in `cat calfiles`; do
+        while [ ${#pids[@]} -ge $CORES ]; do
+            waitsome 1
+        done
+        right_file=./Right/`echo $daq_file | sed 's/L0/R0/g'`
+        if [ -e $right_file ]; then
+            output_file=`echo $daq_file | sed 's/_L0//g'`
+
+            cmd="coinc_sort -v -t 200 -l ./Left/$daq_file -r $right_file \
+                 -o ./merged/$output_file &> ./merged/$output_file.coinc_sort.out &"
+            echo $cmd
+            eval $cmd
+            notify $? $cmd
+            pids+=($!);
+        fi
+    done
+    waitall
+fi
+
+#############################################################################################################
+# Merges together all of the coincidence sorted events from either
+# do_merge_handle_multiples or doindividualmerge.
+if [[ $doindividualchain -eq 1 ]]; then
+    cd Left
+    BASE=`ls DAQ*L0*root | head -n 1 | cut -d L -f 1`
+    cd ../
+    ls -tr ./merged/DAQ_Data_*.cal.sort.egate.root > mergedfiles
+
+    cmd="chain_list -v -f mergedfiles -of ${BASE}all.merged.root -c merged &> ${BASE}all.merged.root.chain_list.out"
+    echo $cmd
+    eval $cmd
+    check $? $cmd
+fi
+
+#############################################################################################################
+# A new method of doing timing calibration based on experiments done on both the
+# 2015-10-27 uniform FOV dataset as well as the 2015-05-19 capillary tube
+# dataset.  This uses a feature added to the timing calibrations of being able
+# to read in and write out a per-crystal calibration, without creating a new
+# root file.  Printing out the postcript files for the individual apd or crystal
+# fits within each program is disabled, though the time resolution curve is
+# plotted after all the iterations at the apd, crystal, and energy dependence
+# level are completed.  The timing calibrations are saved to
+# ${BASE}.crystal_cal.txt and ${BASE}.crystal_edep_cal.txt.
+if [[ $do_new_time_cal -eq 1 ]]; then
+    BASE=$(ls DAQ*all.merged.root | cut -d _ -f 1-3)
+
+    input_file="${BASE}_all.merged.root"
+    crystal_cal_file="${BASE}.crystal_cal.txt"
+    crystal_edep_cal_file="${BASE}.crystal_edep_cal.txt"
+
+    cmd="cal_apd_offset -f $input_file -ft 100 -n -dp -wcal $crystal_cal_file &> $input_file.cal_apd_offset.0.out"
+    echo $cmd
+    eval $cmd
+    check $? $cmd
+
+    cmd="cal_apd_offset -f $input_file -ft 100 -n -dp -rcal $crystal_cal_file -wcal $crystal_cal_file &> $input_file.cal_apd_offset.1.out"
+    echo $cmd
+    eval $cmd
+    check $? $cmd
+
+    cmd="cal_apd_offset -f $input_file -ft 100 -n -pto -rcal $crystal_cal_file -wcal $crystal_cal_file &> $input_file.cal_apd_offset.2.out"
+    echo $cmd
+    eval $cmd
+    check $? $cmd
+
+    cmd="cal_crystal_offset2 -f $input_file -ft 100 -n -dp -rcal $crystal_cal_file -wcal $crystal_cal_file &> $input_file.cal_crystal_offset2.0.out"
+    echo $cmd
+    eval $cmd
+    check $? $cmd
+
+    cmd="cal_crystal_offset2 -f $input_file -ft 100 -n -dp -rcal $crystal_cal_file -wcal $crystal_cal_file &> $input_file.cal_crystal_offset2.1.out"
+    echo $cmd
+    eval $cmd
+    check $? $cmd
+
+    cmd="cal_crystal_offset2 -f $input_file -ft 100 -n -pto -rcal $crystal_cal_file -wcal $crystal_cal_file &> $input_file.cal_crystal_offset2.1.out"
+    echo $cmd
+    eval $cmd
+    check $? $cmd
+
+    cmd="cal_edep -f $input_file -ft 100 -pto -rcal $crystal_cal_file -wedcal $crystal_edep_cal_file &> $input_file.cal_edep.out"
+    echo $cmd
+    eval $cmd
+    check $? $cmd
+fi
+
+#############################################################################################################
+# This uses the timing calibrations saved to ${BASE}.crystal_cal.txt and
+# ${BASE}.crystal_edep_cal.txt in do_new_time_cal to redo the coincidence
+# sorting so the fewer multiples, and more randoms can be rejected.  Reiterating
+# on the timing calibration after doing this coincidence sorting didn't show a
+# significant effect on either the 2015-10-27 uniform FOV dataset nor the
+# 2015-05-19 capillary tube dataset.  All of the files are put into the "merged"
+# folder overwriting the old merged files.
+if [[ $do_post_timecal_merge -eq 1 ]]; then
+    BASE=`ls DAQ*all.merged.root | cut -d _ -f 1-3`
+    crystal_cal_file="${BASE}.crystal_cal.txt"
+    crystal_edep_cal_file="${BASE}.crystal_edep_cal.txt"
+    cd Left
+    ls -tr DAQ*L*cal.sort.egate.root > ../calfiles
+    cd ..
+
+    mkfolder merged
+
+    for daq_file in `cat calfiles`; do
+        while [ ${#pids[@]} -ge $CORES ]; do
+            waitsome 1
+        done
+        right_file=./Right/`echo $daq_file | sed 's/L0/R0/g'`
+        if [ -e $right_file ]; then
+            output_file=`echo $daq_file | sed 's/_L0//g'`
+            cmd="coinc_sort -v -t 50 -rcal $crystal_cal_file -redcal $crystal_edep_cal_file \
+                 -l ./Left/$daq_file -r $right_file -o ./merged/$output_file &> \
+                 ./merged/$output_file.coinc_sort.out &"
+            echo $cmd
+            eval $cmd
+            notify $? $cmd
+            pids+=($!);
+        fi
+    done
+    waitall
+fi
+
+#############################################################################################################
+# Merges together all of the coincidence sorted events from
+# do_post_timecal_merge
+if [[ $doindividualchain -eq 1 ]]; then
+    cd Left
+    BASE=`ls DAQ*L0*root | head -n 1 | cut -d L -f 1`
+    cd ../
+    ls -tr ./merged/DAQ_Data_*.cal.sort.egate.root > mergedfiles
+
+    cmd="chain_list -v -f mergedfiles -of ${BASE}all.merged.root -c merged &> ${BASE}all.merged.root.chain_list.out"
+    echo $cmd
+    eval $cmd
+    check $? $cmd
+fi
+
+#############################################################################################################
+# Uses the time calibration created in do_new_time_cal to a delayed window
+# randoms estimate using coinc_sort.  Currently this creates multiple delayed
+# windows at 200ns steps from 2000ns to 6000ns delays.  This was shown to have
+# an almost perfectly uniform fine timestamp distribution for the 2015-10-27
+# uniform FOV dataset.  All of the files are put into the "randoms" folder.
+if [[ $do_post_timecal_randoms -eq 1 ]]; then
+    BASE=`ls DAQ*all.merged.root | cut -d _ -f 1-3`
+    crystal_cal_file="${BASE}.crystal_cal.txt"
+    crystal_edep_cal_file="${BASE}.crystal_edep_cal.txt"
+    cd Left
+    ls -tr DAQ*L*cal.sort.egate.root > ../calfiles
+    cd ../
+
+    mkfolder randoms
+    delays=`seq 2000 200 6000`
+    for daq_file in `cat calfiles`; do
+        while [ ${#pids[@]} -ge $CORES ]; do
+            waitsome 1
+        done
+        right_file=./Right/`echo $daq_file | sed 's/L0/R0/g'`
+        if [ -e $right_file ]; then
+            output_file=$(echo $daq_file | sed 's/_L0/_rand/g')
+            cmd="coinc_sort -v -t 50 -d \"$delays\" -rcal $crystal_cal_file -redcal $crystal_edep_cal_file \
+                 -l ./Left/$daq_file -r $right_file -o ./randoms/$output_file &> \
+                 ./randoms/$output_file.coinc_sort.out &"
+            echo $cmd
+            eval $cmd
+            notify $? $cmd
+            pids+=($!);
+        fi
+    done
+    waitall
+fi
+
+#############################################################################################################
+# Merges together all of the delayed window coincidence sorted events from
+# do_post_timecal_merge
+if [[ $do_post_timecal_randoms -eq 1 ]]; then
+    cd Left
+    BASE=`ls DAQ*L0*root | head -n 1 | cut -d L -f 1`
+    cd ../
+    ls -tr ./randoms/DAQ_Data_*_rand_*.cal.sort.egate.root > random_files
+
+    cmd="chain_list -v -f random_files -of ${BASE}random.root -c merged &> ${BASE}random.root.chain_list.out"
+    echo $cmd
+    eval $cmd
+    check $? $cmd
+fi
+
 
 #############################################################################################################
 # This part does random coincidences
@@ -583,6 +806,7 @@ if [[ $doindividualrandmerge -eq 1 ]]; then
                 pids+=($!);
             fi
         done
+        waitall
     done
 
     # Individualchainportion for randoms
@@ -625,20 +849,6 @@ if [[ $doindividualrandmerge -eq 1 ]]; then
     eval $cmd
 
     cd ..
-fi
-
-#############################################################################################################
-
-if [[ $doindividualchain -eq 1 ]]; then
-    cd Left
-    BASE=`ls DAQ*L0*root | head -n 1 | cut -d L -f 1`
-    cd ../
-    ls -tr DAQ_Data_*.cal.sort.egate.root > mergedfiles
-
-    cmd="chain_list -v -f mergedfiles -of ${BASE}all.merged.root -c merged &> ${BASE}all.merged.root.chain_list.out"
-    echo $cmd
-    eval $cmd
-    check $? $cmd
 fi
 
 #############################################################################################################
@@ -768,6 +978,8 @@ if [[ $dotimecal -eq 1 ]]; then
     eval $cmd
     check $? $cmd
 fi
+
+
 #############################################################################################################
 ## ONLY STEP TO DO:  format_recon -f ${BASE}_all.merged.ana.apdoffcal.crystaloffcal.edepcal.crystaloffcal.root -p 64.262 -t 20
 ## -p :: paneldistance in mm
