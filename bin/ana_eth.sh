@@ -155,6 +155,7 @@ function usage()
     echo "       -n: do -mn -tn -ptmn -rn"
     echo "       -i: do -pi -mi -chi"
     echo "       -ai: do -d -g -cal -i -t"
+    echo "       -an: do -d -g -cal -n"
     echo "       -h: display this help"
     echo "       -C [] : number of cores"
     echo "       -el [] : set the low energy window, default $energy_low"
@@ -227,6 +228,7 @@ do
     -ptmn) do_post_timecal_merge=1;doindividualchain=1;;
     -rn) do_post_timecal_randoms=1;do_chain_individual_randoms=1;;
     -n) do_merge_handle_multiples=1;doindividualchain=1;do_new_time_cal=1;do_post_timecal_merge=1;doindividualchain=1;do_post_timecal_randoms=1;do_chain_individual_randoms=1;;
+    -an) dodecode=1; setupfolders=1; dopedestals=1; dosegmentation=1; docalccalibrate=1; doindividualprocess=1; do_merge_handle_multiples=1; doindividualchain=1; do_new_time_cal=1; do_post_timecal_merge=1; doindividualchain=1;do_post_timecal_randoms=1;do_chain_individual_randoms=1;;
 	-h) usage ; exit; break;;
 	-C) CORES=$2;shift;;
 	-el) energy_low=$2;shift;;
