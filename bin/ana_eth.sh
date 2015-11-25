@@ -701,7 +701,7 @@ if [[ $do_post_timecal_merge -eq 1 ]]; then
         right_file=./Right/`echo $daq_file | sed 's/L0/R0/g'`
         if [ -e $right_file ]; then
             output_file=`echo $daq_file | sed 's/_L0//g'`
-            cmd="coinc_sort -v -t 50 -rcal $crystal_cal_file -redcal $crystal_edep_cal_file \
+            cmd="coinc_sort -v -t 25 -rcal $crystal_cal_file -redcal $crystal_edep_cal_file \
                  -l ./Left/$daq_file -r $right_file -o ./merged/$output_file &> \
                  ./merged/$output_file.coinc_sort.out &"
             echo $cmd
@@ -751,7 +751,7 @@ if [[ $do_post_timecal_randoms -eq 1 ]]; then
         right_file=./Right/`echo $daq_file | sed 's/L0/R0/g'`
         if [ -e $right_file ]; then
             output_file=$(echo $daq_file | sed 's/_L0/_rand/g')
-            cmd="coinc_sort -v -t 50 -d \"$delays\" -rcal $crystal_cal_file -redcal $crystal_edep_cal_file \
+            cmd="coinc_sort -v -t 25 -d \"$delays\" -rcal $crystal_cal_file -redcal $crystal_edep_cal_file \
                  -l ./Left/$daq_file -r $right_file -o ./randoms/$output_file &> \
                  ./randoms/$output_file.coinc_sort.out &"
             echo $cmd
