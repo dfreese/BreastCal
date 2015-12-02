@@ -162,6 +162,7 @@ function usage()
     echo "       -eh [] : set the high energy window, default $energy_high"
     echo "       -tt [] : set the trigger threshold, default $trigger_threshold"
     echo "       -dt [] : set the double trigger threshold, default $double_trigger_threshold"
+    echo "       -twpc [] : set the post time calibration time window, default $post_tcal_time_window"
 }
 
 ##############################################################################################################
@@ -171,6 +172,7 @@ energy_low=400
 energy_high=700
 trigger_threshold=-700
 double_trigger_threshold=-700
+post_tcal_time_window=25
 STARTTIME=`date +%s`
 verbose=0
 dodecode=0
@@ -235,6 +237,7 @@ do
 	-eh) energy_high=$2;shift;;
     -tt) trigger_threshold=$2;shift;;
     -dt) double_trigger_threshold=$2;shift;;
+    -twpc) post_tcal_time_window=$2;shift;;
 	-dgcal) dodecode=1;dosegmentation=1;docalccalibrate=1;setupfolders=1;dopedestals=1;;
 	*) usage; break;;
     esac
@@ -242,7 +245,6 @@ do
 done;
 
 echo "NUMBER OF CORES:: " $CORES
-
 
 ################################################################################
 if [[ $setupfolders -eq 1 ]]; then
@@ -701,7 +703,7 @@ if [[ $do_post_timecal_merge -eq 1 ]]; then
         right_file=./Right/`echo $daq_file | sed 's/L0/R0/g'`
         if [ -e $right_file ]; then
             output_file=`echo $daq_file | sed 's/_L0//g'`
-            cmd="coinc_sort -v -t 25 -rcal $crystal_cal_file -redcal $crystal_edep_cal_file \
+            cmd="coinc_sort -v -t $post_tcal_time_window -rcal $crystal_cal_file -redcal $crystal_edep_cal_file \
                  -l ./Left/$daq_file -r $right_file -o ./merged/$output_file &> \
                  ./merged/$output_file.coinc_sort.out &"
             echo $cmd
@@ -751,7 +753,7 @@ if [[ $do_post_timecal_randoms -eq 1 ]]; then
         right_file=./Right/`echo $daq_file | sed 's/L0/R0/g'`
         if [ -e $right_file ]; then
             output_file=$(echo $daq_file | sed 's/_L0/_rand/g')
-            cmd="coinc_sort -v -t 25 -d \"$delays\" -rcal $crystal_cal_file -redcal $crystal_edep_cal_file \
+            cmd="coinc_sort -v -t $post_tcal_time_window -d \"$delays\" -rcal $crystal_cal_file -redcal $crystal_edep_cal_file \
                  -l ./Left/$daq_file -r $right_file -o ./randoms/$output_file &> \
                  ./randoms/$output_file.coinc_sort.out &"
             echo $cmd
