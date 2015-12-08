@@ -617,7 +617,7 @@ if [[ $doindividualchain -eq 1 ]]; then
     cd Left
     BASE=`ls DAQ*L0*root | head -n 1 | cut -d L -f 1`
     cd ../
-    ls -tr ./merged/DAQ_Data_*.cal.sort.egate.root > mergedfiles
+    ls -tr $PWD/merged/DAQ_Data_*.cal.sort.egate.root > mergedfiles
 
     cmd="chain_list -v -f mergedfiles -of ${BASE}all.merged.root -c merged &> ${BASE}all.merged.root.chain_list.out"
     echo $cmd
@@ -722,7 +722,7 @@ if [[ $doindividualchain -eq 1 ]]; then
     cd Left
     BASE=`ls DAQ*L0*root | head -n 1 | cut -d L -f 1`
     cd ../
-    ls -tr ./merged/DAQ_Data_*.cal.sort.egate.root > mergedfiles
+    ls -tr $PWD/merged/DAQ_Data_*.cal.sort.egate.root > mergedfiles
 
     cmd="chain_list -v -f mergedfiles -of ${BASE}all.merged.root -c merged &> ${BASE}all.merged.root.chain_list.out"
     echo $cmd
