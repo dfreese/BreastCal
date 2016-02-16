@@ -162,7 +162,10 @@ function usage()
     echo "       -eh [] : set the high energy window, default $energy_high"
     echo "       -tt [] : set the trigger threshold, default $trigger_threshold"
     echo "       -dt [] : set the double trigger threshold, default $double_trigger_threshold"
+    echo "       -twi [] : initial time window, default $initial_time_window"
     echo "       -twpc [] : set the post time calibration time window, default $post_tcal_time_window"
+    echo "       -do: decode only, don't setup left and right folders or do pedestals"
+    echo "       -sfo: setup folders only"
 }
 
 ##############################################################################################################
@@ -172,6 +175,7 @@ energy_low=400
 energy_high=700
 trigger_threshold=-700
 double_trigger_threshold=-700
+initial_time_window=100
 post_tcal_time_window=25
 STARTTIME=`date +%s`
 verbose=0
@@ -205,6 +209,8 @@ while [ $# -gt 0 ];
 do
     case "$1" in
 	-v) verbose=1;;
+    -sfo) setupfolders=1;;
+    -do) dodecode=1;;
 	-d) dodecode=1; setupfolders=1; dopedestals=1;;
     -g) dosegmentation=1;;
     -cal) docalccalibrate=1;;
@@ -237,6 +243,7 @@ do
 	-eh) energy_high=$2;shift;;
     -tt) trigger_threshold=$2;shift;;
     -dt) double_trigger_threshold=$2;shift;;
+    -twi) initial_time_window=$2;shift;;
     -twpc) post_tcal_time_window=$2;shift;;
 	-dgcal) dodecode=1;dosegmentation=1;docalccalibrate=1;setupfolders=1;dopedestals=1;;
 	*) usage; break;;
@@ -324,7 +331,9 @@ if [[ $dodecode -eq 1 ]]; then
             while [ ${#pids[@]} -ge $CORES ]; do
                 waitsome 1
             done
-            cmd="decoder -pedfile $pedfile -f $file -uv -t $trigger_threshold -n $double_trigger_threshold -cmap ../DAQ_Board_Map.nfo -pid $panel_id &> $file.decode.out &"
+            cmd="decoder -pedfile $pedfile -f $file -uv -t $trigger_threshold \
+                    -n $double_trigger_threshold -cmap ../DAQ_Board_Map.nfo \
+                    -pid $panel_id &> $file.decode.out &"
             echo $cmd
             eval $cmd
             notify $? $cmd
@@ -599,7 +608,7 @@ if [[ $do_merge_handle_multiples -eq 1 ]]; then
         if [ -e $right_file ]; then
             output_file=`echo $daq_file | sed 's/_L0//g'`
 
-            cmd="coinc_sort -v -t 200 -l ./Left/$daq_file -r $right_file \
+            cmd="coinc_sort -v -t $initial_time_window -l ./Left/$daq_file -r $right_file \
                  -o ./merged/$output_file &> ./merged/$output_file.coinc_sort.out &"
             echo $cmd
             eval $cmd
@@ -642,37 +651,37 @@ if [[ $do_new_time_cal -eq 1 ]]; then
     crystal_cal_file="${BASE}.crystal_cal.txt"
     crystal_edep_cal_file="${BASE}.crystal_edep_cal.txt"
 
-    cmd="cal_apd_offset -f $input_file -ft 100 -n -dp -wcal $crystal_cal_file &> $input_file.cal_apd_offset.0.out"
+    cmd="cal_apd_offset -f $input_file -ft $initial_time_window -n -dp -wcal $crystal_cal_file &> $input_file.cal_apd_offset.0.out"
     echo $cmd
     eval $cmd
     check $? $cmd
 
-    cmd="cal_apd_offset -f $input_file -ft 100 -n -dp -rcal $crystal_cal_file -wcal $crystal_cal_file &> $input_file.cal_apd_offset.1.out"
+    cmd="cal_apd_offset -f $input_file -ft $initial_time_window -n -dp -rcal $crystal_cal_file -wcal $crystal_cal_file &> $input_file.cal_apd_offset.1.out"
     echo $cmd
     eval $cmd
     check $? $cmd
 
-    cmd="cal_apd_offset -f $input_file -ft 100 -n -pto -rcal $crystal_cal_file -wcal $crystal_cal_file &> $input_file.cal_apd_offset.2.out"
+    cmd="cal_apd_offset -f $input_file -ft $initial_time_window -n -pto -rcal $crystal_cal_file -wcal $crystal_cal_file &> $input_file.cal_apd_offset.2.out"
     echo $cmd
     eval $cmd
     check $? $cmd
 
-    cmd="cal_crystal_offset2 -f $input_file -ft 100 -n -dp -rcal $crystal_cal_file -wcal $crystal_cal_file &> $input_file.cal_crystal_offset2.0.out"
+    cmd="cal_crystal_offset2 -f $input_file -ft $initial_time_window -n -dp -rcal $crystal_cal_file -wcal $crystal_cal_file &> $input_file.cal_crystal_offset2.0.out"
     echo $cmd
     eval $cmd
     check $? $cmd
 
-    cmd="cal_crystal_offset2 -f $input_file -ft 100 -n -dp -rcal $crystal_cal_file -wcal $crystal_cal_file &> $input_file.cal_crystal_offset2.1.out"
+    cmd="cal_crystal_offset2 -f $input_file -ft $initial_time_window -n -dp -rcal $crystal_cal_file -wcal $crystal_cal_file &> $input_file.cal_crystal_offset2.1.out"
     echo $cmd
     eval $cmd
     check $? $cmd
 
-    cmd="cal_crystal_offset2 -f $input_file -ft 100 -n -pto -rcal $crystal_cal_file -wcal $crystal_cal_file &> $input_file.cal_crystal_offset2.1.out"
+    cmd="cal_crystal_offset2 -f $input_file -ft $initial_time_window -n -pto -rcal $crystal_cal_file -wcal $crystal_cal_file &> $input_file.cal_crystal_offset2.1.out"
     echo $cmd
     eval $cmd
     check $? $cmd
 
-    cmd="cal_edep -f $input_file -ft 100 -pto -rcal $crystal_cal_file -wedcal $crystal_edep_cal_file &> $input_file.cal_edep.out"
+    cmd="cal_edep -f $input_file -ft $initial_time_window -pto -rcal $crystal_cal_file -wedcal $crystal_edep_cal_file &> $input_file.cal_edep.out"
     echo $cmd
     eval $cmd
     check $? $cmd
