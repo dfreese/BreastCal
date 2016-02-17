@@ -42,7 +42,7 @@ int main(int argc, char ** argv) {
     int uv_threshold = -1000;
 
     bool verbose = false;
-    string filename;
+    vector<string> filenames;
     string filename_config;
     string filename_output;
     string filename_ped;
@@ -71,7 +71,7 @@ int main(int argc, char ** argv) {
             }
         }
         if (argument == "-f") {
-            filename = following_argument;
+            filenames.push_back(following_argument);
         }
         if (argument == "-c") {
             filename_config = following_argument;
@@ -85,7 +85,7 @@ int main(int argc, char ** argv) {
     }
 
     if (verbose) {
-        cout << "filename:        " << filename << endl;
+        cout << "filenames:       " << Util::vec2String(filenames) << endl;
         cout << "filename_ped:    " << filename_ped << endl;
         cout << "filename_output: " << filename_output << endl;
         cout << "filename_config: " << filename_config << endl;
@@ -124,41 +124,45 @@ int main(int argc, char ** argv) {
     config.resizeArrayPCDRMA<int>(uv_entries, 0);
 
     deque<char> file_data;
-    int read_status = readFileIntoDeque(filename, file_data);
-    if (verbose) {
-        cout << "read_status: " << read_status << endl;
-    }
-    if (read_status < 0) {
-        cerr << "Unable to load: " << filename << endl;
-        return(-3);
-    }
-    vector<EventRaw> raw_events;
     ProcessInfo info;
-
-    ProcessParams::DecodeBuffer(file_data, raw_events, info, &config);
-    ProcessParams::ClearProcessedData(file_data, info);
-    for (size_t ii = 0; ii < raw_events.size(); ii++) {
-        EventRaw & event = raw_events[ii];
-        int apd = 0;
-        float u = event.u0h;
-        float v = event.v0h;
-        if (event.com1h > event.com0h) {
-            apd = 1;
-            u = event.u1h;
-            v = event.v1h;
+    for (size_t ii = 0; ii < filenames.size(); ii++) {
+        string & filename = filenames[ii];
+        int read_status = readFileIntoDeque(filename, file_data);
+        if (verbose) {
+            cout << "read_status: " << read_status << endl;
         }
+        if (read_status < 0) {
+            cerr << "Unable to load: " << filename << endl;
+            return(-3);
+        }
+        vector<EventRaw> raw_events;
 
-        float & u_center = u_centers[event.panel][event.cartridge]
-                [event.daq][event.rena][event.module][apd];
-        float & v_center = v_centers[event.panel][event.cartridge]
-                [event.daq][event.rena][event.module][apd];
-        int & entries = uv_entries[event.panel][event.cartridge]
-                [event.daq][event.rena][event.module][apd];
+        ProcessParams::DecodeBuffer(file_data, raw_events, info, &config);
+        ProcessParams::ClearProcessedData(file_data, info);
+        for (size_t ii = 0; ii < raw_events.size(); ii++) {
+            EventRaw & event = raw_events[ii];
+            int apd = 0;
+            float u = event.u0h;
+            float v = event.v0h;
+            if (event.com1h > event.com0h) {
+                apd = 1;
+                u = event.u1h;
+                v = event.v1h;
+            }
 
-        entries++;
-        u_center += (u - u_center) / entries;
-        v_center += (v - v_center) / entries;
+            float & u_center = u_centers[event.panel][event.cartridge]
+                    [event.daq][event.rena][event.module][apd];
+            float & v_center = v_centers[event.panel][event.cartridge]
+                    [event.daq][event.rena][event.module][apd];
+            int & entries = uv_entries[event.panel][event.cartridge]
+                    [event.daq][event.rena][event.module][apd];
+
+            entries++;
+            u_center += (u - u_center) / entries;
+            v_center += (v - v_center) / entries;
+        }
     }
+
 
     for (int p = 0; p < config.panels_per_system; p++) {
         for (int c = 0; c < config.cartridges_per_panel; c++) {
@@ -176,7 +180,16 @@ int main(int argc, char ** argv) {
         }
     }
 
-    config.writeUVCenters(filename_output);
+    int write_status = config.writeUVCenters(filename_output);
+    if (verbose) {
+        cout << "write_status: " << write_status << endl;
+    }
+    if (write_status < 0) {
+        cerr << "SystemConfiguration.writeUVCenters() failed with status: "
+             << write_status
+             << endl;
+        return(-4);
+    }
 
     if (verbose) {
         cout << info << endl;
