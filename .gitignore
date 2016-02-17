@@ -17,3 +17,6 @@ PAR/*par
 *toc
 *aux
 DOC/*log
+
+qmake/Makefile
+qmake/*/Makefile
