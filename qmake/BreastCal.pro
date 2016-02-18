@@ -1,3 +1,4 @@
 TEMPLATE = subdirs
 SUBDIRS = \
-    calc_uv
+    calc_uv \
+    pedestals
