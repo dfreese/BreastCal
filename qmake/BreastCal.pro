@@ -1,4 +1,5 @@
 TEMPLATE = subdirs
 SUBDIRS = \
     calc_uv \
-    pedestals
+    pedestals \
+    fill_energy
