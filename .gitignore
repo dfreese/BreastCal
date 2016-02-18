@@ -20,3 +20,4 @@ DOC/*log
 
 qmake/Makefile
 qmake/*/Makefile
+*.pro.user
