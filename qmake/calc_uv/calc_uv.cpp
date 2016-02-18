@@ -30,7 +30,9 @@ int readFileIntoDeque(const string & filename, deque<T> & container) {
 }
 
 void usage() {
-
+    cout << "uv_calc [-vh] -c [config] -p [ped file] -f [filename] -f ...\n"
+         << "  -o [name] : output filename\n"
+         << endl;
 }
 
 int main(int argc, char ** argv) {

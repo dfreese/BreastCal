@@ -31,7 +31,9 @@ int readFileIntoDeque(const string & filename, deque<T> & container) {
 }
 
 void usage() {
-
+    cout << "pedestals [-vh] -c [config] -f [filename] -f ...\n"
+         << "  -o [name] : output filename\n"
+         << endl;
 }
 
 int main(int argc, char ** argv) {
