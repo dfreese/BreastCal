@@ -11,6 +11,7 @@
 #include <miil/util.h>
 #include <TH1F.h>
 #include <TSpectrum.h>
+#include <TError.h>
 
 using namespace std;
 
@@ -35,6 +36,7 @@ float GetApdPhotopeak(
         float pp_up = 2800,
         int width = 12)
 {
+    gErrorIgnoreLevel = 5001;
     TSpectrum sp;
     do {
         float thresholds[7] = {0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.05};
