@@ -84,6 +84,20 @@ int main(int argc, char ** argv) {
         }
     }
 
+    if (filenames.empty()) {
+        cerr << "No filenames specified" << endl;
+        return(-4);
+    }
+
+    if (filename_output == "") {
+        if (filenames.size() == 1) {
+            filename_output = filenames[0] + ".uv";
+        } else {
+            cerr << "Output file not specified" << endl;
+            return(-3);
+        }
+    }
+
     if (verbose) {
         cout << "filenames:       " << Util::vec2String(filenames) << endl;
         cout << "filename_ped:    " << filename_ped << endl;
