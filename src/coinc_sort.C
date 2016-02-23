@@ -248,7 +248,9 @@ int main(int argc, char *argv[])
 
     if (read_per_crystal_correction) {
         if (verbose) {
-            cout << "Reading Input crystal calibration file\n";
+            cout << "Reading Input crystal calibration file: "
+                 << input_crystal_cal_filename
+                 << "\n";
         }
         int cal_read_status =
                 ReadPerCrystalCal(input_crystal_cal_filename, crystal_cal);
@@ -260,10 +262,6 @@ int main(int argc, char *argv[])
         }
     }
 
-
-    if (verbose) {
-        cout << "Reading Input crystal energy calibration file\n";
-    }
     float crystal_edep_cal[SYSTEM_PANELS]
             [CARTRIDGES_PER_PANEL]
             [FINS_PER_CARTRIDGE]
@@ -273,6 +271,11 @@ int main(int argc, char *argv[])
             [2] = {{{{{{{0}}}}}}};
 
     if (read_per_crystal_energy_correction) {
+        if (verbose) {
+            cout << "Reading Input crystal energy calibration file: "
+                 << input_per_crystal_energy_cal_filename
+                 << "\n";
+        }
         int cal_read_status(ReadPerCrystalEnergyCal(
                 input_per_crystal_energy_cal_filename, crystal_edep_cal));
         if (cal_read_status < 0) {
@@ -283,13 +286,8 @@ int main(int argc, char *argv[])
         }
     }
 
-
     if (verbose) {
-        cout << "Reading Left File" << endl;
-    }
-
-    if (verbose) {
-        cout << " Opening file " << filename_left << endl;
+        cout << "Reading Left File " << filename_left << endl;
     }
     TFile *file_left = new TFile(filename_left.c_str());
     if (!file_left || file_left->IsZombie()) {
@@ -341,11 +339,7 @@ int main(int argc, char *argv[])
 
 
     if (verbose) {
-        cout << "Reading Right File" << endl;
-    }
-
-    if (verbose) {
-        cout << " Opening file " << filename_right << endl;
+        cout << "Reading Right File " << filename_right << endl;
     }
     TFile * file_right = new TFile(filename_right.c_str());
     if (!file_right || file_right->IsZombie()) {
