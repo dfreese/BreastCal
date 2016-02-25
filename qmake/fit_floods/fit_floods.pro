@@ -2,6 +2,7 @@ TEMPLATE = app
 CONFIG -= qt
 CONFIG += console
 CONFIG += c++11
+CONFIG += debug
 TARGET = ../../bin/fit_floods
 QMAKE_CXXFLAGS += -std=c++0x -Wall -Wextra -pedantic
 

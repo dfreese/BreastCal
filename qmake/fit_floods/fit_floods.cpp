@@ -1237,7 +1237,7 @@ int PeakSearch(
 
     /* find mean based on projection*/
     Float_t xc,yc;
-    kmeans2d( flood, &xc, &yc);
+    kmeans2d(flood, &xc, &yc);
 
     projX = (TH1D*) flood->ProjectionX("",120,136);
     projX->SetName("projX");
@@ -1973,7 +1973,7 @@ int PeakSearch(
 
 void usage() {
     cout << "fit_floods [-vh] -c [config] -f [filename]\n"
-         << "  -o [name]    : crystal location output filename\n"
+         << "  -o [name] : crystal location output filename\n"
          << endl;
 }
 
@@ -2087,7 +2087,6 @@ int main(int argc, char ** argv) {
             }
         }
     }
-    input_file->Close();
 
 
     for (int p = 0; p < config.panels_per_system; p++) {
@@ -2095,6 +2094,9 @@ int main(int argc, char ** argv) {
             for (int f = 0; f < config.fins_per_cartridge; f++) {
                 for (int m = 0; m < config.modules_per_fin; m++) {
                     for (int a = 0; a < config.apds_per_module; a++) {
+                        if (verbose) {
+                            cout << "fitting " << floods[p][c][f][m][a]->GetName() << endl;
+                        }
                         Int_t validflag;
                         Float_t cost;
                         PeakSearch(
@@ -2107,63 +2109,18 @@ int main(int argc, char ** argv) {
         }
     }
 
+//    TFile * output_file = new TFile("test.root", "RECREATE");
+//    Int_t validflag;
+//    Float_t cost;
+//    PeakSearch(peaks[0][1][1][1][0],
+//               floods[0][1][1][1][0],
+//               0, validflag, cost, 0);
 
-//    long events_filled = 0;
-//    long events_egated = 0;
-//    if (verbose) {
-//        cout << "Filling Flood Histograms" << endl;
-//    }
-//    deque<char> file_data;
-//    ProcessInfo info;
-//    for (size_t ii = 0; ii < filenames.size(); ii++) {
-//        string & filename = filenames[ii];
-//        int read_status = readFileIntoDeque(filename, file_data);
-//        if (verbose) {
-//            cout << filename << " read with status: " << read_status << endl;
-//        }
-//        if (read_status < 0) {
-//            cerr << "Unable to load: " << filename << endl;
-//            return(-3);
-//        }
-//        vector<EventRaw> raw_events;
+//    output_file->cd();
+//    peaks[0][1][1][1][0]->Write();
 
-//        ProcessParams::DecodeBuffer(file_data, raw_events, info, &config);
-//        ProcessParams::ClearProcessedData(file_data, info);
-//        for (size_t ii = 0; ii < raw_events.size(); ii++) {
-//            EventRaw & event = raw_events[ii];
-//            int apd, module, fin;
-//            float x, y, energy;
-//            int calc_status = CalculateXYandEnergy(
-//                        event, &config, x, y, energy, apd, module, fin);
-//            if (calc_status < 0) {
-//                continue;
-//            }
+//    input_file->Close();
 
-//            TH2F * flood =
-//                    floods[event.panel][event.cartridge][fin][module][apd];
-
-//            float egate_lo =
-//                    egate_los[event.panel][event.cartridge][fin][module][apd];
-//            float egate_hi =
-//                    egate_his[event.panel][event.cartridge][fin][module][apd];
-
-//            if ((energy < egate_hi) && (energy > egate_lo)) {
-//                flood->Fill(x, y);
-//                events_filled++;
-//            } else {
-//                events_egated++;
-//            }
-//        }
-//    }
-
-//    if (verbose) {
-//        cout << info.getDecodeInfo();
-//    }
-
-//    if (verbose) {
-//        cout << "Events Used in Floods  : " << events_filled << endl;
-//        cout << "Events Rejected (egate): " << events_egated << endl;
-//    }
 
 //    if (verbose) {
 //        cout << "Writing out floods: " << filename_output << endl;
