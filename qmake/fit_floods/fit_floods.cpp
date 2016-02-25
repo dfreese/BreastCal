@@ -19,6 +19,11 @@ using namespace std;
 void usage() {
     cout << "fit_floods [-vh] -c [config] -f [filename]\n"
          << "  -o [name] : crystal location output filename\n"
+         << "  -pn [num] : specify panel number\n"
+         << "  -cn [num] : specify cartridge number\n"
+         << "  -fn [num] : specify fin number\n"
+         << "  -mn [num] : specify module number\n"
+         << "  -an [num] : specify apd number\n"
          << endl;
 }
 
@@ -32,6 +37,12 @@ int main(int argc, char ** argv) {
     string filename;
     string filename_config;
     string filename_output;
+
+    int specific_panel = -1;
+    int specific_cartridge = -1;
+    int specific_fin = -1;
+    int specific_module = -1;
+    int specific_apd = -1;
 
     // Arguments not requiring input
     for (int ix = 1; ix < argc; ix++) {
@@ -57,6 +68,38 @@ int main(int argc, char ** argv) {
         }
         if (argument == "-o") {
             filename_output = following_argument;
+        }
+        if (argument == "-pn") {
+            if (Util::StringToNumber(following_argument, specific_panel) < 0) {
+                cerr << "specific_panel number invalid" << endl;
+                return(-4);
+            }
+        }
+        if (argument == "-cn") {
+            if (Util::StringToNumber(
+                        following_argument,specific_cartridge) < 0)
+            {
+                cerr << "specific_cartridge number invalid" << endl;
+                return(-4);
+            }
+        }
+        if (argument == "-fn") {
+            if (Util::StringToNumber(following_argument, specific_fin) < 0) {
+                cerr << "specific_fin number invalid" << endl;
+                return(-4);
+            }
+        }
+        if (argument == "-mn") {
+            if (Util::StringToNumber(following_argument, specific_module) < 0) {
+                cerr << "specific_module number invalid" << endl;
+                return(-4);
+            }
+        }
+        if (argument == "-an") {
+            if (Util::StringToNumber(following_argument, specific_apd) < 0) {
+                cerr << "specific_apd number invalid" << endl;
+                return(-4);
+            }
         }
     }
 
@@ -87,6 +130,68 @@ int main(int argc, char ** argv) {
         return(-2);
     }
 
+    int first_panel = 0;
+    int last_panel = config.panels_per_system;
+    int first_cart = 0;
+    int last_cart = config.cartridges_per_panel;
+    int first_fin = 0;
+    int last_fin = config.fins_per_cartridge;
+    int first_module = 0;
+    int last_module = config.modules_per_fin;
+    int first_apd = 0;
+    int last_apd = config.apds_per_module;
+
+    if (specific_panel >=0) {
+        if (specific_panel < config.panels_per_system) {
+            first_panel = specific_panel;
+            last_panel = first_panel + 1;
+        } else {
+            cerr << "Invalid specific_panel" << endl;
+            return(-5);
+        }
+    }
+
+    if (specific_cartridge >=0) {
+        if (specific_cartridge < config.cartridges_per_panel) {
+            first_cart = specific_cartridge;
+            last_cart = first_cart + 1;
+        } else {
+            cerr << "Invalid specific_cartridge" << endl;
+            return(-5);
+        }
+    }
+
+    if (specific_fin >=0) {
+        if (specific_fin < config.fins_per_cartridge) {
+            first_fin = specific_fin;
+            last_fin = first_fin + 1;
+        } else {
+            cerr << "Invalid specific_fin" << endl;
+            return(-5);
+        }
+    }
+
+    if (specific_module >=0) {
+        if (specific_fin < config.modules_per_fin) {
+            first_module = specific_module;
+            last_module = first_module + 1;
+        } else {
+            cerr << "Invalid specific_module" << endl;
+            return(-5);
+        }
+    }
+
+    if (specific_apd >=0) {
+        if (specific_fin < config.apds_per_module) {
+            first_apd = specific_apd;
+            last_apd = first_apd + 1;
+        } else {
+            cerr << "Invalid specific_apd" << endl;
+            return(-5);
+        }
+    }
+
+
 
     if (verbose) {
         cout << "loading floods: " << filename << endl;
@@ -103,11 +208,11 @@ int main(int argc, char ** argv) {
         return(-3);
     }
 
-    for (int p = 0; p < config.panels_per_system; p++) {
-        for (int c = 0; c < config.cartridges_per_panel; c++) {
-            for (int f = 0; f < config.fins_per_cartridge; f++) {
-                for (int m = 0; m < config.modules_per_fin; m++) {
-                    for (int a = 0; a < config.apds_per_module; a++) {
+    for (int p = first_panel; p < last_panel; p++) {
+        for (int c = first_cart; c < last_cart; c++) {
+            for (int f = first_fin; f < last_fin; f++) {
+                for (int m = first_module; m < last_module; m++) {
+                    for (int a = first_apd; a < last_apd; a++) {
 
                         // Create all of the 2D flood histograms with the
                         // appropriate names.
@@ -133,15 +238,11 @@ int main(int argc, char ** argv) {
         }
     }
 
-
-    for (int p = 0; p < config.panels_per_system; p++) {
-        for (int c = 0; c < config.cartridges_per_panel; c++) {
-            for (int f = 0; f < config.fins_per_cartridge; f++) {
-                for (int m = 0; m < config.modules_per_fin; m++) {
-                    for (int a = 0; a < config.apds_per_module; a++) {
-                        if (verbose) {
-                            cout << "fitting " << floods[p][c][f][m][a]->GetName() << endl;
-                        }
+    for (int p = first_panel; p < last_panel; p++) {
+        for (int c = first_cart; c < last_cart; c++) {
+            for (int f = first_fin; f < last_fin; f++) {
+                for (int m = first_module; m < last_module; m++) {
+                    for (int a = first_apd; a < last_apd; a++) {
                         Int_t validflag;
                         Float_t cost;
                         PeakSearch(
