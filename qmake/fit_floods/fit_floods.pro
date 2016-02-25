@@ -17,4 +17,8 @@ INCLUDEPATH += $$(ROOTSYS)/include
 DEPENDPATH += $$(ROOTSYS)/include
 
 
-SOURCES += fit_floods.cpp
+SOURCES += fit_floods.cpp \
+    segmentation.cpp
+
+HEADERS += \
+    segmentation.h
