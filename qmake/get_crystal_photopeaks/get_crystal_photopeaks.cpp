@@ -10,6 +10,7 @@
 #include <miil/process/ProcessInfo.h>
 #include <miil/util.h>
 #include <TH1F.h>
+#include <TF1.h>
 #include <TSpectrum.h>
 #include <TError.h>
 #include <TFile.h>
@@ -241,14 +242,14 @@ int readFileIntoDeque(const string & filename, deque<T> & container) {
 }
 
 bool isCornerCrystal(int id) {
-    bool lookup[64] = {true,  true,  false, false, false, false, true,  true,
-                       true,  true,  false, false, false, false, true,  true,
+    bool lookup[64] = {true,  false, false, false, false, false, false, true,
                        false, false, false, false, false, false, false, false,
                        false, false, false, false, false, false, false, false,
                        false, false, false, false, false, false, false, false,
                        false, false, false, false, false, false, false, false,
-                       true,  true,  false, false, false, false, true,  true,
-                       true,  true,  false, false, false, false, true,  true};
+                       false, false, false, false, false, false, false, false,
+                       false, false, false, false, false, false, false, false,
+                       true,  false, false, false, false, false, false, true};
     if (id < 0 || id >= 64) {
         return(false);
     }
@@ -278,7 +279,7 @@ int main(int argc, char ** argv) {
     string filename_root_output;
 
 
-    int Ebins = 320;
+    int Ebins = 160;
     int E_up = 3000;
     int E_low = -200;
 
@@ -564,6 +565,69 @@ int main(int argc, char ** argv) {
                             if (crystal_cal.gain_comm == 0) {
                                 crystal_cal.gain_comm = comm_photopeak;
                             }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // TODO: Fit each peak and place it into the calibration array
+
+    float EFITMIN = 0;
+    float EFITMAX = 2400;
+    float EFITMIN_COM = 0;
+    float EFITMAX_COM = 1200;
+    float MINEHISTENTRIES = 1000;
+    if (verbose) {
+        cout << "Fitting photopeaks" << endl;
+    }
+    for (int p = 0; p < config.panels_per_system; p++) {
+        for (int c = 0; c < config.cartridges_per_panel; c++) {
+            for (int f = 0; f < config.fins_per_cartridge; f++) {
+                for (int m = 0; m < config.modules_per_fin; m++) {
+                    for (int a = 0; a < config.apds_per_module; a++) {
+                        for (int x = 0; x < config.crystals_per_apd; x++) {
+                            CrystalCalibration & crystal_cal =
+                                    config.calibration[p][c][f][m][a][x];
+                            TH1F * spat_hist = spat_hists[p][c][f][m][a][x];
+                            TH1F * comm_hist = comm_hists[p][c][f][m][a][x];
+
+                            TF1 spat_fit("spat_fit", "gaus", EFITMIN, EFITMAX);
+                            TF1 comm_fit("comm_fit", "gaus",
+                                         EFITMIN_COM, EFITMAX_COM);
+
+                            if (spat_hist->GetEntries() > MINEHISTENTRIES) {
+                                spat_hist->Fit(
+                                            &spat_fit,
+                                            "Q", "",
+                                            crystal_cal.gain_spat * 0.8,
+                                            crystal_cal.gain_spat * 1.15);
+                            }
+                            if (comm_hist->GetEntries() > MINEHISTENTRIES) {
+                                comm_hist->Fit(
+                                            &comm_fit,
+                                            "Q", "",
+                                            crystal_cal.gain_comm * 0.8,
+                                            crystal_cal.gain_comm * 1.15);
+                            }
+
+                            if (spat_fit.GetParameter(1)) {
+                               crystal_cal.eres_spat =
+                                       235.0 * spat_fit.GetParameter(2) /
+                                       spat_fit.GetParameter(1);
+                            } else {
+                                crystal_cal.eres_spat = -1;
+                            }
+
+                            if (comm_fit.GetParameter(1)) {
+                               crystal_cal.eres_comm =
+                                       235.0 * comm_fit.GetParameter(2) /
+                                       comm_fit.GetParameter(1);
+                            } else {
+                                crystal_cal.eres_comm = -1;
+                            }
+
                         }
                     }
                 }
