@@ -433,13 +433,16 @@ Int_t ClusterSize(TH2F *hist, Int_t xbin, Int_t ybin, bin *maxbin)
     return maxbin->pixels;
 }
 
-Int_t sort16(Float_t *xpeaks, Float_t *ypeaks, Double_t **sortedxpeaks, Double_t **sortedypeaks, TGraph *peaks_remapped, Float_t xcorner, Float_t ycorner,Int_t verbose)
+Int_t sort16(
+        Float_t *xpeaks,
+        Float_t *ypeaks,
+        Double_t **sortedxpeaks,
+        Double_t **sortedypeaks,
+        TGraph *peaks_remapped,
+        Float_t xcorner,
+        Float_t ycorner,
+        Int_t verbose)
 {
-    //  verbose=0;
-    if (verbose) {
-        cout << "Welcome to the peak sorting algorithm " << endl;
-    }
-
     Int_t i,j,jj,k,l;
     Int_t *map,*xmap,*ymap;
     Int_t *flagged;
@@ -451,7 +454,6 @@ Int_t sort16(Float_t *xpeaks, Float_t *ypeaks, Double_t **sortedxpeaks, Double_t
     Double_t *ycost;
     Double_t angle,length;
     Int_t curcorner=0;
-    Int_t prevpoint;
     remapped_x= new Double_t[SPEAKS];
     remapped_y= new Double_t[SPEAKS];
     rdist = new Double_t[SPEAKS];
@@ -487,9 +489,6 @@ Int_t sort16(Float_t *xpeaks, Float_t *ypeaks, Double_t **sortedxpeaks, Double_t
                 break;
             }
         }
-        if (verbose) {
-            cout << " setting point : " << curcorner << " (corner)  ( j = " << j << " ) @ " << xpeaks[map[j]] << ", " << ypeaks[map[j]]<< endl;
-        }
         remapped_x[curcorner]=xpeaks[map[j]];
         remapped_y[curcorner]=ypeaks[map[j]];
         flagged[map[j]]=1;
@@ -497,11 +496,6 @@ Int_t sort16(Float_t *xpeaks, Float_t *ypeaks, Double_t **sortedxpeaks, Double_t
         for ( l=0; l<(3-k); l++) {
             // find the lowest point in $x$ that hasn't been used ::
             j=0;
-            if (l) {
-                prevpoint=curcorner+l;
-            } else {
-                prevpoint=curcorner;
-            }
             while(j<16) {
                 //      cout << j<<endl;
                 if (flagged[xmap[j]]) {
@@ -509,11 +503,7 @@ Int_t sort16(Float_t *xpeaks, Float_t *ypeaks, Double_t **sortedxpeaks, Double_t
                 } else  {
                     // potentially good point, let's check the angle ::
                     angle=atan2(ypeaks[xmap[j]]-remapped_y[curcorner+l],xpeaks[xmap[j]]-remapped_x[curcorner+l]);
-                    if (l==0 ) {
-                        if (verbose) {
-                            cout << " Angle = " << angle << "(k= " << k << ", j= " << j << ")" <<endl;
-                        }
-                    }
+
                     if (angle < ((Double_t)4*3.141592/16.)) {
                         if (verbose) {
                             cout << " ---> Angle too small " << endl;
@@ -522,16 +512,6 @@ Int_t sort16(Float_t *xpeaks, Float_t *ypeaks, Double_t **sortedxpeaks, Double_t
                         j++;
                         continue ;
                     } else { // we have a valid angle, let's do some more checks ::
-                        if (verbose) {
-                            cout << "length line segment : " ;
-                            length= TMath::Sqrt(TMath::Power(ypeaks[xmap[j]]-remapped_y[prevpoint],2)+
-                                                TMath::Power(xpeaks[xmap[j]]-remapped_x[prevpoint],2));
-                            cout << length << " ( prevpoint = " << prevpoint << ")";
-                            cout <<  "(x,y)_prev = (" << remapped_x[prevpoint] << "," << remapped_y[prevpoint] <<"); (x,y)_cur = (";
-                            cout << xpeaks[xmap[j]] << "," << ypeaks[xmap[j]] << "); ( j = " << j << " ).";
-                            cout <<endl;
-                            cout << " l = " << l << " k = " << k << endl;
-                        }
                         if (l!=(2-k)) {
                             /* check next unused point */
                             // late night fix: sometimes the next point along $x$ is taken first ( a point with higher $x$ value ) ,
@@ -550,20 +530,13 @@ Int_t sort16(Float_t *xpeaks, Float_t *ypeaks, Double_t **sortedxpeaks, Double_t
                                 }
                             }
 
-                            if (verbose) {
-                                cout << " jj after  while loop :: " << jj << endl;
-                            }
                             if (jj>15) {
                                 return -1;    // AVDB 5-7-2014 ADDED THIS STATEMENT
                             }
                             angle=atan2(ypeaks[xmap[jj]]-ypeaks[xmap[j]],xpeaks[xmap[jj]]-xpeaks[xmap[j]]);
                             length=TMath::Sqrt(TMath::Power(ypeaks[xmap[j]]-ypeaks[xmap[jj]],2)+
                                                TMath::Power(xpeaks[xmap[j]]-xpeaks[xmap[jj]],2));
-                            if (verbose) {
-                                cout << " Angle with next point :: " ;
-                                cout << angle << ", length = " << length;
-                                cout << " (x,y)_next = (" << xpeaks[xmap[jj]] << "," << ypeaks[xmap[jj]] <<")" << endl;
-                            }
+
                             if ((length<0.075 )&&(angle < 0.)) {
                                 if (verbose) {
                                     cout << " ----> Negative, increasing j !  (cur j=" << j <<")"<<endl;
@@ -583,15 +556,6 @@ Int_t sort16(Float_t *xpeaks, Float_t *ypeaks, Double_t **sortedxpeaks, Double_t
                 } // unused point
             } // while loop
 
-            if (verbose) {
-                cout << " curcorner : " << curcorner << ", l = " << l << endl;
-            }
-
-            if (verbose) {
-                if (j<16) {
-                    cout << " setting point : " << curcorner+l+1 << " (j=" << j << "); x=" << xpeaks[xmap[j]] << ", y=" << ypeaks[xmap[j]]<<endl;
-                }
-            }
             if (j>15) {
                 j=curcorner+l+1;
             }
@@ -604,24 +568,10 @@ Int_t sort16(Float_t *xpeaks, Float_t *ypeaks, Double_t **sortedxpeaks, Double_t
         for ( l=0; l<(3-k); l++) {
             // find the lowest point in $y$ that hasn't been used ::
             j=0;
-            if (l) {
-                prevpoint=curcorner+l+(3-k);
-            } else {
-                prevpoint=curcorner;
-            }
             while(j<16) {
                 if (flagged[ymap[j]]) {
                     j++;
                 } else  {
-                    if (verbose) {
-                        cout << "length line segment : " ;
-                        length= TMath::Sqrt(TMath::Power(ypeaks[ymap[j]]-remapped_y[prevpoint],2)+
-                                            TMath::Power(xpeaks[ymap[j]]-remapped_x[prevpoint],2));
-                        cout << length << " ( prevpoint = " << prevpoint << ")";
-                        cout <<  "(x,y)_prev = (" << remapped_x[prevpoint] << "," << remapped_y[prevpoint] <<"); (x,y)_cur = (";
-                        cout << xpeaks[ymap[j]] << "," << ypeaks[ymap[j]] << ")";
-                        cout <<endl;
-                    }
                     if (l!=(2-k)) {
                         /* check next unused point */
                         // late night fix: sometimes the next point along $x$ is taken first ( a point with higher $x$ value ) ,
@@ -637,10 +587,6 @@ Int_t sort16(Float_t *xpeaks, Float_t *ypeaks, Double_t **sortedxpeaks, Double_t
                         }
                         angle=atan2(ypeaks[ymap[jj]]-ypeaks[ymap[j]],xpeaks[ymap[jj]]-xpeaks[ymap[j]]);
 
-                        if (verbose) {
-                            cout << " Angle with next point :: " ;
-                            cout << angle << " (x,y)_next = (" << xpeaks[ymap[jj]] << "," << ypeaks[ymap[jj]] <<")" << endl;
-                        }
                         if ( angle > TMath::Pi()/2. ) {
                             j++;
                         }
@@ -648,17 +594,11 @@ Int_t sort16(Float_t *xpeaks, Float_t *ypeaks, Double_t **sortedxpeaks, Double_t
                     break;
                 }
             }
-            if (verbose) {
-                cout << " setting point : " << curcorner+l+1+(3-k) << endl;
-            }
             remapped_x[curcorner+l+1+(3-k)]=xpeaks[ymap[j]];
             remapped_y[curcorner+l+1+(3-k)]=ypeaks[ymap[j]];
             flagged[ymap[j]]=1;
         }
 
-        if (verbose) {
-            cout << " Corner " << k << ": " << remapped_x[curcorner] << " "<<  remapped_y[curcorner] <<endl;
-        }
         curcorner+=(4-k)*2-1;
 
     } // loop over k
