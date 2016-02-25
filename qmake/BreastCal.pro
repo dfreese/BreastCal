@@ -5,4 +5,5 @@ SUBDIRS = \
     get_apd_photopeaks \
     fill_energy \
     fill_floods \
-    fit_floods
+    fit_floods \
+    get_crystal_photopeaks
