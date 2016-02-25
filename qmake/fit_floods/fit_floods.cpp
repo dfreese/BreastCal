@@ -172,7 +172,7 @@ int main(int argc, char ** argv) {
     }
 
     if (specific_module >=0) {
-        if (specific_fin < config.modules_per_fin) {
+        if (specific_module < config.modules_per_fin) {
             first_module = specific_module;
             last_module = first_module + 1;
         } else {
@@ -182,7 +182,7 @@ int main(int argc, char ** argv) {
     }
 
     if (specific_apd >=0) {
-        if (specific_fin < config.apds_per_module) {
+        if (specific_apd < config.apds_per_module) {
             first_apd = specific_apd;
             last_apd = first_apd + 1;
         } else {
@@ -202,12 +202,16 @@ int main(int argc, char ** argv) {
     config.resizeArrayPCFMA<TGraph*>(peaks, 0);
 
 
+
     TFile * input_file = new TFile(filename.c_str());
     if (input_file->IsZombie()) {
         cerr << "Unable to open root file: " << filename << endl;
         return(-3);
     }
 
+    if (verbose) {
+        cout << "Getting the floods" << endl;
+    }
     for (int p = first_panel; p < last_panel; p++) {
         for (int c = first_cart; c < last_cart; c++) {
             for (int f = first_fin; f < last_fin; f++) {
@@ -230,7 +234,8 @@ int main(int argc, char ** argv) {
                         sprintf(name_string,
                                 "peaks[%d][%d][%d][%d][%d]",
                                 p, c, f, m, a);
-                        peaks[p][c][f][m][a] = new TGraph(64);
+                        peaks[p][c][f][m][a] =
+                                new TGraph(config.crystals_per_apd);
                         peaks[p][c][f][m][a]->SetName(name_string);
                     }
                 }
@@ -238,22 +243,76 @@ int main(int argc, char ** argv) {
         }
     }
 
+
+    vector<vector<vector<vector<vector<bool> > > > > valid_fit;
+    config.resizeArrayPCFMA<bool>(valid_fit, false);
+
+    if (verbose) {
+        cout << "Fitting the floods" << endl;
+    }
     for (int p = first_panel; p < last_panel; p++) {
         for (int c = first_cart; c < last_cart; c++) {
             for (int f = first_fin; f < last_fin; f++) {
                 for (int m = first_module; m < last_module; m++) {
                     for (int a = first_apd; a < last_apd; a++) {
-                        Int_t validflag;
-                        Float_t cost;
+                        if (verbose) {
+                            cout << "fitting "
+                                 << floods[p][c][f][m][a]->GetName()
+                                 << endl;
+                        }
+                        Int_t validflag = 0;
+                        Float_t cost = -1;
                         PeakSearch(
                                 peaks[p][c][f][m][a],
                                 floods[p][c][f][m][a],
                                 0, validflag, cost, a);
+
+                        if (validflag == 15) {
+                            valid_fit[p][c][f][m][a] = true;
+                        }
                     }
                 }
             }
         }
     }
+    input_file->Close();
+
+    if (verbose) {
+        cout << "Writing out results" << endl;
+    }
+
+    ofstream output(filename_output.c_str());
+    if (!output.good()) {
+        cerr << "Unable to open output file: " << filename_output << endl;
+        return(-3);
+    }
+    for (int p = first_panel; p < last_panel; p++) {
+        for (int c = first_cart; c < last_cart; c++) {
+            for (int f = first_fin; f < last_fin; f++) {
+                for (int m = first_module; m < last_module; m++) {
+                    for (int a = first_apd; a < last_apd; a++) {
+                        if (valid_fit[p][c][f][m][a]) {
+                            TGraph * peak_graph = peaks[p][c][f][m][a];
+                            Double_t * x_values = peak_graph->GetX();
+                            Double_t * y_values = peak_graph->GetY();
+                            for (int ii = 0; ii < config.crystals_per_apd; ii++)
+                            {
+                                float x = x_values[ii];
+                                float y = y_values[ii];
+                                output << 1 << " "  << x << " " << y << "\n";
+                            }
+                        } else {
+                            for (int ii = 0; ii < config.crystals_per_apd; ii++)
+                            {
+                                output << 0 << " " << 0 << " " << 0 << "\n";
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    output.close();
 
 //    TFile * output_file = new TFile("test.root", "RECREATE");
 //    Int_t validflag;

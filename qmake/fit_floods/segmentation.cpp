@@ -1153,11 +1153,10 @@ int PeakSearch(
         TGraph * peaks_sorted,
         TH2F *flood,
         int verbose,
-        int &validflag,
+        int & validflag,
         float &cost,
         bool APD)
 {
-
     if (flood->GetEntries() < 600) {
         return(-1);
     }
