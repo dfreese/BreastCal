@@ -255,11 +255,6 @@ int main(int argc, char ** argv) {
             for (int f = first_fin; f < last_fin; f++) {
                 for (int m = first_module; m < last_module; m++) {
                     for (int a = first_apd; a < last_apd; a++) {
-                        if (verbose) {
-                            cout << "fitting "
-                                 << floods[p][c][f][m][a]->GetName()
-                                 << endl;
-                        }
                         Int_t validflag = 0;
                         Float_t cost = -1;
                         PeakSearch(
@@ -314,37 +309,5 @@ int main(int argc, char ** argv) {
     }
     output.close();
 
-//    TFile * output_file = new TFile("test.root", "RECREATE");
-//    Int_t validflag;
-//    Float_t cost;
-//    PeakSearch(peaks[0][1][1][1][0],
-//               floods[0][1][1][1][0],
-//               0, validflag, cost, 0);
-
-//    output_file->cd();
-//    peaks[0][1][1][1][0]->Write();
-
-//    input_file->Close();
-
-
-//    if (verbose) {
-//        cout << "Writing out floods: " << filename_output << endl;
-//    }
-
-//    TFile * output_file = new TFile(filename_output.c_str(), "RECREATE");
-//    output_file->cd();
-//    for (int p = 0; p < config.panels_per_system; p++) {
-//        for (int c = 0; c < config.cartridges_per_panel; c++) {
-//            for (int f = 0; f < config.fins_per_cartridge; f++) {
-//                for (int m = 0; m < config.modules_per_fin; m++) {
-//                    for (int a = 0; a < config.apds_per_module; a++) {
-//                        TH2F * flood = floods[p][c][f][m][a];
-//                        flood->Write();
-//                    }
-//                }
-//            }
-//        }
-//    }
-//    output_file->Close();
     return(0);
 }
