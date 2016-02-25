@@ -12,65 +12,214 @@
 #include <TH1F.h>
 #include <TSpectrum.h>
 #include <TError.h>
+#include <TFile.h>
 
 using namespace std;
 
-// getfloods - Fitting the APD photopeaks:
-// Give up if the histogram has less than 200 entries
-// Otherwise call GetApdPhotopeak with a width of 12, and a window of 700 to
-// 2800 for spatials, or 350 to 1200 for commons.
+// enecal / Sel_GetEhis - fitting the crystal photopeaks within an APD
+// For spatial channels:
+//     Get spatial photopeak from getfloods
+//     For corner crystals:
+//         Call GetCrystalPhotopeak with window of photopeak * (0.7 to 1.15)
+//         without forcing identification
+//         If that fails, force with window of photopeak * (0.6 to 1.5)
+//     For non-corner crystals:
+//         Call GetCrystalPhotopeak with window of photopeak * (0.85 to 1.15)
+//         without forcing identification
+//         If that fails, force with window of photopeak * (0.7 to 1.5)
+// For common channels:
+//     Get common photopeak from getfloods
+//     Call GetCrystalPhotopeak with window of photopeak * (0.85 to 1.25)
+//     without forcing identification
+//     If that fails, force with window of photopeak * (0.6 to 1.25) for corner
+//     crystals, or photopeak * (0.7 to 1.5) for non-corner crystals.
 
-// Peak search using sigma = width (always 12 to start) and threshold = 0.6
-// If at least one peak is found within the window, return the furthest right
-// else lower the threshold by 0.1 down to and including 0.1 and repeat search.
+
+// Peak search using sigma = 3 and threshold = 0.9
+// If two or more peaks are found, and at least one is within the given window
+// return the maximum within the window, else if two or more peaks are found,
+// but none are within the window, give up, else, lower the threshold by 0.1
+// down to and including 0.1 and repeat peak search
 //
-// Peak search using sigma = width and threshold = 0.05
-// If at least one peak is found within the window, return the furthest right.
+// Peak search using sigma = 3 and threshold = 0.05
+// If one or more peaks are found within the window, return the largest
 //
-// If the width is above 3, lower it by 2 and start over.
+// If force is not selected, give up
 //
-// Return the lower window value.
-float GetApdPhotopeak(
-        TH1F *hist,
-        float pp_low = 700,
-        float pp_up = 2800,
-        int width = 12)
+// Peak search using sigma = 10 and threshold = 0.4, and "nobackground", which
+// disables background removal.
+// If one or more peaks are found, and at least one is within the given window
+// return the maximum within the window, else, lower sigma by 1 down
+// to and including 4 and repeat peak search.
+//
+// Peak search using sigma = 3 and threshold = 0.4
+// If one or more peaks are found within the window, return the largest within
+// the window, else return the first peak if it is above the lower limit, else
+// lower the threshold by 0.1 down to and including 0.2 and repeat peak search.
+//
+// Note, given the first peak search method takes care of most cases, this
+// could be written as:
+//
+// Peak search using sigma = 3 and threshold = 0.4
+// If a peak is found and it is above the lower limit, return it, else lower the
+// threshold by 0.1 down to and including 0.2 and repeat peak search.
+//
+// Give up
+
+Float_t GetCrystalPhotopeak(
+        TH1F * hist,
+        Float_t xlow,
+        Float_t xhigh,
+        Bool_t force = false)
 {
-    gErrorIgnoreLevel = 5001;
-    TSpectrum sp;
-    do {
-        float thresholds[7] = {0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.05};
-        // float thresholds[4] = {0.3, 0.2, 0.1, 0.05};
-        // float thresholds[4] = {0.2, 0.1, 0.05};
-        for (size_t thresh_idx = 0;
-             thresh_idx < sizeof(thresholds) / sizeof(float);
-             thresh_idx++)
+    if (hist->GetEntries() < 100) {
+        return(0);
+    }
+    TSpectrum *ss = new TSpectrum();
+
+    Int_t npeaks = 0;
+    for (int i = 0; (i < 10) && (npeaks < 2); i++) {
+        if (i < 9)  {
+            npeaks = ss->Search(hist, 3, "", 0.9 - (Float_t) i / 10);
+        } else {
+            npeaks = ss->Search(hist, 3, "", 0.05);
+        }
+    }
+
+    // Assume that if one peak is found, that it is the correct peak
+    // This will only happen at the lowest threshold of 0.05
+
+    // Take the largest peak with x position larger than the lower limit
+    Int_t corpeak = 0;
+    Float_t yy = 0;
+    for (int i = 0; i < npeaks; i++) {
+        if ((yy < *(ss->GetPositionY() + i) ) &&
+            (*(ss->GetPositionX() + i) > xlow) &&
+            (*(ss->GetPositionX() +i) < xhigh))
         {
-            Int_t npeaks = sp.Search(hist, width, "", thresholds[thresh_idx]);
-            if (npeaks < 2 &&
-                thresh_idx != (sizeof(thresholds) / sizeof(float) - 1))
+            corpeak = i;
+            yy = *(ss->GetPositionY() + i);
+        }
+    }
+
+    // If the peak found initially is within the window, return.
+    if (((*(ss->GetPositionX() + corpeak)) >= xlow) &&
+        ((*(ss->GetPositionX() + corpeak)) <= xhigh))
+    {
+        float photopeak = *(ss->GetPositionX() + corpeak);
+        delete ss;
+        return (photopeak);
+    }
+
+    if (!force) {
+        delete ss;
+        return (-1);
+    }
+
+    // If the peak is not found in the window, move sigma rather than threshold
+    // I find that sigma = 3 is too small, limit it to 4 by demanding i<7
+    for (int i = 0; i < 7; i++) {
+        npeaks = ss->Search(hist, 10 - i, "nobackground", 0.4);
+
+        // Take the largest peak with x position larger than the lower limit
+        corpeak = 0;
+        Float_t yy = 0;
+        for (int j = 0; j < npeaks; j++) {
+            // CHANGE !!
+            if ((yy < *(ss->GetPositionY() + j)) &&
+                (*(ss->GetPositionX() + j) > xlow) &&
+                (*(ss->GetPositionX() +j) < xhigh))
             {
-                continue;
-            }
-            // get the peak between E_low and E_up ;
-            bool efound = false;
-            // Initialize peak to lower bound
-            Double_t pp_right = pp_low;
-            for (int l = 0; l < npeaks; l++) {
-                // look for the peak with the highest x value
-                if ((*(sp.GetPositionX() + l) < pp_up ) &&
-                    (*(sp.GetPositionX() + l) > pp_right))
-                {
-                    pp_right = (*(sp.GetPositionX() + l));
-                    efound = true;
-                }
-            }
-            if (efound) {
-                return(pp_right);
+                corpeak = j;
+                yy = *(ss->GetPositionY() + j);
             }
         }
-        width -= 2;
-    } while (width > 1);
+
+        // If a peak is found within the window, return it
+        if (((*(ss->GetPositionX() + corpeak)) >= xlow) &&
+            ((*(ss->GetPositionX() + corpeak)) <= xhigh))
+        {
+            float photopeak = *(ss->GetPositionX() + corpeak);
+            delete ss;
+            return (photopeak);
+        }
+    }
+
+    // If a peak is not found within the window, go back to the threshold method
+    // but just select the largest peak above the lower limit and disregard
+    // the upper limit.
+    //
+    // probably a bug that corpeak is not reset to zero
+    //
+    // upper limit isn't actually completely discarded, as it is used in
+    // setting corpeak.
+    float thresholds[3] = {0.4, 0.3, 0.2};
+    // note 9-6-13: changed sigma from 2 to 3
+    for (int thresh_idx = 0; thresh_idx < 3; thresh_idx++) {
+        npeaks = ss->Search(hist, 3, "", thresholds[thresh_idx]);
+        Float_t yy = 0;
+        for (int i = 0; i < npeaks; i++) {
+            // take largest peak with x position larger than lower fit limit
+            // CHANGE !!
+            if((yy < *(ss->GetPositionY() + i)) &&
+               (*(ss->GetPositionX() + i) > xlow) &&
+               (*(ss->GetPositionX() +i) < xhigh))
+            {
+                corpeak = i;
+                yy = *(ss->GetPositionY() + i);
+            }
+        }
+
+        if ((*(ss->GetPositionX() + corpeak)) >= xlow) {
+            float photopeak = *(ss->GetPositionX() + corpeak);
+            delete ss;
+            return (photopeak);
+        }
+    }
+    return(0);
+}
+
+int loadPhotopeaks(
+        const string & filename,
+        vector<float> & spat_photopeaks,
+        vector<float> & comm_photopeaks,
+        size_t expected_lines)
+{
+    vector<float> spat_photopeaks_loaded(expected_lines, 0);
+    vector<float> comm_photopeaks_loaded(expected_lines, 0);
+
+    ifstream input(filename.c_str());
+    if (!input.good()) {
+        return(-1);
+    }
+
+    size_t lines_read = 0;
+    string line;
+    while (getline(input, line)) {
+        if (lines_read >= expected_lines) {
+            return(-4);
+        }
+        stringstream ss;
+        ss << line;
+        string spat_pp_str;
+        string comm_pp_str;
+        ss >> spat_pp_str;
+        ss >> comm_pp_str;
+        if (Util::StringToNumber(
+                    spat_pp_str, spat_photopeaks_loaded[lines_read]) < 0)
+        {
+            return(-3);
+        }
+        if (Util::StringToNumber(
+                    comm_pp_str, comm_photopeaks_loaded[lines_read]) < 0)
+        {
+            return(-3);
+        }
+        lines_read++;
+    }
+
+    spat_photopeaks = spat_photopeaks_loaded;
+    comm_photopeaks = comm_photopeaks_loaded;
     return(0);
 }
 
@@ -91,9 +240,25 @@ int readFileIntoDeque(const string & filename, deque<T> & container) {
     return(0);
 }
 
+bool isCornerCrystal(int id) {
+    bool lookup[64] = {true,  true,  false, false, false, false, true,  true,
+                       true,  true,  false, false, false, false, true,  true,
+                       false, false, false, false, false, false, false, false,
+                       false, false, false, false, false, false, false, false,
+                       false, false, false, false, false, false, false, false,
+                       false, false, false, false, false, false, false, false,
+                       true,  true,  false, false, false, false, true,  true,
+                       true,  true,  false, false, false, false, true,  true};
+    if (id < 0 || id >= 64) {
+        return(false);
+    }
+    return(lookup[id]);
+}
+
 void usage() {
     cout << "get_crystal_photopeaks [-vh] -c [config] -p [ped file] -x [loc file] -f [filename] -f ...\n"
          << "  -o [name] : photopeak output filename\n"
+         << "  -ro [name]: optional root output file for energy spectra\n"
          << endl;
 }
 
@@ -109,6 +274,8 @@ int main(int argc, char ** argv) {
     string filename_output;
     string filename_ped;
     string filename_loc;
+    string filename_pp;
+    string filename_root_output;
 
 
     int Ebins = 320;
@@ -145,11 +312,17 @@ int main(int argc, char ** argv) {
         if (argument == "-p") {
             filename_ped = following_argument;
         }
+        if (argument == "-pp") {
+            filename_pp = following_argument;
+        }
         if (argument == "-o") {
             filename_output = following_argument;
         }
         if (argument == "-x") {
             filename_loc = following_argument;
+        }
+        if (argument == "-ro") {
+            filename_root_output = following_argument;
         }
     }
 
@@ -174,8 +347,10 @@ int main(int argc, char ** argv) {
         cout << "filenames:       " << Util::vec2String(filenames) << endl;
         cout << "filename_config: " << filename_config << endl;
         cout << "filename_ped:    " << filename_ped << endl;
+        cout << "filename_pp:     " << filename_pp << endl;
         cout << "filename_loc:    " << filename_loc << endl;
         cout << "filename_output: " << filename_output << endl;
+        cout << "filename_root_output: " << filename_root_output << endl;
     }
 
     SystemConfiguration config;
@@ -202,14 +377,38 @@ int main(int argc, char ** argv) {
     }
 
 
+    if (verbose) {
+        cout << "loading photopeaks: " << filename_pp << endl;
+    }
+    vector<vector<vector<vector<vector<float> > > > > spat_photopeaks;
+    vector<vector<vector<vector<vector<float> > > > > comm_photopeaks;
+    config.resizeArrayPCFMA<float>(spat_photopeaks, 0);
+    config.resizeArrayPCFMA<float>(comm_photopeaks, 0);
+
+    vector<float> spat_pp_load;
+    vector<float> comm_pp_load;
+
+    int pp_load_status = loadPhotopeaks(
+                filename_pp,
+                spat_pp_load, comm_pp_load,
+                config.apds_per_system);
+
+    if (pp_load_status < 0) {
+        cerr << "loadPhotopeaks() failed with status: "
+             << pp_load_status
+             << endl;
+        return(-4);
+    }
+
     int loc_load_status = config.loadCrystalLocations(filename_loc);
     if (loc_load_status < 0) {
         cerr << "SystemConfiguration.loadCrystalLocations() failed, status: "
              << loc_load_status
              << endl;
-        return(-4);
+        return(-5);
     }
 
+    int photopeak_count = 0;
     vector<vector<vector<vector<vector<vector<TH1F*> > > > > > spat_hists;
     vector<vector<vector<vector<vector<vector<TH1F*> > > > > > comm_hists;
     config.resizeArrayPCFMAX<TH1F*>(spat_hists, 0);
@@ -219,6 +418,13 @@ int main(int argc, char ** argv) {
             for (int f = 0; f < config.fins_per_cartridge; f++) {
                 for (int m = 0; m < config.modules_per_fin; m++) {
                     for (int a = 0; a < config.apds_per_module; a++) {
+                        // Copy the loaded photopeaks into their vectors
+                        spat_photopeaks[p][c][f][m][a] =
+                                spat_pp_load[photopeak_count];
+                        comm_photopeaks[p][c][f][m][a] =
+                                comm_pp_load[photopeak_count];
+                        photopeak_count++;
+
                         for (int x = 0; x < config.crystals_per_apd; x++) {
                             char namestring[30];
                             char titlestring[50];
@@ -282,31 +488,115 @@ int main(int argc, char ** argv) {
         }
     }
 
-    // TODO: add in photopeak fitting function
+    if (verbose) {
+        cout << "Finding photopeaks" << endl;
+    }
+    for (int p = 0; p < config.panels_per_system; p++) {
+        for (int c = 0; c < config.cartridges_per_panel; c++) {
+            for (int f = 0; f < config.fins_per_cartridge; f++) {
+                for (int m = 0; m < config.modules_per_fin; m++) {
+                    for (int a = 0; a < config.apds_per_module; a++) {
+                        float spat_photopeak = spat_photopeaks[p][c][f][m][a];
+                        float comm_photopeak = comm_photopeaks[p][c][f][m][a];
+                        for (int x = 0; x < config.crystals_per_apd; x++) {
+                            CrystalCalibration & crystal_cal =
+                                    config.calibration[p][c][f][m][a][x];
 
-//    if (verbose) {
-//        cout << "Finding photopeaks" << endl;
-//    }
-//    for (int p = 0; p < config.panels_per_system; p++) {
-//        for (int c = 0; c < config.cartridges_per_panel; c++) {
-//            for (int f = 0; f < config.fins_per_cartridge; f++) {
-//                for (int m = 0; m < config.modules_per_fin; m++) {
-//                    for (int a = 0; a < config.apds_per_module; a++) {
-//                        for (int x = 0; x < config.crystals_per_apd; x++) {
-//                            spat_photopeaks[p][c][f][m][a][x] = GetApdPhotopeak(
-//                                        spat_hists[p][c][f][m][a][x],
-//                                        700, 2800, 12);
+                            // Setup the initial upper and lower bounds for the
+                            // spat and common channels.
+                            float lower_bound_spat = 0.85 * spat_photopeak;
+                            float upper_bound_spat = 1.15 * spat_photopeak;
 
-//                            comm_photopeaks[p][c][f][m][a][x] = GetApdPhotopeak(
-//                                        comm_hists[p][c][f][m][a][x],
-//                                        350, 1200, 12);
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//    }
+                            float lower_bound_comm = 0.85 * comm_photopeak;
+                            float upper_bound_comm = 1.25 * comm_photopeak;
 
+                            if (isCornerCrystal(x)) {
+                                lower_bound_spat = 0.7 * spat_photopeak;
+                                upper_bound_spat = 1.15 * spat_photopeak;
+                            }
+
+                            crystal_cal.gain_spat = GetCrystalPhotopeak(
+                                        spat_hists[p][c][f][m][a][x],
+                                        lower_bound_spat, upper_bound_spat,
+                                        false);
+                            if (crystal_cal.gain_spat == -1) {
+                                if (isCornerCrystal(x)) {
+                                    lower_bound_spat = 0.6 * spat_photopeak;
+                                    upper_bound_spat = 1.5 * spat_photopeak;
+                                } else {
+                                    lower_bound_spat = 0.7 * spat_photopeak;
+                                    upper_bound_spat = 1.5 * spat_photopeak;
+                                }
+                                crystal_cal.gain_spat = GetCrystalPhotopeak(
+                                            spat_hists[p][c][f][m][a][x],
+                                            lower_bound_spat,
+                                            upper_bound_spat,
+                                            true);
+                            }
+                            // If the peak isn't found again, set to apd
+                            // photopeak
+                            if (crystal_cal.gain_spat == 0) {
+                                crystal_cal.gain_spat = spat_photopeak;
+                            }
+
+
+                            crystal_cal.gain_comm = GetCrystalPhotopeak(
+                                        comm_hists[p][c][f][m][a][x],
+                                        lower_bound_comm, upper_bound_comm,
+                                        false);
+                            if (crystal_cal.gain_comm == -1) {
+                                if (isCornerCrystal(x)) {
+                                    lower_bound_comm = 0.6 * comm_photopeak;
+                                    upper_bound_spat = 1.25 * comm_photopeak;
+                                } else {
+                                    lower_bound_comm = 0.7 * comm_photopeak;
+                                    upper_bound_comm = 1.5 * comm_photopeak;
+                                }
+                                crystal_cal.gain_comm = GetCrystalPhotopeak(
+                                            comm_hists[p][c][f][m][a][x],
+                                            lower_bound_comm,
+                                            upper_bound_comm,
+                                            true);
+                            }
+
+                            // If the peak isn't found again, set to apd
+                            // photopeak
+                            if (crystal_cal.gain_comm == 0) {
+                                crystal_cal.gain_comm = comm_photopeak;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (filename_root_output != "") {
+        TFile * output_file =
+                new TFile(filename_root_output.c_str(), "RECREATE");
+        if (output_file->IsZombie()) {
+            cerr << "Unable to open root output file: "
+                 << filename_root_output << endl;
+            return(-6);
+        }
+        output_file->cd();
+        for (int p = 0; p < config.panels_per_system; p++) {
+            for (int c = 0; c < config.cartridges_per_panel; c++) {
+                for (int f = 0; f < config.fins_per_cartridge; f++) {
+                    for (int m = 0; m < config.modules_per_fin; m++) {
+                        for (int a = 0; a < config.apds_per_module; a++) {
+                            for (int x = 0; x < config.crystals_per_apd; x++) {
+                                // Copy the loaded photopeaks into their vectors
+                                spat_hists[p][c][f][m][a][x]->Write();
+                                comm_hists[p][c][f][m][a][x]->Write();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        output_file->Close();
+    }
 
     // TODO: write function to write calibration out
 
