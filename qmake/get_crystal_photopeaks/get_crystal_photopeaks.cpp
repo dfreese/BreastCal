@@ -647,6 +647,9 @@ int main(int argc, char ** argv) {
     }
 
     if (filename_root_output != "") {
+        if (verbose) {
+            cout << "Writing histograms to " << filename_root_output << endl;
+        }
         TFile * output_file =
                 new TFile(filename_root_output.c_str(), "RECREATE");
         if (output_file->IsZombie()) {
@@ -672,9 +675,6 @@ int main(int argc, char ** argv) {
         }
         output_file->Close();
     }
-
-    // TODO: write function to write calibration out
-
 
     if (verbose) {
         cout << info.getDecodeInfo() << endl;
