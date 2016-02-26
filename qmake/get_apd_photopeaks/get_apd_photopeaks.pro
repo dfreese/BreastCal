@@ -11,7 +11,7 @@ LIBS += -L$$(LIBMIIL_DIR)/lib -lmiil_process
 INCLUDEPATH += $$(LIBMIIL_DIR)/include
 DEPENDPATH += $$(LIBMIIL_DIR)/include
 
-LIBS += -L$$(ROOTSYS)/lib -lHist -lSpectrum -lCore
+LIBS += -L$$(ROOTSYS)/lib -lHist -lSpectrum -lCore -lRIO
 INCLUDEPATH += $$(ROOTSYS)/include
 DEPENDPATH += $$(ROOTSYS)/include
 

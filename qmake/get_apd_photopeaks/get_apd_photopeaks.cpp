@@ -12,6 +12,7 @@
 #include <TH1F.h>
 #include <TSpectrum.h>
 #include <TError.h>
+#include <TFile.h>
 
 using namespace std;
 
@@ -36,6 +37,9 @@ float GetApdPhotopeak(
         float pp_up = 2800,
         int width = 12)
 {
+    if (hist->GetEntries() < 1000) {
+        return(0);
+    }
     gErrorIgnoreLevel = 5001;
     TSpectrum sp;
     do {
@@ -94,6 +98,7 @@ int readFileIntoDeque(const string & filename, deque<T> & container) {
 void usage() {
     cout << "get_apd_photopeaks [-vh] -c [config] -p [ped file] -f [filename] -f ...\n"
          << "  -o [name] : photopeak output filename\n"
+         << "  -ro [name]: optional root output file for energy spectra\n"
          << endl;
 }
 
@@ -108,6 +113,7 @@ int main(int argc, char ** argv) {
     string filename_config;
     string filename_output;
     string filename_ped;
+    string filename_root_output;
 
 
     int Ebins = 320;
@@ -147,6 +153,9 @@ int main(int argc, char ** argv) {
         if (argument == "-o") {
             filename_output = following_argument;
         }
+        if (argument == "-ro") {
+            filename_root_output = following_argument;
+        }
     }
 
     if (filenames.empty()) {
@@ -171,6 +180,7 @@ int main(int argc, char ** argv) {
         cout << "filename_ped:    " << filename_ped << endl;
         cout << "filename_output: " << filename_output << endl;
         cout << "filename_config: " << filename_config << endl;
+        cout << "filename_root_output: " << filename_root_output << endl;
     }
 
     SystemConfiguration config;
@@ -317,6 +327,36 @@ int main(int argc, char ** argv) {
         }
     }
     pp_output.close();
+
+
+    if (filename_root_output != "") {
+        if (verbose) {
+            cout << "Writing histograms to " << filename_root_output << endl;
+        }
+        TFile * output_file =
+                new TFile(filename_root_output.c_str(), "RECREATE");
+        if (output_file->IsZombie()) {
+            cerr << "Unable to open root output file: "
+                 << filename_root_output << endl;
+            return(-6);
+        }
+        output_file->cd();
+        for (int p = 0; p < config.panels_per_system; p++) {
+            for (int c = 0; c < config.cartridges_per_panel; c++) {
+                for (int f = 0; f < config.fins_per_cartridge; f++) {
+                    for (int m = 0; m < config.modules_per_fin; m++) {
+                        for (int a = 0; a < config.apds_per_module; a++) {
+                            // Copy the loaded photopeaks into their vectors
+                            spat_hists[p][c][f][m][a]->Write();
+                            comm_hists[p][c][f][m][a]->Write();
+                        }
+                    }
+                }
+            }
+        }
+        output_file->Close();
+    }
+
 
 
     if (verbose) {
