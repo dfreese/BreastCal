@@ -9,6 +9,7 @@
 #include <miil/process/ProcessParams.h>
 #include <miil/process/ProcessInfo.h>
 #include <miil/util.h>
+#include <miil/file_utils.h>
 #include <TH2F.h>
 #include <TSpectrum.h>
 #include <TFile.h>
