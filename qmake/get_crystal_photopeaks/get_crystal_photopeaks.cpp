@@ -635,6 +635,17 @@ int main(int argc, char ** argv) {
         }
     }
 
+    if (verbose) {
+        cout << "Writing out calibration to " << filename_output << endl;
+    }
+    int config_write_status = config.writeCalibration(filename_output);
+    if (config_write_status < 0) {
+        cerr << "SystemConfiguration.writeCalibration() failed, status: "
+             << config_write_status
+             << endl;
+        return(-7);
+    }
+
     if (filename_root_output != "") {
         TFile * output_file =
                 new TFile(filename_root_output.c_str(), "RECREATE");
