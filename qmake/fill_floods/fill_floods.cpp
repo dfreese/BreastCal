@@ -81,6 +81,7 @@ int loadPhotopeaks(
 void usage() {
     cout << "fill_floods [-vh] -c [config] -p [ped file] -pp [pp file] -f [filename] -f ...\n"
          << "  -o [name]    : flood output filename\n"
+         << "  -l [name]    : list file of input filenames\n"
          << "  -el [energy] : low energy limit  (default: 357.7keV)\n"
          << "  -eh [energy] : high energy limit (default: 664.3keV)\n"
          << endl;
@@ -121,6 +122,13 @@ int main(int argc, char ** argv) {
         string following_argument(argv[ix + 1]);
         if (argument == "-f") {
             filenames.push_back(following_argument);
+        }
+        if (argument == "-l") {
+            if (Util::loadFilelistFile(following_argument, filenames) < 0) {
+                cerr << "Unable to load filelist: "
+                     << following_argument << endl;
+                return(-2);
+            }
         }
         if (argument == "-c") {
             filename_config = following_argument;

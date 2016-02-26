@@ -9,6 +9,7 @@
 #include <miil/process/ProcessParams.h>
 #include <miil/process/ProcessInfo.h>
 #include <miil/util.h>
+#include <miil/file_utils.h>
 
 using namespace std;
 
@@ -32,6 +33,7 @@ int readFileIntoDeque(const string & filename, deque<T> & container) {
 void usage() {
     cout << "uv_calc [-vh] -c [config] -p [ped file] -f [filename] -f ...\n"
          << "  -o [name] : output filename\n"
+         << "  -l [name] : list file of input filenames\n"
          << endl;
 }
 
@@ -83,6 +85,13 @@ int main(int argc, char ** argv) {
         }
         if (argument == "-o") {
             filename_output = following_argument;
+        }
+        if (argument == "-l") {
+            if (Util::loadFilelistFile(following_argument, filenames) < 0) {
+                cerr << "Unable to load filelist: "
+                     << following_argument << endl;
+                return(-2);
+            }
         }
     }
 

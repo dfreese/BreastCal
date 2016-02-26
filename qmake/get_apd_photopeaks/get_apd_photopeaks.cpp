@@ -9,6 +9,7 @@
 #include <miil/process/ProcessParams.h>
 #include <miil/process/ProcessInfo.h>
 #include <miil/util.h>
+#include <miil/file_utils.h>
 #include <TH1F.h>
 #include <TSpectrum.h>
 #include <TError.h>
@@ -98,6 +99,7 @@ int readFileIntoDeque(const string & filename, deque<T> & container) {
 void usage() {
     cout << "get_apd_photopeaks [-vh] -c [config] -p [ped file] -f [filename] -f ...\n"
          << "  -o [name] : photopeak output filename\n"
+         << "  -l [name] : list file of input filenames\n"
          << "  -ro [name]: optional root output file for energy spectra\n"
          << endl;
 }
@@ -155,6 +157,13 @@ int main(int argc, char ** argv) {
         }
         if (argument == "-ro") {
             filename_root_output = following_argument;
+        }
+        if (argument == "-l") {
+            if (Util::loadFilelistFile(following_argument, filenames) < 0) {
+                cerr << "Unable to load filelist: "
+                     << following_argument << endl;
+                return(-2);
+            }
         }
     }
 
