@@ -7,4 +7,5 @@ SUBDIRS = \
     fill_floods \
     fit_floods \
     get_crystal_photopeaks \
-    calibrate
+    calibrate \
+    sort_coinc
