@@ -19,6 +19,7 @@ using namespace std;
 void usage() {
     cout << "fit_floods [-vh] -c [config] -f [filename]\n"
          << "  -o [name] : crystal location output filename\n"
+         << "  -ro [name]: optional root output file for energy spectra\n"
          << "  -pn [num] : specify panel number\n"
          << "  -cn [num] : specify cartridge number\n"
          << "  -fn [num] : specify fin number\n"
@@ -37,6 +38,7 @@ int main(int argc, char ** argv) {
     string filename;
     string filename_config;
     string filename_output;
+    string filename_root_output;
 
     int specific_panel = -1;
     int specific_cartridge = -1;
@@ -68,6 +70,9 @@ int main(int argc, char ** argv) {
         }
         if (argument == "-o") {
             filename_output = following_argument;
+        }
+        if (argument == "-ro") {
+            filename_root_output = following_argument;
         }
         if (argument == "-pn") {
             if (Util::StringToNumber(following_argument, specific_panel) < 0) {
@@ -116,6 +121,7 @@ int main(int argc, char ** argv) {
         cout << "filename       : " << filename << endl;
         cout << "filename_config: " << filename_config << endl;
         cout << "filename_output: " << filename_output << endl;
+        cout << "filename_root_output: " << filename_root_output << endl;
     }
 
     SystemConfiguration config;
@@ -308,6 +314,34 @@ int main(int argc, char ** argv) {
         }
     }
     output.close();
+
+
+    if (filename_root_output != "") {
+        if (verbose) {
+            cout << "Writing graphs to " << filename_root_output << endl;
+        }
+        TFile * output_file =
+                new TFile(filename_root_output.c_str(), "RECREATE");
+        if (output_file->IsZombie()) {
+            cerr << "Unable to open root output file: "
+                 << filename_root_output << endl;
+            return(-6);
+        }
+        output_file->cd();
+        for (int p = 0; p < config.panels_per_system; p++) {
+            for (int c = 0; c < config.cartridges_per_panel; c++) {
+                for (int f = 0; f < config.fins_per_cartridge; f++) {
+                    for (int m = 0; m < config.modules_per_fin; m++) {
+                        for (int a = 0; a < config.apds_per_module; a++) {
+                            peaks[p][c][f][m][a]->Write();
+                        }
+                    }
+                }
+            }
+        }
+        output_file->Close();
+    }
+
 
     return(0);
 }
