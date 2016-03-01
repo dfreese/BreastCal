@@ -21,7 +21,7 @@
 using namespace std;
 
 void usage() {
-    cout << "calibrate [-vh] -c [config] -p [ped file] -cal [cal file] -fl [filename] -fr ...\n"
+    cout << "sort_coinc [-vh] -c [config] -p [ped file] -cal [cal file] -fl [filename] -fr ...\n"
          << "  -o [name] : coincidence output filename\n"
          << "  -ll [name]: list file of left input filenames\n"
          << "  -lr [name]: list file of right input filenames\n"
