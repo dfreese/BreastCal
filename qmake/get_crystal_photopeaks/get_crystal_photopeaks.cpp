@@ -225,23 +225,6 @@ int loadPhotopeaks(
     return(0);
 }
 
-template<typename T>
-int readFileIntoDeque(const string & filename, deque<T> & container) {
-    ifstream file(filename.c_str(), ios::binary);
-    if (!file.good()) {
-        return(-1);
-    }
-
-    size_t chunk_size = 1024 * 1024;
-    vector<char> chunk(chunk_size);
-
-    while (file.read((char*) chunk.data(), chunk.size()) || file.gcount()) {
-        container.insert(
-                container.end(), chunk.begin(), chunk.begin() + file.gcount());
-    }
-    return(0);
-}
-
 bool isCornerCrystal(int id) {
     bool lookup[64] = {true,  false, false, false, false, false, false, true,
                        false, false, false, false, false, false, false, false,
@@ -470,7 +453,7 @@ int main(int argc, char ** argv) {
     ProcessInfo info;
     for (size_t ii = 0; ii < filenames.size(); ii++) {
         string & filename = filenames[ii];
-        int read_status = readFileIntoDeque(filename, file_data);
+        int read_status = Util::readFileIntoDeque(filename, file_data);
         if (verbose) {
             cout << filename << " read with status: " << read_status << endl;
         }

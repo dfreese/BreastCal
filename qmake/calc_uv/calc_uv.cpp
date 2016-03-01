@@ -13,23 +13,6 @@
 
 using namespace std;
 
-template<typename T>
-int readFileIntoDeque(const string & filename, deque<T> & container) {
-    ifstream file(filename.c_str(), ios::binary);
-    if (!file.good()) {
-        return(-1);
-    }
-
-    size_t chunk_size = 1024 * 1024;
-    vector<char> chunk(chunk_size);
-
-    while (file.read((char*) chunk.data(), chunk.size()) || file.gcount()) {
-        container.insert(
-                container.end(), chunk.begin(), chunk.begin() + file.gcount());
-    }
-    return(0);
-}
-
 void usage() {
     cout << "uv_calc [-vh] -c [config] -p [ped file] -f [filename] -f ...\n"
          << "  -o [name] : output filename\n"
@@ -152,7 +135,7 @@ int main(int argc, char ** argv) {
     ProcessInfo info;
     for (size_t ii = 0; ii < filenames.size(); ii++) {
         string & filename = filenames[ii];
-        int read_status = readFileIntoDeque(filename, file_data);
+        int read_status = Util::readFileIntoDeque(filename, file_data);
         if (verbose) {
             cout << "read_status: " << read_status << endl;
         }
