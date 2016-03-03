@@ -204,7 +204,7 @@ int main(int argc, char ** argv) {
     }
 
     if (verbose) {
-        cout << info << endl;
+        cout << info.getDecodeInfo() << endl;
     }
     return(0);
 }
