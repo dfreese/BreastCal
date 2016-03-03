@@ -61,7 +61,7 @@ int main(int argc, char ** argv) {
     bool assume_calibrated_flag = false;
 
     float time_window = 25;
-    std::vector<float> delayed_windows(1, 0);
+    std::vector<float> delayed_windows;
 
     // Arguments not requiring input
     for (int ix = 1; ix < argc; ix++) {
@@ -144,7 +144,6 @@ int main(int argc, char ** argv) {
                      << following_argument << endl;
                 return(-3);
             }
-            energy_gate_flag = true;
         }
         if (argument == "-el") {
             if (Util::StringToNumber(following_argument, energy_gate_low) < 0)
@@ -179,6 +178,10 @@ int main(int argc, char ** argv) {
     if (filename_output == "") {
         cerr << "No output filename specified" << endl;
         return(-5);
+    }
+
+    if (delayed_windows.empty()) {
+        delayed_windows.push_back(0);
     }
 
     if (verbose) {
@@ -267,7 +270,6 @@ int main(int argc, char ** argv) {
     if (verbose) {
         cout << "Calibrating Data" << endl;
     }
-    deque<char> file_data;
     ProcessInfo info;
     vector<EventCal> cal_events_left;
     vector<EventCal> cal_events_right;
@@ -286,6 +288,7 @@ int main(int argc, char ** argv) {
                 return(-3);
             }
         } else {
+            deque<char> file_data;
             int read_status = Util::readFileIntoDeque(filename, file_data);
             if (verbose) {
                 cout << filename << " read with status: "
@@ -296,7 +299,6 @@ int main(int argc, char ** argv) {
                 return(-3);
             }
             vector<EventRaw> raw_events;
-
             ProcessParams::DecodeBuffer(file_data, raw_events, info, &config);
             ProcessParams::ClearProcessedData(file_data, info);
             ProcessParams::CalibrateBuffer(
@@ -318,6 +320,7 @@ int main(int argc, char ** argv) {
                 return(-3);
             }
         } else {
+            deque<char> file_data;
             int read_status = Util::readFileIntoDeque(filename, file_data);
             if (verbose) {
                 cout << filename << " read with status: "
@@ -328,7 +331,6 @@ int main(int argc, char ** argv) {
                 return(-3);
             }
             vector<EventRaw> raw_events;
-
             ProcessParams::DecodeBuffer(file_data, raw_events, info, &config);
             ProcessParams::ClearProcessedData(file_data, info);
             ProcessParams::CalibrateBuffer(
@@ -382,8 +384,7 @@ int main(int argc, char ** argv) {
     if (verbose) {
         cout << "Sorting Events" << endl;
     }
-//    insertion_sort(cal_events_left, EventCalLessThanOnlyCt);
-//    insertion_sort(cal_events_right, EventCalLessThanOnlyCt);
+
     insertion_sort(cal_events_left, EventCalLessThan,
                    (float) config.uv_period_ns, (float) config.ct_period_ns);
     insertion_sort(cal_events_right, EventCalLessThan,
