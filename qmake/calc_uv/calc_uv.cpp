@@ -103,7 +103,7 @@ int main(int argc, char ** argv) {
     SystemConfiguration config;
     int config_load_status = config.load(filename_config);
     if (verbose) {
-        cout << "config_load_status: " << config_load_status << endl;
+        cout << "Loading Config: " << filename_config << endl;
     }
     if (config_load_status < 0) {
         cerr << "SystemConfiguration.load() failed with status: "
@@ -114,7 +114,7 @@ int main(int argc, char ** argv) {
 
     int ped_load_status = config.loadPedestals(filename_ped);
     if (verbose) {
-        cout << "ped_load_status: " << ped_load_status << endl;
+        cout << "Loading Pedestals: " << filename_ped << endl;
     }
     if (ped_load_status < 0) {
         cerr << "SystemConfiguration.loadPedestals() failed with status: "
@@ -137,10 +137,10 @@ int main(int argc, char ** argv) {
         string & filename = filenames[ii];
         int read_status = Util::readFileIntoDeque(filename, file_data);
         if (verbose) {
-            cout << "read_status: " << read_status << endl;
+            cout << "Reading File: " << filename << endl;
         }
         if (read_status < 0) {
-            cerr << "Unable to load: " << filename << endl;
+            cerr << "Reading file " << filename << " failed with status: " << read_status << endl;
             return(-3);
         }
         vector<EventRaw> raw_events;
@@ -190,7 +190,7 @@ int main(int argc, char ** argv) {
 
     int write_status = config.writeUVCenters(filename_output);
     if (verbose) {
-        cout << "write_status: " << write_status << endl;
+        cout << "Writing Output: " << filename_output << endl;
     }
     if (write_status < 0) {
         cerr << "SystemConfiguration.writeUVCenters() failed with status: "
@@ -200,7 +200,7 @@ int main(int argc, char ** argv) {
     }
 
     if (verbose) {
-        cout << info << endl;
+        cout << info.getDecodeInfo() << endl;
     }
     return(0);
 }
