@@ -90,7 +90,7 @@ int main(int argc, char ** argv) {
     SystemConfiguration config;
     int config_load_status = config.load(filename_config);
     if (verbose) {
-        cout << "config_load_status: " << config_load_status << endl;
+        cout << "Loading config: " << filename_config << endl;
     }
     if (config_load_status < 0) {
         cerr << "SystemConfiguration.load() failed with status: "
@@ -105,7 +105,7 @@ int main(int argc, char ** argv) {
         string & filename = filenames[ii];
         int read_status = Util::readFileIntoDeque(filename, file_data);
         if (verbose) {
-            cout << "read_status: " << read_status << endl;
+            cout << filename << " read with status: " << read_status << endl;
         }
         if (read_status < 0) {
             cerr << "Unable to load: " << filename << endl;
@@ -194,7 +194,7 @@ int main(int argc, char ** argv) {
 
     int write_status = config.writePedestals(filename_output);
     if (verbose) {
-        cout << "write_status: " << write_status << endl;
+        cout << "Writing Pedestals: " << filename_output << endl;
     }
     if (write_status < 0) {
         cerr << "SystemConfiguration.writePedestals() failed with status: "
