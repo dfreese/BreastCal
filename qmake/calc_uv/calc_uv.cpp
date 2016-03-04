@@ -152,7 +152,7 @@ int main(int argc, char ** argv) {
             int apd = 0;
             float u = event.u0h;
             float v = event.v0h;
-            if (event.com1h > event.com0h) {
+            if (event.com1h < event.com0h) {
                 apd = 1;
                 u = event.u1h;
                 v = event.v1h;
