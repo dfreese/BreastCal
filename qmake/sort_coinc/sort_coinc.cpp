@@ -21,7 +21,7 @@
 using namespace std;
 
 void usage() {
-    cout << "sort_coinc [-vh] -c [config] -p [ped file] -cal [cal file] -fl [filename] -fr ...\n"
+    cout << "sort_coinc [-vh] -c [config] -p [ped file] -cal [cal file] -uv [uv file] -fl [filename] -fr ...\n"
          << "  -o [name] : coincidence output filename\n"
          << "  -ll [name]: list file of left input filenames\n"
          << "  -lr [name]: list file of right input filenames\n"
@@ -50,6 +50,7 @@ int main(int argc, char ** argv) {
     string filename_output;
     string filename_ped;
     string filename_cal;
+    string filename_uv;
     string filename_tcal;
     string filename_tcal_edep;
     string filename_root_output;
@@ -102,6 +103,9 @@ int main(int argc, char ** argv) {
         }
         if (argument == "-cal") {
             filename_cal = following_argument;
+        }
+        if (argument == "-uv") {
+            filename_uv = following_argument;
         }
         if (strcmp(argv[ix], "-d") == 0) {
             float window_val = 0;
@@ -235,6 +239,17 @@ int main(int argc, char ** argv) {
              << ped_load_status
              << endl;
         return(-4);
+    }
+
+    if (verbose) {
+        cout << "Loading UV Centers: " << filename_uv << endl;
+    }
+    int uv_load_status = config.loadUVCenters(filename_uv);
+    if (uv_load_status < 0) {
+        cerr << "SystemConfiguration.loadUVCenters() failed with status: "
+             << uv_load_status
+             << endl;
+        return(-5);
     }
 
     if (filename_tcal != "") {

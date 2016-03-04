@@ -19,7 +19,7 @@
 using namespace std;
 
 void usage() {
-    cout << "calibrate [-vh] -c [config] -p [ped file] -cal [cal file] -f [filename] -f ...\n"
+    cout << "calibrate [-vh] -c [config] -p [ped file] -cal [cal file] -uv [uv file] -f [filename] -f ...\n"
          << "  -o [name] : photopeak output filename\n"
          << "  -l [name] : list file of input filenames\n"
          << "  -ro [name]: optional root output file\n"
@@ -41,6 +41,7 @@ int main(int argc, char ** argv) {
     string filename_output;
     string filename_ped;
     string filename_cal;
+    string filename_uv;
     string filename_root_output;
 
     bool energy_gate_flag = false;
@@ -80,6 +81,9 @@ int main(int argc, char ** argv) {
         }
         if (argument == "-cal") {
             filename_cal = following_argument;
+        }
+        if (argument == "-uv") {
+            filename_uv = following_argument;
         }
         if (argument == "-ro") {
             filename_root_output = following_argument;
@@ -171,9 +175,20 @@ int main(int argc, char ** argv) {
     int cal_load_status = config.loadCalibration(filename_cal);
     if (cal_load_status < 0) {
         cerr << "SystemConfiguration.loadPedestals() failed with status: "
-             << ped_load_status
+             << cal_load_status
              << endl;
-        return(-3);
+        return(-4);
+    }
+
+    if (verbose) {
+        cout << "Loading UV Centers: " << filename_uv << endl;
+    }
+    int uv_load_status = config.loadUVCenters(filename_uv);
+    if (uv_load_status < 0) {
+        cerr << "SystemConfiguration.loadUVCenters() failed with status: "
+             << uv_load_status
+             << endl;
+        return(-5);
     }
 
     if (verbose) {
@@ -190,7 +205,7 @@ int main(int argc, char ** argv) {
         }
         if (read_status < 0) {
             cerr << "Unable to load: " << filename << endl;
-            return(-3);
+            return(-6);
         }
         vector<EventRaw> raw_events;
 
@@ -237,7 +252,7 @@ int main(int argc, char ** argv) {
                 sizeof(EventCal) * cal_events.size()))
     {
         cerr << "Failed to write to output: " << filename_output << endl;
-        return(-5);
+        return(-7);
     }
 
 
