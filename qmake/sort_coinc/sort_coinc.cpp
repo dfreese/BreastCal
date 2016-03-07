@@ -409,7 +409,9 @@ int main(int argc, char ** argv) {
     output_events.reserve((int) (0.5 * 0.5 * (cal_events_left.size())));
 
 
-    cout << "Time Window: " << time_window << "ns\n";
+    if (verbose) {
+        cout << "Time Window: " << time_window << "ns\n";
+    }
 
     long dropped_single(0);
     long dropped_multiple(0);
