@@ -4,6 +4,7 @@ import os
 import json
 import subprocess
 import argparse
+import re
 
 def parse_args():
     # see https://docs.python.org/2/library/argparse.html for reference
@@ -18,6 +19,9 @@ def parse_args():
             type=str)
     parser.add_argument('-b', '--blank',
             help='Generate a blank json config',
+            type=str)
+    parser.add_argument('-g', '--generate',
+            help='Auto generate a json config from the base name given',
             type=str)
     parser.add_argument('-a', '--all',
             help='Run all of the calibrations',
@@ -71,6 +75,45 @@ def generate_blank_config(filename):
               separators=(',', ': '))
     quit()
 
+def auto_generate_config(base_name):
+    files = os.listdir('.')
+    # find the daq files
+    daq_files_rx = re.compile('DAQ_Data.*\.dat')
+    daq_files = [m.group() for l in files for m in [daq_files_rx.search(l)] if m]
+    # find all the pedestal files
+    ped_files_rx = re.compile('PED_Data.*\.dat')
+    ped_files = [m.group() for l in files for m in [ped_files_rx.search(l)] if m]
+
+    json_rx = re.compile('.*\.json')
+    json_files = [m.group() for l in files for m in [json_rx.search(l)] if m]
+
+    config_file = '/home/miil/FINDATA/nfo/breast_daq_config.json'
+    if len(json_files) > 0:
+        config_file = json_files[0]
+
+    new_config = dict()
+    new_config['config_file'] = config_file
+    new_config['ped_file_list'] = base_name + '.pedfilelist.txt'
+    new_config['ped_file'] = base_name + '.ped' 
+    new_config['file_list'] = base_name + '.daqfilelist.txt'
+    new_config['uv_file'] = base_name + '.uv'
+    new_config['pp_file'] = base_name + '.pp'
+    new_config['pp_root_file'] = base_name + '.pp.root'
+    new_config['flood_root_file'] = base_name + '.floods.root'
+    new_config['loc_file'] = base_name + '.loc'
+    new_config['graphs_root_file'] = base_name + '.graphs.root'
+    new_config['cal_file'] = base_name + '.cal'
+    new_config['crystal_energy_root_file'] = base_name + '.xpp.root'
+    json.dump(new_config,
+              open(base_name + '.json', 'w'),
+              ensure_ascii=True,
+              sort_keys=True,
+              indent=4,
+              separators=(',', ': '))
+
+    open(new_config['ped_file_list'], 'w').write('\n'.join(ped_files))
+    open(new_config['file_list'], 'w').write('\n'.join(daq_files))
+    quit()
 
 parser = parse_args()
 args = parser.parse_args()
@@ -78,6 +121,10 @@ args = parser.parse_args()
 # Check first if the user wanted to generate a template to work from
 if args.blank:
     generate_blank_config(args.blank)
+# Or if we should try and generate one from the current directory
+if args.generate:
+    auto_generate_config(args.generate)
+
 
 # Then make sure they had specified a json config file
 if args.config is None:
