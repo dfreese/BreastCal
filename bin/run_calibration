@@ -1,0 +1,162 @@
+#!/usr/bin/env python
+
+import os
+import json
+import subprocess
+import argparse
+
+def parse_args():
+    # see https://docs.python.org/2/library/argparse.html for reference
+    parser = argparse.ArgumentParser(
+            description='Run calibration on collected data')
+    parser.add_argument('--cores',
+            help='Number of simultaneous instances to run if necessary',
+            type=int,
+            default=4)
+    parser.add_argument('-c', '--config',
+            help='Calibration Config Json with breast_daq_config "config_file"',
+            type=str)
+    parser.add_argument('-b', '--blank',
+            help='Generate a blank json config',
+            type=str)
+    parser.add_argument('-a', '--all',
+            help='Run all of the calibrations',
+            action='store_true')
+    parser.add_argument('-p', '--pedestals',
+            help='Calculate pedestals from "ped_file_list" into "ped_file"',
+            action='store_true')
+    parser.add_argument('-u', '--uv',
+            help='Calculate uv from "file_list" into "uv_file"',
+            action='store_true')
+    parser.add_argument('-app', '--apd_photopeaks',
+            help='Calculate the APD photopeaks from "file_list" ' +
+                 'into "pp_file" and generate energy histograms in ' +
+                 '"pp_root_file"',
+            action='store_true')
+    parser.add_argument('-fillf', '--fill_floods',
+            help='Fill floods from "file_list" into "flood_root_file"',
+            action='store_true')
+    parser.add_argument('-fitf', '--fit_floods',
+            help='Fit floods in "flood_root_file" and write the crystal ' +
+                  'positions to "loc_file" and place the root graphs in ' +
+                  '"graphs_root_file"',
+            action='store_true')
+    parser.add_argument('-cpp', '--crystal_photopeaks',
+            help='Calculate the crystal photopeaks from "file_list" ' +
+                 'and generate "cal_file" and generate energy histograms in ' +
+                 '"crystal_energy_root_file"',
+            action='store_true')
+
+    return parser
+
+def generate_blank_config(filename):
+    blank_config = dict()
+    blank_config['config_file'] = ''
+    blank_config['ped_file_list'] = ''
+    blank_config['ped_file'] = ''
+    blank_config['file_list'] = ''
+    blank_config['uv_file'] = ''
+    blank_config['pp_file'] = ''
+    blank_config['pp_root_file'] = ''
+    blank_config['flood_root_file'] = ''
+    blank_config['loc_file'] = ''
+    blank_config['graphs_root_file'] = ''
+    blank_config['cal_file'] = ''
+    blank_config['crystal_energy_root_file'] = ''
+    json.dump(blank_config,
+              open(filename, 'w'),
+              ensure_ascii=True,
+              sort_keys=True,
+              indent=4,
+              separators=(',', ': '))
+    quit()
+
+
+parser = parse_args()
+args = parser.parse_args()
+
+# Check first if the user wanted to generate a template to work from
+if args.blank:
+    generate_blank_config(args.blank)
+
+# Then make sure they had specified a json config file
+if args.config is None:
+    parser.print_help()
+    quit()
+
+# And then load that config
+cal_info = json.load(open(args.config,'r'))
+
+
+if args.all:
+    args.pedestals = True
+    args.uv = True
+    args.apd_photopeaks = True
+    args.fill_floods = True
+    args.fit_floods = True
+    args.crystal_photopeaks = True
+
+if args.pedestals:
+    ped_cmd = 'pedestals -v -c %s -l %s -o %s' % (
+            cal_info['config_file'],
+            cal_info['ped_file_list'],
+            cal_info['ped_file'])
+    print ped_cmd
+    ped_popen = subprocess.Popen([ped_cmd], shell=True)
+    ped_popen.wait()
+
+if args.uv:
+    uv_cmd = 'calc_uv -v -c %s -p %s -l %s -o %s' % (
+            cal_info['config_file'],
+            cal_info['ped_file'],
+            cal_info['file_list'],
+            cal_info['uv_file'])
+    print uv_cmd
+    uv_popen = subprocess.Popen([uv_cmd], shell=True)
+    uv_popen.wait()
+
+if args.apd_photopeaks:
+    apd_cmd = 'get_apd_photopeaks -v -c %s -p %s -l %s -o %s -ro %s' % (
+            cal_info['config_file'],
+            cal_info['ped_file'],
+            cal_info['file_list'],
+            cal_info['pp_file'],
+            cal_info['pp_root_file'])
+    print apd_cmd
+    apd_popen = subprocess.Popen([apd_cmd], shell=True)
+    apd_popen.wait()
+
+if args.fill_floods:
+    fill_cmd = 'fill_floods -v -c %s -p %s -l %s -pp %s -o %s' % (
+            cal_info['config_file'],
+            cal_info['ped_file'],
+            cal_info['file_list'],
+            cal_info['pp_file'],
+            cal_info['flood_root_file'])
+    print fill_cmd
+    fill_popen = subprocess.Popen([fill_cmd], shell=True)
+    fill_popen.wait()
+
+if args.fit_floods:
+    fit_cmd = 'fit_floods -v -c %s -f %s -o %s -ro %s' % (
+            cal_info['config_file'],
+            cal_info['flood_root_file'],
+            cal_info['loc_file'],
+            cal_info['graphs_root_file'])
+    print fit_cmd
+    fit_popen = subprocess.Popen([fit_cmd], shell=True)
+    fit_popen.wait()
+
+if args.crystal_photopeaks:
+    cry_cmd = 'get_crystal_photopeaks -v -c %s -p %s -pp %s -x %s -l %s -o %s -ro %s' % (
+            cal_info['config_file'],
+            cal_info['ped_file'],
+            cal_info['pp_file'],
+            cal_info['loc_file'],
+            cal_info['file_list'],
+            cal_info['cal_file'],
+            cal_info['crystal_energy_root_file'])
+    print cry_cmd
+    cry_popen = subprocess.Popen([cry_cmd], shell=True)
+    cry_popen.wait()
+
