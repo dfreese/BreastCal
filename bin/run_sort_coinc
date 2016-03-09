@@ -1,0 +1,204 @@
+#!/usr/bin/env python
+
+import os
+import json
+import subprocess
+import argparse
+import re
+
+def parse_args():
+    # see https://docs.python.org/2/library/argparse.html for reference
+    parser = argparse.ArgumentParser(
+            description='Sort Coincidences')
+    parser.add_argument('-s', '--settings',
+            help='Run from settings file',
+            type=str)
+    parser.add_argument('-c', '--cal_config',
+            help='Calibration Config Json',
+            type=str)
+    parser.add_argument('--cores',
+            help='Number of simultaneous sort_coinc to run',
+            type=int,
+            default=4)
+    parser.add_argument('-w', '--window',
+            help='Coincidence Window (ns)',
+            type=float)
+    parser.add_argument('-el', '--egate_low',
+            help='Low Energy Threshold (keV)',
+            type=float)
+    parser.add_argument('-eh', '--egate_high',
+            help='High Energy Threshold (keV)',
+            type=float)
+    parser.add_argument('-t', '--tcal',
+            help='Per Crystal Time Calibration',
+            type=str)
+    parser.add_argument('-e', '--tecal',
+            help='Per Crystal Energy Dependent Time Calibration',
+            type=str)
+    parser.add_argument('-l', '--left',
+            help='The Left Filelist',
+            type=str)
+    parser.add_argument('-r', '--right',
+            help='The Right Filelist',
+            type=str)
+    parser.add_argument('--system_config',
+            help='The system config json file',
+            type=str)
+    parser.add_argument('--ped_file',
+            help='The pedestal file to use',
+            type=str)
+    parser.add_argument('--cal_file',
+            help='The calibration file to use',
+            type=str)
+    parser.add_argument('--uv_file',
+            help='The calibration file to use',
+            type=str)
+    parser.add_argument('-o', '--output',
+            help='The extension that .dat is replaced with',
+            type=str,
+            default='coinc')
+    return parser
+
+
+parser = parse_args()
+args = parser.parse_args()
+
+# Flag for if we should overwrite the loaded coinc_info json file
+overwrite_settings = False
+
+# Load in the specified settings as the default
+if args.settings:
+    coinc_info = json.load(open(args.settings, 'r'))
+else:
+    coinc_info = dict()
+
+# Overwrite the appropriate ones with the config file if specified
+if args.cal_config:
+    cal_info = json.load(open(args.cal_config, 'r'))
+    coinc_info['config_file'] = cal_info['config_file']
+    coinc_info['ped_file'] = cal_info['ped_file']
+    coinc_info['cal_file'] = cal_info['cal_file']
+    coinc_info['uv_file'] = cal_info['uv_file']
+    coinc_info_name = args.cal_config.replace('.json', '.coinc.json')
+
+# Then overwrite those settings with any of them from the command line
+if args.window:
+    coinc_info['window'] = args.window
+if args.egate_low:
+    coinc_info['egate_low'] = args.egate_low
+if args.egate_high:
+    coinc_info['egate_high'] = args.egate_high
+if args.egate_high:
+    coinc_info['egate_high'] = args.egate_high
+if args.tcal:
+    coinc_info['time_cal_file'] = args.tcal
+if args.tecal:
+    coinc_info['time_edep_cal_file'] = args.tecal
+if args.left:
+    coinc_info['left_filelist'] = args.left
+if args.right:
+    coinc_info['right_filelist'] = args.right
+if args.system_config:
+    coinc_info['system_config'] = args.system_config
+if args.ped_file:
+    coinc_info['ped_file'] = args.ped_file
+if args.cal_file:
+    coinc_info['cal_file'] = args.cal_file
+if args.uv_file:
+    coinc_info['uv_file'] = args.uv_file
+
+# Check that all of the required information has been specified so far
+if (('config_file' not in coinc_info) or ('ped_file' not in coinc_info) or
+        ('cal_file' not in coinc_info) or ('uv_file' not in coinc_info)):
+    parser.print_help()
+    quit()
+
+# Check to make sure the filelist files have been specified
+if 'left_filelist' not in coinc_info and 'right_filelist' not in coinc_info:
+    # If not and the cal config has been specified, then generate filelists from that
+    if args.cal_config:
+        files = open(cal_info['file_list'], 'r').read().splitlines()
+        left_files_rx = re.compile('_L0_')
+        left_files = [l for l in files for m in [left_files_rx.search(l)] if m]
+        left_filelist_name = cal_info['file_list'].replace('.txt','.left.txt')
+        coinc_info['left_filelist'] = left_filelist_name
+        open(coinc_info['left_filelist'], 'w').write('\n'.join(left_files))
+
+        right_files_rx = re.compile('_R0_')
+        right_files = [l for l in files for m in [right_files_rx.search(l)] if m]
+        right_filelist_name = cal_info['file_list'].replace('.txt','.right.txt')
+        coinc_info['right_filelist'] = right_filelist_name
+        open(coinc_info['right_filelist'], 'w').write('\n'.join(right_files))
+
+        overwrite_settings = True
+    else:
+        parser.print_help()
+        quit()
+
+# Overwrite loaded settings file if it was specified
+if args.settings is None or overwrite_settings:
+    coinc_info_name = 'coinc_info.json'
+    if args.cal_config:
+        coinc_info_name = args.cal_config.replace('.json', '.coinc.json')
+    if overwrite_settings and args.settings is not None:
+        coinc_info_name = args.settings
+    json.dump(coinc_info,
+              open(coinc_info_name, 'w'),
+              ensure_ascii=True,
+              sort_keys=True,
+              indent=4,
+              separators=(',', ': '))
+
+# Now we have the full settings to begin constructing the sort_coinc command we'll use
+sort_coinc_cmd_base = 'sort_coinc -c %s -p %s -cal %s -uv %s' % (
+        coinc_info['config_file'], coinc_info['ped_file'], coinc_info['cal_file'], coinc_info['uv_file'])
+
+# Then we add in the optional arguments
+if 'window' in coinc_info:
+    sort_coinc_cmd_base += ' -w %d' % coinc_info['window']
+if 'egate_low' in coinc_info:
+    sort_coinc_cmd_base += ' -el %d' % coinc_info['egate_low']
+if 'egate_high' in coinc_info:
+    sort_coinc_cmd_base += ' -eh %d' % coinc_info['egate_high']
+if 'time_cal_file' in coinc_info:
+    sort_coinc_cmd_base += ' -t %s' % coinc_info['time_cal_file']
+if 'time_edep_cal_file' in coinc_info:
+    sort_coinc_cmd_base += ' -te %s' % coinc_info['time_edep_cal_file']
+
+
+# Load in the names of the data files
+left_files = open(coinc_info['left_filelist'], 'r').read().splitlines() 
+right_files = open(coinc_info['right_filelist'], 'r').read().splitlines() 
+
+# And make sure we have the right ones
+if len(left_files) != len(right_files):
+    print "left and right file lists not the same size"
+    quit()
+
+# Initialize a list to hold all of the processes
+popens = []
+
+for left_file, right_file in zip(left_files, right_files):
+    # Construct the output file name from the left side
+    out_file = left_file.replace('_L0_','_').replace('.dat', '.' + args.output)
+
+    # And use that to generate the full sort_coinc command
+    sort_coinc_cmd_full = sort_coinc_cmd_base
+    sort_coinc_cmd_full += ' -fl %s' % (left_file)
+    sort_coinc_cmd_full += ' -fr %s' % (right_file)
+    sort_coinc_cmd_full += ' -o %s' % (out_file)
+    print sort_coinc_cmd_full
+
+    popens.append(subprocess.Popen([sort_coinc_cmd_full], shell=True))
+
+    # If we have args.cores instances running, then wait until the first one
+    # gets done before we continue
+    if len(popens) >= args.cores:
+        popens[0].wait()
+        popens.pop(0)
+
+# Wait for the processes to finish up
+for popen in popens:
+    popen.wait()
+
+
