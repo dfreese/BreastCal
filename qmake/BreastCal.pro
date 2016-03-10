@@ -9,4 +9,5 @@ SUBDIRS = \
     get_crystal_photopeaks \
     calibrate \
     tcal_apd_offset \
+    tcal_crystal_offset \
     sort_coinc
