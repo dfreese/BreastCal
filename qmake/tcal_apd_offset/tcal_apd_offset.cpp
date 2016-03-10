@@ -168,10 +168,22 @@ int main(int argc, char ** argv) {
                 return(-2);
             }
         }
+        if (argument == "-t") {
+            if (Util::StringToNumber(following_argument, time_window) < 0) {
+                cerr << "Invalid time_window value: "
+                     << following_argument << endl;
+                return(-2);
+            }
+        }
         if (argument == "-a") {
             if (Util::StringToNumber(following_argument, alpha) < 0) {
                 cerr << "Invalid alpha value: "
                      << following_argument << endl;
+                return(-2);
+            }
+            if (alpha <= 0 || alpha > 1) {
+                cerr << "Invalid alpha value: "
+                     << alpha << endl;
                 return(-2);
             }
         }
@@ -276,13 +288,15 @@ int main(int argc, char ** argv) {
         }
     }
 
+    // With coincidence events, we should be able to read all of them into
+    // memory, (1GB is 14e6 events)
     if (verbose) {
-        cout << "Filling Time Histograms" << endl;
+        cout << "Loading Files" << endl;
     }
+    deque<EventCoinc> coinc_data;
     for (size_t ii = 0; ii < filenames.size(); ii++) {
         string & filename = filenames[ii];
-        vector<EventCoinc> coinc_data;
-        int read_status = Util::readFileIntoVector(filename, coinc_data);
+        int read_status = Util::readFileIntoDeque(filename, coinc_data);
         if (verbose) {
             cout << filename << " read with status: " << read_status << endl;
         }
@@ -290,18 +304,28 @@ int main(int argc, char ** argv) {
             cerr << "Unable to load: " << filename << endl;
             return(-3);
         }
+    }
 
-        for (size_t ii = 0; ii < coinc_data.size(); ii++) {
-            EventCoinc & event = coinc_data[ii];
+    if (verbose) {
+        cout << "Filling Time Histograms with " << coinc_data.size() << " events" << endl;
+    }
+    for (size_t ii = 0; ii < coinc_data.size(); ii++) {
+        // Don't copy by reference so we don't modify the initial distribution
+        EventCoinc event = coinc_data[ii];
+        // That way we can always call TimeCalCoincEvent which will apply the
+        // full correction
+        TimeCalCoincEvent(event, &config);
 
-            TH1F * apd0_hist =
-                    apd_dtf[0][event.cartridge0][event.fin0][event.module0][event.apd0];
-            TH1F * apd1_hist =
-                    apd_dtf[1][event.cartridge1][event.fin1][event.module1][event.apd1];
+        TH1F * apd0_hist =
+                apd_dtf[0][event.cartridge0][event.fin0][event.module0][event.apd0];
+        TH1F * apd1_hist =
+                apd_dtf[1][event.cartridge1][event.fin1][event.module1][event.apd1];
 
-            apd0_hist->Fill(event.dtf);
-            apd1_hist->Fill(event.dtf);
-        }
+        apd0_hist->Fill(event.dtf);
+        // The right panel is always subtracted from the left,
+        // so we flip the sign.  This was we always subtract
+        // from the fine timestamp of the singles events.
+        apd1_hist->Fill(-event.dtf);
     }
 
     if (verbose) {
@@ -316,12 +340,6 @@ int main(int argc, char ** argv) {
                                     apd_dtf[p][c][f][m][a],
                                     use_gaussian_fit_flag,
                                     min_no_entries);
-                        // The right panel is always subtracted from the left,
-                        // so we flip the sign.  This was we always subtract
-                        // from the fine timestamp of the singles events.
-                        if (p == 1) {
-                            apd_time_offset[p][c][f][m][a] *= -1;
-                        }
                     }
                 }
             }
