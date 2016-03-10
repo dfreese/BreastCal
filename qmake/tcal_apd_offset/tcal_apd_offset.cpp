@@ -323,16 +323,8 @@ int main(int argc, char ** argv) {
                 for (int f = 0; f < config.fins_per_cartridge; f++) {
                     for (int m = 0; m < config.modules_per_fin; m++) {
                         for (int a = 0; a < config.apds_per_module; a++) {
-                            char namestring[30];
-                            char titlestring[50];
-                            sprintf(namestring,
-                                    "dtf[%d][%d][%d][%d][%d]",
-                                    p, c, f, m, a);
-                            sprintf(titlestring,
-                                    "P%dC%dF%dM%dA%d dtf",
-                                    p, c, f, m, a);
                             TH1F * h = apd_dtf[p][c][f][m][a];
-                            h->Clear();
+                            h->Reset();
                         }
                     }
                 }
