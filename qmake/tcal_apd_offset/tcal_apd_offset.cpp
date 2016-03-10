@@ -317,6 +317,7 @@ int main(int argc, char ** argv) {
 
     for (int iter_no = 0; iter_no < no_iterations; iter_no++) {
 
+        // Clear the histograms prior to every iteration
         for (int p = 0; p < config.panels_per_system; p++) {
             for (int c = 0; c < config.cartridges_per_panel; c++) {
                 for (int f = 0; f < config.fins_per_cartridge; f++) {
