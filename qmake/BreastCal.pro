@@ -8,4 +8,5 @@ SUBDIRS = \
     fit_floods \
     get_crystal_photopeaks \
     calibrate \
+    tcal_apd_offset \
     sort_coinc
