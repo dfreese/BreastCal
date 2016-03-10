@@ -92,10 +92,11 @@ void usage() {
          << "  -o [name] : output edep cal output filename\n"
          << "  -i [name] : input edep cal output filename\n"
          << "  -l [name] : list file of input filenames\n"
-         << "  -a [val]  : optional alpha relaxation parameter (default: 1.0)\n"
+         << "  -a [val]  : optional alpha relaxation parameter (default: 0.3)\n"
          << "  -t [val]  : optional window on time calibration (default: 200ns)\n"
          << "  -m [val]  : optional minimum number of entries for fit (default: 200)\n"
-         << "  -n [val]  : optional number of bins in histograms (default: 50)\n"
+         << "  -b [val]  : optional number of bins in histograms (default: 50)\n"
+         << "  -n [val]  : optional number iterations (default: 10)\n"
          << "  -ro [name]: optional root output file for timing spectra\n"
          << "  -ao [name]: optional output file of apd offsets\n"
          << "  -gf       : use gaussian fit of the timing specturm\n"
@@ -118,10 +119,11 @@ int main(int argc, char ** argv) {
 
     bool use_gaussian_fit_flag = false;
 
-    float alpha = 1.0;
+    float alpha = 0.3;
     float time_window = 200.0;
     int no_time_bins = 50;
     int min_no_entries = 200;
+    int no_iterations = 10;
 
     // Arguments not requiring input
     for (int ix = 1; ix < argc; ix++) {
@@ -194,9 +196,16 @@ int main(int argc, char ** argv) {
                 return(-2);
             }
         }
-        if (argument == "-n") {
+        if (argument == "-b") {
             if (Util::StringToNumber(following_argument, no_time_bins) < 0) {
                 cerr << "Invalid no_time_bins value: "
+                     << following_argument << endl;
+                return(-2);
+            }
+        }
+        if (argument == "-n") {
+            if (Util::StringToNumber(following_argument, no_iterations) < 0) {
+                cerr << "Invalid no_iterations value: "
                      << following_argument << endl;
                 return(-2);
             }
@@ -306,57 +315,82 @@ int main(int argc, char ** argv) {
         }
     }
 
-    if (verbose) {
-        cout << "Filling Time Histograms with " << coinc_data.size() << " events" << endl;
-    }
-    for (size_t ii = 0; ii < coinc_data.size(); ii++) {
-        // Don't copy by reference so we don't modify the initial distribution
-        EventCoinc event = coinc_data[ii];
-        // That way we can always call TimeCalCoincEvent which will apply the
-        // full correction
-        TimeCalCoincEvent(event, &config);
+    for (int iter_no = 0; iter_no < no_iterations; iter_no++) {
 
-        TH1F * apd0_hist =
-                apd_dtf[0][event.cartridge0][event.fin0][event.module0][event.apd0];
-        TH1F * apd1_hist =
-                apd_dtf[1][event.cartridge1][event.fin1][event.module1][event.apd1];
-
-        apd0_hist->Fill(event.dtf);
-        // The right panel is always subtracted from the left,
-        // so we flip the sign.  This was we always subtract
-        // from the fine timestamp of the singles events.
-        apd1_hist->Fill(-event.dtf);
-    }
-
-    if (verbose) {
-        cout << "Finding spectrum peaks" << endl;
-    }
-    for (int p = 0; p < config.panels_per_system; p++) {
-        for (int c = 0; c < config.cartridges_per_panel; c++) {
-            for (int f = 0; f < config.fins_per_cartridge; f++) {
-                for (int m = 0; m < config.modules_per_fin; m++) {
-                    for (int a = 0; a < config.apds_per_module; a++) {
-                        apd_time_offset[p][c][f][m][a] = alpha * calcApdOffset(
-                                    apd_dtf[p][c][f][m][a],
-                                    use_gaussian_fit_flag,
-                                    min_no_entries);
+        for (int p = 0; p < config.panels_per_system; p++) {
+            for (int c = 0; c < config.cartridges_per_panel; c++) {
+                for (int f = 0; f < config.fins_per_cartridge; f++) {
+                    for (int m = 0; m < config.modules_per_fin; m++) {
+                        for (int a = 0; a < config.apds_per_module; a++) {
+                            char namestring[30];
+                            char titlestring[50];
+                            sprintf(namestring,
+                                    "dtf[%d][%d][%d][%d][%d]",
+                                    p, c, f, m, a);
+                            sprintf(titlestring,
+                                    "P%dC%dF%dM%dA%d dtf",
+                                    p, c, f, m, a);
+                            TH1F * h = apd_dtf[p][c][f][m][a];
+                            h->Clear();
+                        }
                     }
                 }
             }
         }
-    }
 
-    if (verbose) {
-        cout << "Applying offsets to calibration" << endl;
-    }
-    for (int p = 0; p < config.panels_per_system; p++) {
-        for (int c = 0; c < config.cartridges_per_panel; c++) {
-            for (int f = 0; f < config.fins_per_cartridge; f++) {
-                for (int m = 0; m < config.modules_per_fin; m++) {
-                    for (int a = 0; a < config.apds_per_module; a++) {
-                        for (int x = 0; x < config.crystals_per_apd; x++) {
-                            CrystalCalibration & x_cal = config.calibration[p][c][f][m][a][x];
-                            x_cal.time_offset += apd_time_offset[p][c][f][m][a];
+
+        if (verbose) {
+            cout << "Filling Time Histograms with " << coinc_data.size() << " events" << endl;
+        }
+        for (size_t ii = 0; ii < coinc_data.size(); ii++) {
+            // Don't copy by reference so we don't modify the initial distribution
+            EventCoinc event = coinc_data[ii];
+            // That way we can always call TimeCalCoincEvent which will apply the
+            // full correction
+            TimeCalCoincEvent(event, &config);
+
+            TH1F * apd0_hist =
+                    apd_dtf[0][event.cartridge0][event.fin0][event.module0][event.apd0];
+            TH1F * apd1_hist =
+                    apd_dtf[1][event.cartridge1][event.fin1][event.module1][event.apd1];
+
+            apd0_hist->Fill(event.dtf);
+            // The right panel is always subtracted from the left,
+            // so we flip the sign.  This was we always subtract
+            // from the fine timestamp of the singles events.
+            apd1_hist->Fill(-event.dtf);
+        }
+
+        if (verbose) {
+            cout << "Finding spectrum peaks" << endl;
+        }
+        for (int p = 0; p < config.panels_per_system; p++) {
+            for (int c = 0; c < config.cartridges_per_panel; c++) {
+                for (int f = 0; f < config.fins_per_cartridge; f++) {
+                    for (int m = 0; m < config.modules_per_fin; m++) {
+                        for (int a = 0; a < config.apds_per_module; a++) {
+                            apd_time_offset[p][c][f][m][a] = alpha * calcApdOffset(
+                                        apd_dtf[p][c][f][m][a],
+                                        use_gaussian_fit_flag,
+                                        min_no_entries);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (verbose) {
+            cout << "Applying offsets to calibration" << endl;
+        }
+        for (int p = 0; p < config.panels_per_system; p++) {
+            for (int c = 0; c < config.cartridges_per_panel; c++) {
+                for (int f = 0; f < config.fins_per_cartridge; f++) {
+                    for (int m = 0; m < config.modules_per_fin; m++) {
+                        for (int a = 0; a < config.apds_per_module; a++) {
+                            for (int x = 0; x < config.crystals_per_apd; x++) {
+                                CrystalCalibration & x_cal = config.calibration[p][c][f][m][a][x];
+                                x_cal.time_offset += apd_time_offset[p][c][f][m][a];
+                            }
                         }
                     }
                 }
