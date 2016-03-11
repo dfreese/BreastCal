@@ -68,18 +68,20 @@ overwrite_settings = False
 
 # Load in the specified settings as the default
 if args.settings:
-    coinc_info = json.load(open(args.settings, 'r'))
+    with open(args.settings, 'r') as json_file:
+        coinc_info = json.load(json_file)
 else:
     coinc_info = dict()
 
 # Overwrite the appropriate ones with the config file if specified
 if args.cal_config:
-    cal_info = json.load(open(args.cal_config, 'r'))
-    coinc_info['config_file'] = cal_info['config_file']
-    coinc_info['ped_file'] = cal_info['ped_file']
-    coinc_info['cal_file'] = cal_info['cal_file']
-    coinc_info['uv_file'] = cal_info['uv_file']
-    coinc_info_name = args.cal_config.replace('.json', '.coinc.json')
+    with open(args.cal_config, 'r') as json_file:
+        cal_info = json.load(json_file)
+        coinc_info['config_file'] = cal_info['config_file']
+        coinc_info['ped_file'] = cal_info['ped_file']
+        coinc_info['cal_file'] = cal_info['cal_file']
+        coinc_info['uv_file'] = cal_info['uv_file']
+        coinc_info_name = args.cal_config.replace('.json', '.coinc.json')
 
 # Then overwrite those settings with any of them from the command line
 if args.window:
@@ -117,18 +119,23 @@ if (('config_file' not in coinc_info) or ('ped_file' not in coinc_info) or
 if 'left_filelist' not in coinc_info and 'right_filelist' not in coinc_info:
     # If not and the cal config has been specified, then generate filelists from that
     if args.cal_config:
-        files = open(cal_info['file_list'], 'r').read().splitlines()
+        with open(cal_info['file_list'], 'r') as f:
+            files = f.read().splitlines()
         left_files_rx = re.compile('_L0_')
-        left_files = [l for l in files for m in [left_files_rx.search(l)] if m]
+        left_files = sorted(
+                [l for l in files for m in [left_files_rx.search(l)] if m])
         left_filelist_name = cal_info['file_list'].replace('.txt','.left.txt')
         coinc_info['left_filelist'] = left_filelist_name
-        open(coinc_info['left_filelist'], 'w').write('\n'.join(left_files))
+        with open(coinc_info['left_filelist'], 'w') as f:
+            f.write('\n'.join(left_files))
 
         right_files_rx = re.compile('_R0_')
-        right_files = [l for l in files for m in [right_files_rx.search(l)] if m]
+        right_files = sorted(
+                [l for l in files for m in [right_files_rx.search(l)] if m])
         right_filelist_name = cal_info['file_list'].replace('.txt','.right.txt')
         coinc_info['right_filelist'] = right_filelist_name
-        open(coinc_info['right_filelist'], 'w').write('\n'.join(right_files))
+        with open(coinc_info['right_filelist'], 'w') as f:
+            f.write('\n'.join(right_files))
 
         overwrite_settings = True
     else:
@@ -142,12 +149,13 @@ if args.settings is None or overwrite_settings:
         coinc_info_name = args.cal_config.replace('.json', '.coinc.json')
     if overwrite_settings and args.settings is not None:
         coinc_info_name = args.settings
-    json.dump(coinc_info,
-              open(coinc_info_name, 'w'),
-              ensure_ascii=True,
-              sort_keys=True,
-              indent=4,
-              separators=(',', ': '))
+    with open(coinc_info_name, 'w') as json_file:
+        json.dump(coinc_info,
+                  json_file,
+                  ensure_ascii=True,
+                  sort_keys=True,
+                  indent=4,
+                  separators=(',', ': '))
 
 # Now we have the full settings to begin constructing the sort_coinc command we'll use
 sort_coinc_cmd_base = 'sort_coinc -c %s -p %s -cal %s -uv %s' % (
@@ -167,8 +175,10 @@ if 'time_edep_cal_file' in coinc_info:
 
 
 # Load in the names of the data files
-left_files = open(coinc_info['left_filelist'], 'r').read().splitlines() 
-right_files = open(coinc_info['right_filelist'], 'r').read().splitlines() 
+with open(coinc_info['left_filelist'], 'r') as f:
+    left_files = f.read().splitlines()
+with open(coinc_info['right_filelist'], 'r') as f:
+    right_files = f.read().splitlines()
 
 # And make sure we have the right ones
 if len(left_files) != len(right_files):
@@ -200,5 +210,3 @@ for left_file, right_file in zip(left_files, right_files):
 # Wait for the processes to finish up
 for popen in popens:
     popen.wait()
-
-

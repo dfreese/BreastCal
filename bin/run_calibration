@@ -67,22 +67,25 @@ def generate_blank_config(filename):
     blank_config['graphs_root_file'] = ''
     blank_config['cal_file'] = ''
     blank_config['crystal_energy_root_file'] = ''
-    json.dump(blank_config,
-              open(filename, 'w'),
-              ensure_ascii=True,
-              sort_keys=True,
-              indent=4,
-              separators=(',', ': '))
+    with open(filename, 'w') as json_file:
+        json.dump(blank_config,
+                  json_file,
+                  ensure_ascii=True,
+                  sort_keys=True,
+                  indent=4,
+                  separators=(',', ': '))
     quit()
 
 def auto_generate_config(base_name):
     files = os.listdir('.')
     # find the daq files
     daq_files_rx = re.compile('DAQ_Data.*\.dat')
-    daq_files = [m.group() for l in files for m in [daq_files_rx.search(l)] if m]
+    daq_files = sorted(
+            [m.group() for l in files for m in [daq_files_rx.search(l)] if m])
     # find all the pedestal files
     ped_files_rx = re.compile('PED_Data.*\.dat')
-    ped_files = [m.group() for l in files for m in [ped_files_rx.search(l)] if m]
+    ped_files = sorted(
+            [m.group() for l in files for m in [ped_files_rx.search(l)] if m])
 
     json_rx = re.compile('.*\.json')
     json_files = [m.group() for l in files for m in [json_rx.search(l)] if m]
@@ -94,7 +97,7 @@ def auto_generate_config(base_name):
     new_config = dict()
     new_config['config_file'] = config_file
     new_config['ped_file_list'] = base_name + '.pedfilelist.txt'
-    new_config['ped_file'] = base_name + '.ped' 
+    new_config['ped_file'] = base_name + '.ped'
     new_config['file_list'] = base_name + '.daqfilelist.txt'
     new_config['uv_file'] = base_name + '.uv'
     new_config['pp_file'] = base_name + '.pp'
@@ -104,15 +107,18 @@ def auto_generate_config(base_name):
     new_config['graphs_root_file'] = base_name + '.graphs.root'
     new_config['cal_file'] = base_name + '.cal'
     new_config['crystal_energy_root_file'] = base_name + '.xpp.root'
-    json.dump(new_config,
-              open(base_name + '.json', 'w'),
-              ensure_ascii=True,
-              sort_keys=True,
-              indent=4,
-              separators=(',', ': '))
+    with open(base_name + '.json', 'w') as json_file:
+        json.dump(new_config,
+                  json_file,
+                  ensure_ascii=True,
+                  sort_keys=True,
+                  indent=4,
+                  separators=(',', ': '))
 
-    open(new_config['ped_file_list'], 'w').write('\n'.join(ped_files))
-    open(new_config['file_list'], 'w').write('\n'.join(daq_files))
+    with open(new_config['ped_file_list'], 'w') as f:
+        f.write('\n'.join(ped_files))
+    with open(new_config['file_list'], 'w') as f:
+        f.write('\n'.join(daq_files))
     quit()
 
 parser = parse_args()
@@ -132,7 +138,8 @@ if args.config is None:
     quit()
 
 # And then load that config
-cal_info = json.load(open(args.config,'r'))
+with open(args.config,'r') as json_file:
+    cal_info = json.load(json_file)
 
 
 if args.all:
@@ -206,4 +213,3 @@ if args.crystal_photopeaks:
     print cry_cmd
     cry_popen = subprocess.Popen([cry_cmd], shell=True)
     cry_popen.wait()
-
