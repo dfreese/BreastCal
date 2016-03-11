@@ -23,6 +23,9 @@ def parse_args():
     parser.add_argument('-g', '--generate',
             help='Auto generate a json config from the base name given',
             type=str)
+    parser.add_argument('-s', '--simulate',
+            help='Just print out the commands, but do not run them',
+            action='store_true')
     parser.add_argument('-a', '--all',
             help='Run all of the calibrations',
             action='store_true')
@@ -156,8 +159,9 @@ if args.pedestals:
             cal_info['ped_file_list'],
             cal_info['ped_file'])
     print ped_cmd
-    ped_popen = subprocess.Popen([ped_cmd], shell=True)
-    ped_popen.wait()
+    if not args.simulate:
+        ped_popen = subprocess.Popen([ped_cmd], shell=True)
+        ped_popen.wait()
 
 if args.uv:
     uv_cmd = 'calc_uv -v -c %s -p %s -l %s -o %s' % (
@@ -166,8 +170,9 @@ if args.uv:
             cal_info['file_list'],
             cal_info['uv_file'])
     print uv_cmd
-    uv_popen = subprocess.Popen([uv_cmd], shell=True)
-    uv_popen.wait()
+    if not args.simulate:
+        uv_popen = subprocess.Popen([uv_cmd], shell=True)
+        uv_popen.wait()
 
 if args.apd_photopeaks:
     apd_cmd = 'get_apd_photopeaks -v -c %s -p %s -l %s -o %s -ro %s' % (
@@ -177,8 +182,9 @@ if args.apd_photopeaks:
             cal_info['pp_file'],
             cal_info['pp_root_file'])
     print apd_cmd
-    apd_popen = subprocess.Popen([apd_cmd], shell=True)
-    apd_popen.wait()
+    if not args.simulate:
+        apd_popen = subprocess.Popen([apd_cmd], shell=True)
+        apd_popen.wait()
 
 if args.fill_floods:
     fill_cmd = 'fill_floods -v -c %s -p %s -l %s -pp %s -o %s' % (
@@ -188,8 +194,9 @@ if args.fill_floods:
             cal_info['pp_file'],
             cal_info['flood_root_file'])
     print fill_cmd
-    fill_popen = subprocess.Popen([fill_cmd], shell=True)
-    fill_popen.wait()
+    if not args.simulate:
+        fill_popen = subprocess.Popen([fill_cmd], shell=True)
+        fill_popen.wait()
 
 if args.fit_floods:
     fit_cmd = 'fit_floods -v -c %s -f %s -o %s -ro %s' % (
@@ -198,8 +205,9 @@ if args.fit_floods:
             cal_info['loc_file'],
             cal_info['graphs_root_file'])
     print fit_cmd
-    fit_popen = subprocess.Popen([fit_cmd], shell=True)
-    fit_popen.wait()
+    if not args.simulate:
+        fit_popen = subprocess.Popen([fit_cmd], shell=True)
+        fit_popen.wait()
 
 if args.crystal_photopeaks:
     cry_cmd = 'get_crystal_photopeaks -v -c %s -p %s -pp %s -x %s -l %s -o %s -ro %s' % (
@@ -211,5 +219,6 @@ if args.crystal_photopeaks:
             cal_info['cal_file'],
             cal_info['crystal_energy_root_file'])
     print cry_cmd
-    cry_popen = subprocess.Popen([cry_cmd], shell=True)
-    cry_popen.wait()
+    if not args.simulate:
+        cry_popen = subprocess.Popen([cry_cmd], shell=True)
+        cry_popen.wait()
