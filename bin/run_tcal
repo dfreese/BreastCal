@@ -1,0 +1,191 @@
+#!/usr/bin/env python
+
+import os
+import json
+import subprocess
+import argparse
+import re
+
+def parse_args():
+    # see https://docs.python.org/2/library/argparse.html for reference
+    parser = argparse.ArgumentParser(
+            description='Time Calibrate Coincidences')
+    parser.add_argument('-s', '--settings',
+            help='Run from settings file',
+            type=str)
+    parser.add_argument('--overwrite',
+            help='Overwrite the settings file with command line arguments',
+            action='store_true')
+    parser.add_argument('--simulate',
+            help='Just print out the commands, but do not run them',
+            action='store_true')
+    parser.add_argument('-c', '--coinc_config',
+            help='Coincidence Config Json',
+            type=str)
+    parser.add_argument('-ao', '--apd_output',
+            help='Name of the apd time cal output file',
+            type=str)
+    parser.add_argument('-co', '--crystal_output',
+            help='Name of the crystal time cal output file',
+            type=str)
+    parser.add_argument('-eo', '--edep_output',
+            help='Name of the energy dependence time cal output file',
+            type=str)
+    parser.add_argument('-i', '--input_cal',
+            help='Initial input time cal',
+            type=str)
+    parser.add_argument('-w', '--window',
+            help='Coincidence Window (ns)',
+            type=float)
+    parser.add_argument('--alpha',
+            help='Alpha iteration parameter',
+            type=float)
+    parser.add_argument('--iter',
+            help='Number of iteration parameter',
+            type=float)
+    parser.add_argument('-a', '--all',
+            help='Run all calibrations',
+            action='store_true')
+    parser.add_argument('-apd', '--apd_cal',
+            help='Run per apd calibrations',
+            action='store_true')
+    parser.add_argument('-xal', '--crystal_cal',
+            help='Run per crystal calibrations',
+            action='store_true')
+    parser.add_argument('-edep', '--edep_cal',
+            help='Run energy dependence calibrations',
+            action='store_true')
+    parser.add_argument('--system_config',
+            help='The system config json file',
+            type=str)
+    return parser
+
+parser = parse_args()
+args = parser.parse_args()
+
+# Flag for if we should overwrite the loaded tcal_info json file
+overwrite_settings = False
+if args.overwrite:
+    overwrite_settings = True
+
+# Load in the specified settings as the default
+if args.settings:
+    with open(args.settings, 'r') as json_file:
+        tcal_info = json.load(json_file)
+else:
+    tcal_info = dict()
+
+# Overwrite the appropriate ones with the config file if specified
+if args.coinc_config:
+    with open(args.coinc_config, 'r') as json_file:
+        # Copy in everything from the coinc config file
+        coinc_info = json.load(json_file)
+        for key, value in coinc_info.iteritems():
+            tcal_info[key] = value
+
+# Then overwrite those settings with any of them from the command line
+if args.window:
+    tcal_info['window'] = args.window
+if args.alpha:
+    tcal_info['alpha'] = args.alpha
+if args.iter:
+    tcal_info['iterations'] = args.iter
+if args.egate_low:
+    tcal_info['egate_low'] = args.egate_low
+if args.egate_high:
+    tcal_info['egate_high'] = args.egate_high
+if args.egate_high:
+    tcal_info['egate_high'] = args.egate_high
+if args.system_config:
+    tcal_info['system_config'] = args.system_config
+if args.apd_output:
+    tcal_info['apd_output'] = args.apd_output
+if args.crystal_output:
+    tcal_info['crystal_output'] = args.crystal_output
+if args.edep_output:
+    tcal_info['edep_output'] = args.edep_output
+
+if 'system_config' in tcal_info:
+    print 'System configuration not specified'
+    quit()
+
+if 'coinc_filelist' not in tcal_info:
+    print 'Coincidence Filelist not specified'
+    quit()
+
+# specify a default output for the calibrations
+if 'apd_output' not in tcal_info:
+    tcal_info['apd_output'] = tcal_info['coinc_filelist'].replace('.filelist.coinc.txt', '.tcal_apd.txt')
+if 'crystal_output' not in tcal_info:
+    tcal_info['crystal_output'] = tcal_info['coinc_filelist'].replace('.filelist.coinc.txt', '.tcal_crystal.txt')
+if 'edep_output' not in tcal_info:
+    tcal_info['edep_output'] = tcal_info['coinc_filelist'].replace('.filelist.coinc.txt', '.tcal_edep.txt')
+
+if args.all:
+    args.apd_cal = True
+    args.crystal_cal = True
+    args.edep_cal = True
+
+# Setup the input file.  Take time_edep_cal_file that was copied from the coinc
+# json file first.  This will overwrite any loaded settings file
+if 'time_edep_cal_file' in tcal_info:
+    tcal_info['input_cal_file'] = tcal_info['time_edep_cal_file']
+# Then overwrite that with any user input
+if args.input_cal:
+    tcal_info['input_cal_file'] = args.input_cal
+
+# Finally change the time_edep_cal_file specified to whatever will be output by
+# this script
+if args.apd_cal:
+    tcal_info['time_edep_cal_file'] = tcal_info['apd_output']
+if args.crystal_cal:
+    tcal_info['time_edep_cal_file'] = tcal_info['crystal_output']
+if args.edep_cal:
+    tcal_info['time_edep_cal_file'] = tcal_info['edep_output']
+
+# Overwrite loaded settings file if it was specified
+if args.settings is None or overwrite_settings:
+    tcal_info_name = 'tcal_info.json'
+    if args.coinc_config:
+        tcal_info_name = args.coinc_config.replace('.coinc.json', '.tcal.json')
+    if overwrite_settings and args.settings is not None:
+        tcal_info_name = args.settings
+    with open(tcal_info_name, 'w') as json_file:
+        json.dump(tcal_info,
+                  json_file,
+                  ensure_ascii=True,
+                  sort_keys=True,
+                  indent=4,
+                  separators=(',', ': '))
+        json_file.write('\n')
+
+tcal_options = '-v'
+if 'window' in tcal_info:
+    tcal_options += ' -w %d' % tcal_info['window']
+if 'iterations' in tcal_info:
+    tcal_options += ' -n %d' % tcal_info['iterations']
+if 'alpha' in tcal_info:
+    tcal_options += ' -a %0.1f' % tcal_info['alpha']
+
+if args.apd_cal:
+    apd_cal_cmd = 'tcal_apd_offset %s -o %s' % (tcal_options, tcal_info['apd_output'])
+    if 'input_cal_file' in tcal_info:
+        apd_cal_cmd += ' -i %s' % tcal_info['input_cal_file']
+    print apd_cal_cmd
+    if not args.simulate:
+        popens.append(subprocess.Popen([apd_cal_cmd], shell=True))
+
+if args.crystal_cal:
+    crystal_cal_cmd = 'tcal_crystal_offset %s -i %s -o %s' % (
+            tcal_options, tcal_info['apd_output'], tcal_info['crystal_output'])
+    print crystal_cal_cmd
+    if not args.simulate:
+        popens.append(subprocess.Popen([crystal_cal_cmd], shell=True))
+
+if args.edep_cal:
+    edep_cal_cmd = 'tcal_edep_offset %s -i %s -o %s' % (
+            tcal_options, tcal_info['crystal_output'], tcal_info['edep_output'])
+    print edep_cal_cmd
+    if not args.simulate:
+        popens.append(subprocess.Popen([edep_cal_cmd], shell=True))
+
