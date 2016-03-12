@@ -22,9 +22,19 @@ def parse_args():
             type=str)
     parser.add_argument('-g', '--generate',
             help='Auto generate a json config from the base name given',
-            type=str)
+            default=None,
+            type=str,
+            action='store',
+            const=True,
+            nargs='?')
     parser.add_argument('-s', '--simulate',
             help='Just print out the commands, but do not run them',
+            action='store_true')
+    parser.add_argument('-d', '--decode',
+            help='Decode all of the data files first (saves time not space)',
+            action='store_true')
+    parser.add_argument('-ad', '--assume_decoded',
+            help='Assume the files have been decoded for faster calibration',
             action='store_true')
     parser.add_argument('-a', '--all',
             help='Run all of the calibrations',
@@ -62,6 +72,8 @@ def generate_blank_config(filename):
     blank_config['ped_file_list'] = ''
     blank_config['ped_file'] = ''
     blank_config['file_list'] = ''
+    blank_config['dec_file_list'] = ''
+    blank_config['cal_file_list'] = ''
     blank_config['uv_file'] = ''
     blank_config['pp_file'] = ''
     blank_config['pp_root_file'] = ''
@@ -77,31 +89,51 @@ def generate_blank_config(filename):
                   sort_keys=True,
                   indent=4,
                   separators=(',', ': '))
+        json_file.write('\n')
     quit()
 
 def auto_generate_config(base_name):
     files = os.listdir('.')
-    # find the daq files
-    daq_files_rx = re.compile('DAQ_Data.*\.dat')
-    daq_files = sorted(
-            [m.group() for l in files for m in [daq_files_rx.search(l)] if m])
-    # find all the pedestal files
-    ped_files_rx = re.compile('PED_Data.*\.dat')
-    ped_files = sorted(
-            [m.group() for l in files for m in [ped_files_rx.search(l)] if m])
 
-    json_rx = re.compile('.*\.json')
-    json_files = [m.group() for l in files for m in [json_rx.search(l)] if m]
+    # Find any config file that would have been created by breastdaq
+    config_files_rx = re.compile('^DAQ_Config_[0-9]{10}.json$')
+    config_files = sorted(
+            [l for l in files for m in [config_files_rx.search(l)] if m])
 
     config_file = '/home/miil/FINDATA/nfo/breast_daq_config.json'
-    if len(json_files) > 0:
-        config_file = json_files[0]
+    if len(config_files) == 0:
+        print 'No BreastDAQ config file found.  Using system default: %s' % config_file
+        if type(base_name) is not str:
+            base_name = input('Enter base name to use for calibration: ')
+    elif len(config_files) > 1:
+        print 'Found Multiple BreastDAQ config files, input one: ', config_files
+        config_file = input('Enter config: ')
+    else:
+        config_name = config_files[0]
+
+    if type(base_name) is not str:
+        base_name = config_name.replace('_Config_', '_Calib_').replace('.json', '')
+
+    # find the daq files
+    daq_files_rx = re.compile('^DAQ_Data_[0-9]{10}_[L,R][0-9]_[0-9]{1,3}.dat$')
+    daq_files = sorted(
+            [l for l in files for m in [daq_files_rx.search(l)] if m])
+
+    dec_files = [s.replace('.dat','.dat.dec') for s in daq_files]
+    cal_files = [s.replace('.dat','.dat.cal') for s in daq_files]
+
+    # find all the pedestal files
+    ped_files_rx = re.compile('^PED_Data_[0-9]{10}_[L,R][0-9]_[0-9]{1,3}.dat$')
+    ped_files = sorted(
+            [l for l in files for m in [ped_files_rx.search(l)] if m])
 
     new_config = dict()
     new_config['config_file'] = config_file
-    new_config['ped_file_list'] = base_name + '.pedfilelist.txt'
+    new_config['ped_file_list'] = base_name + '.filelist.ped.txt'
     new_config['ped_file'] = base_name + '.ped'
-    new_config['file_list'] = base_name + '.daqfilelist.txt'
+    new_config['file_list'] = base_name + '.filelist.daq.txt'
+    new_config['dec_file_list'] = base_name + '.filelist.dec.txt'
+    new_config['cal_file_list'] = base_name + '.filelist.cal.txt'
     new_config['uv_file'] = base_name + '.uv'
     new_config['pp_file'] = base_name + '.pp'
     new_config['pp_root_file'] = base_name + '.pp.root'
@@ -110,22 +142,36 @@ def auto_generate_config(base_name):
     new_config['graphs_root_file'] = base_name + '.graphs.root'
     new_config['cal_file'] = base_name + '.cal'
     new_config['crystal_energy_root_file'] = base_name + '.xpp.root'
-    with open(base_name + '.json', 'w') as json_file:
+
+
+    cal_json_name = base_name + '.json'
+
+    with open(cal_json_name, 'w') as json_file:
         json.dump(new_config,
                   json_file,
                   ensure_ascii=True,
                   sort_keys=True,
                   indent=4,
                   separators=(',', ': '))
+        json_file.write('\n')
 
     with open(new_config['ped_file_list'], 'w') as f:
-        f.write('\n'.join(ped_files))
+        f.write('\n'.join(ped_files) + '\n')
     with open(new_config['file_list'], 'w') as f:
-        f.write('\n'.join(daq_files))
+        f.write('\n'.join(daq_files) + '\n')
+    with open(new_config['dec_file_list'], 'w') as f:
+        f.write('\n'.join(dec_files) + '\n')
+    with open(new_config['cal_file_list'], 'w') as f:
+        f.write('\n'.join(cal_files) + '\n')
+
+    print 'Check if the generated config (%s) and filelists look correct' % \
+            cal_json_name
+    print 'Then execute "run_calibration -c %s [-a -ff ...]"' % cal_json_name
     quit()
 
 parser = parse_args()
 args = parser.parse_args()
+
 
 # Check first if the user wanted to generate a template to work from
 if args.blank:
@@ -144,6 +190,30 @@ if args.config is None:
 with open(args.config,'r') as json_file:
     cal_info = json.load(json_file)
 
+
+if args.decode:
+    # If we are decoding the files, then we can safely assume this...
+    args.assume_decoded = True
+    popens = []
+    with open(cal_info['file_list']) as f:
+        daq_files = f.read().splitlines()
+    for f in daq_files:
+        decode_cmd = 'decode -c %s -p %s -f %s' % (
+                cal_info['config_file'],
+                cal_info['ped_file'], f)
+        print decode_cmd
+        if not args.simulate:
+            popens.append(subprocess.Popen([decode_cmd], shell=True))
+
+        # If we have args.cores instances running, then wait until the first one
+        # gets done before we continue
+        if len(popens) >= args.cores:
+            popens[0].wait()
+            popens.pop(0)
+
+    # Wait for the processes to finish up
+    for popen in popens:
+        popen.wait()
 
 if args.all:
     args.pedestals = True
@@ -164,35 +234,50 @@ if args.pedestals:
         ped_popen.wait()
 
 if args.uv:
+    filelist = cal_info['file_list']
+    if args.assume_decoded:
+        filelist = cal_info['dec_file_list']
     uv_cmd = 'calc_uv -v -c %s -p %s -l %s -o %s' % (
             cal_info['config_file'],
             cal_info['ped_file'],
-            cal_info['file_list'],
+            filelist,
             cal_info['uv_file'])
+    if args.assume_decoded:
+        uv_cmd += ' -ad'
     print uv_cmd
     if not args.simulate:
         uv_popen = subprocess.Popen([uv_cmd], shell=True)
         uv_popen.wait()
 
 if args.apd_photopeaks:
+    filelist = cal_info['file_list']
+    if args.assume_decoded:
+        filelist = cal_info['dec_file_list']
     apd_cmd = 'get_apd_photopeaks -v -c %s -p %s -l %s -o %s -ro %s' % (
             cal_info['config_file'],
             cal_info['ped_file'],
-            cal_info['file_list'],
+            filelist,
             cal_info['pp_file'],
             cal_info['pp_root_file'])
+    if args.assume_decoded:
+        apd_cmd += ' -ad'
     print apd_cmd
     if not args.simulate:
         apd_popen = subprocess.Popen([apd_cmd], shell=True)
         apd_popen.wait()
 
 if args.fill_floods:
+    filelist = cal_info['file_list']
+    if args.assume_decoded:
+        filelist = cal_info['dec_file_list']
     fill_cmd = 'fill_floods -v -c %s -p %s -l %s -pp %s -o %s' % (
             cal_info['config_file'],
             cal_info['ped_file'],
-            cal_info['file_list'],
+            filelist,
             cal_info['pp_file'],
             cal_info['flood_root_file'])
+    if args.assume_decoded:
+        fill_cmd += ' -ad'
     print fill_cmd
     if not args.simulate:
         fill_popen = subprocess.Popen([fill_cmd], shell=True)
@@ -210,14 +295,19 @@ if args.fit_floods:
         fit_popen.wait()
 
 if args.crystal_photopeaks:
+    filelist = cal_info['file_list']
+    if args.assume_decoded:
+        filelist = cal_info['dec_file_list']
     cry_cmd = 'get_crystal_photopeaks -v -c %s -p %s -pp %s -x %s -l %s -o %s -ro %s' % (
             cal_info['config_file'],
             cal_info['ped_file'],
             cal_info['pp_file'],
             cal_info['loc_file'],
-            cal_info['file_list'],
+            filelist,
             cal_info['cal_file'],
             cal_info['crystal_energy_root_file'])
+    if args.assume_decoded:
+        cry_cmd += ' -ad'
     print cry_cmd
     if not args.simulate:
         cry_popen = subprocess.Popen([cry_cmd], shell=True)

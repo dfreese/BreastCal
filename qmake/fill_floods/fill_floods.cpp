@@ -68,6 +68,7 @@ void usage() {
          << "  -l [name]    : list file of input filenames\n"
          << "  -el [energy] : low energy limit  (default: 357.7keV)\n"
          << "  -eh [energy] : high energy limit (default: 664.3keV)\n"
+         << "  -ad          : assume the input files are decoded\n"
          << endl;
 }
 
@@ -83,6 +84,7 @@ int main(int argc, char ** argv) {
     string filename_output;
     string filename_ped;
     string filename_pp;
+    bool assume_decoded = false;
 
     // Flood photopeak windows taken from get_floods.C (pp * 0.7 or 1.3)
     float energy_high = 664.3;
@@ -94,6 +96,9 @@ int main(int argc, char ** argv) {
         if (argument == "-v") {
             verbose = true;
             cout << "Running in verbose mode " << endl;
+        }
+        if (argument == "-ad") {
+            assume_decoded = true;
         }
         if (argument == "-h" || argument == "--help") {
             usage();
@@ -163,12 +168,15 @@ int main(int argc, char ** argv) {
         cout << "filename_pp:     " << filename_pp << endl;
         cout << "filename_output: " << filename_output << endl;
         cout << "filename_config: " << filename_config << endl;
+        if (assume_decoded) {
+            cout << "assuming decoded files" << endl;
+        }
     }
 
     SystemConfiguration config;
     int config_load_status = config.load(filename_config);
     if (verbose) {
-        cout << "config_load_status: " << config_load_status << endl;
+        cout << "loading config file: " << filename_config << endl;
     }
     if (config_load_status < 0) {
         cerr << "SystemConfiguration.load() failed with status: "
@@ -179,7 +187,7 @@ int main(int argc, char ** argv) {
 
     int ped_load_status = config.loadPedestals(filename_ped);
     if (verbose) {
-        cout << "ped_load_status: " << ped_load_status << endl;
+        cout << "loading config file: " << filename_ped << endl;
     }
     if (ped_load_status < 0) {
         cerr << "SystemConfiguration.loadPedestals() failed with status: "
@@ -272,18 +280,29 @@ int main(int argc, char ** argv) {
     ProcessInfo info;
     for (size_t ii = 0; ii < filenames.size(); ii++) {
         string & filename = filenames[ii];
-        int read_status = Util::readFileIntoDeque(filename, file_data);
-        if (verbose) {
-            cout << filename << " read with status: " << read_status << endl;
-        }
-        if (read_status < 0) {
-            cerr << "Unable to load: " << filename << endl;
-            return(-3);
-        }
         vector<EventRaw> raw_events;
+        if (assume_decoded) {
+            int read_status = Util::readFileIntoVector(filename, raw_events);
+            if (verbose) {
+                cout << filename << " read with status: " << read_status << endl;
+            }
+            if (read_status < 0) {
+                cerr << "Unable to load: " << filename << endl;
+                return(-3);
+            }
+        } else {
+            int read_status = Util::readFileIntoDeque(filename, file_data);
+            if (verbose) {
+                cout << filename << " read with status: " << read_status << endl;
+            }
+            if (read_status < 0) {
+                cerr << "Unable to load: " << filename << endl;
+                return(-3);
+            }
 
-        ProcessParams::DecodeBuffer(file_data, raw_events, info, &config);
-        ProcessParams::ClearProcessedData(file_data, info);
+            ProcessParams::DecodeBuffer(file_data, raw_events, info, &config);
+            ProcessParams::ClearProcessedData(file_data, info);
+        }
         for (size_t ii = 0; ii < raw_events.size(); ii++) {
             EventRaw & event = raw_events[ii];
             int apd, module, fin;

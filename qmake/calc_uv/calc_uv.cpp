@@ -17,6 +17,7 @@ void usage() {
     cout << "uv_calc [-vh] -c [config] -p [ped file] -f [filename] -f ...\n"
          << "  -o [name] : output filename\n"
          << "  -l [name] : list file of input filenames\n"
+         << "  -ad       : assume the input files are decoded\n"
          << endl;
 }
 
@@ -33,6 +34,7 @@ int main(int argc, char ** argv) {
     string filename_config;
     string filename_output;
     string filename_ped;
+    bool assume_decoded = false;
 
 
     // Arguments not requiring input
@@ -41,6 +43,9 @@ int main(int argc, char ** argv) {
         if (argument == "-v") {
             verbose = true;
             cout << "Running in verbose mode " << endl;
+        }
+        if (argument == "-ad") {
+            assume_decoded = true;
         }
         if (argument == "-h" || argument == "--help") {
             usage();
@@ -98,6 +103,9 @@ int main(int argc, char ** argv) {
         cout << "filename_output: " << filename_output << endl;
         cout << "filename_config: " << filename_config << endl;
         cout << "uv_threshold: " << uv_threshold << endl;
+        if (assume_decoded) {
+            cout << "assuming decoded files" << endl;
+        }
     }
 
     SystemConfiguration config;
@@ -135,18 +143,29 @@ int main(int argc, char ** argv) {
     ProcessInfo info;
     for (size_t ii = 0; ii < filenames.size(); ii++) {
         string & filename = filenames[ii];
-        int read_status = Util::readFileIntoDeque(filename, file_data);
-        if (verbose) {
-            cout << "Reading File: " << filename << endl;
-        }
-        if (read_status < 0) {
-            cerr << "Reading file " << filename << " failed with status: " << read_status << endl;
-            return(-3);
-        }
         vector<EventRaw> raw_events;
+        if (assume_decoded) {
+            int read_status = Util::readFileIntoVector(filename, raw_events);
+            if (verbose) {
+                cout << filename << " read with status: " << read_status << endl;
+            }
+            if (read_status < 0) {
+                cerr << "Unable to load: " << filename << endl;
+                return(-3);
+            }
+        } else {
+            int read_status = Util::readFileIntoDeque(filename, file_data);
+            if (verbose) {
+                cout << filename << " read with status: " << read_status << endl;
+            }
+            if (read_status < 0) {
+                cerr << "Unable to load: " << filename << endl;
+                return(-3);
+            }
 
-        ProcessParams::DecodeBuffer(file_data, raw_events, info, &config);
-        ProcessParams::ClearProcessedData(file_data, info);
+            ProcessParams::DecodeBuffer(file_data, raw_events, info, &config);
+            ProcessParams::ClearProcessedData(file_data, info);
+        }
         for (size_t ii = 0; ii < raw_events.size(); ii++) {
             EventRaw & event = raw_events[ii];
             int apd = 0;

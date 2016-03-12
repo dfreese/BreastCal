@@ -84,6 +84,7 @@ void usage() {
          << "  -o [name] : photopeak output filename\n"
          << "  -l [name] : list file of input filenames\n"
          << "  -ro [name]: optional root output file for energy spectra\n"
+         << "  -ad       : assume the input files are decoded\n"
          << endl;
 }
 
@@ -99,6 +100,7 @@ int main(int argc, char ** argv) {
     string filename_output;
     string filename_ped;
     string filename_root_output;
+    bool assume_decoded = false;
 
 
     int Ebins = 320;
@@ -116,6 +118,9 @@ int main(int argc, char ** argv) {
         if (argument == "-v") {
             verbose = true;
             cout << "Running in verbose mode " << endl;
+        }
+        if (argument == "-ad") {
+            assume_decoded = true;
         }
         if (argument == "-h" || argument == "--help") {
             usage();
@@ -173,6 +178,9 @@ int main(int argc, char ** argv) {
         cout << "filename_output: " << filename_output << endl;
         cout << "filename_config: " << filename_config << endl;
         cout << "filename_root_output: " << filename_root_output << endl;
+        if (assume_decoded) {
+            cout << "assuming decoded files" << endl;
+        }
     }
 
     SystemConfiguration config;
@@ -245,18 +253,29 @@ int main(int argc, char ** argv) {
     ProcessInfo info;
     for (size_t ii = 0; ii < filenames.size(); ii++) {
         string & filename = filenames[ii];
-        int read_status = Util::readFileIntoDeque(filename, file_data);
-        if (verbose) {
-            cout << filename << " read with status: " << read_status << endl;
-        }
-        if (read_status < 0) {
-            cerr << "Unable to load: " << filename << endl;
-            return(-3);
-        }
         vector<EventRaw> raw_events;
+        if (assume_decoded) {
+            int read_status = Util::readFileIntoVector(filename, raw_events);
+            if (verbose) {
+                cout << filename << " read with status: " << read_status << endl;
+            }
+            if (read_status < 0) {
+                cerr << "Unable to load: " << filename << endl;
+                return(-3);
+            }
+        } else {
+            int read_status = Util::readFileIntoDeque(filename, file_data);
+            if (verbose) {
+                cout << filename << " read with status: " << read_status << endl;
+            }
+            if (read_status < 0) {
+                cerr << "Unable to load: " << filename << endl;
+                return(-3);
+            }
 
-        ProcessParams::DecodeBuffer(file_data, raw_events, info, &config);
-        ProcessParams::ClearProcessedData(file_data, info);
+            ProcessParams::DecodeBuffer(file_data, raw_events, info, &config);
+            ProcessParams::ClearProcessedData(file_data, info);
+        }
         for (size_t ii = 0; ii < raw_events.size(); ii++) {
             EventRaw & event = raw_events[ii];
             int apd, module, fin;
