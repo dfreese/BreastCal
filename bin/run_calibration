@@ -40,18 +40,18 @@ def parse_args():
             help='Run all of the calibrations',
             action='store_true')
     parser.add_argument('-p', '--pedestals',
-            help='Calculate pedestals from "ped_file_list" into "ped_file"',
+            help='Calculate pedestals from "ped_filelist" into "ped_file"',
             action='store_true')
     parser.add_argument('-u', '--uv',
-            help='Calculate uv from "file_list" into "uv_file"',
+            help='Calculate uv from "filelist" into "uv_file"',
             action='store_true')
     parser.add_argument('-app', '--apd_photopeaks',
-            help='Calculate the APD photopeaks from "file_list" ' +
+            help='Calculate the APD photopeaks from "filelist" ' +
                  'into "pp_file" and generate energy histograms in ' +
                  '"pp_root_file"',
             action='store_true')
     parser.add_argument('-fillf', '--fill_floods',
-            help='Fill floods from "file_list" into "flood_root_file"',
+            help='Fill floods from "filelist" into "flood_root_file"',
             action='store_true')
     parser.add_argument('-fitf', '--fit_floods',
             help='Fit floods in "flood_root_file" and write the crystal ' +
@@ -59,7 +59,7 @@ def parse_args():
                   '"graphs_root_file"',
             action='store_true')
     parser.add_argument('-cpp', '--crystal_photopeaks',
-            help='Calculate the crystal photopeaks from "file_list" ' +
+            help='Calculate the crystal photopeaks from "filelist" ' +
                  'and generate "cal_file" and generate energy histograms in ' +
                  '"crystal_energy_root_file"',
             action='store_true')
@@ -69,11 +69,11 @@ def parse_args():
 def generate_blank_config(filename):
     blank_config = dict()
     blank_config['config_file'] = ''
-    blank_config['ped_file_list'] = ''
+    blank_config['ped_filelist'] = ''
     blank_config['ped_file'] = ''
-    blank_config['file_list'] = ''
-    blank_config['dec_file_list'] = ''
-    blank_config['cal_file_list'] = ''
+    blank_config['filelist'] = ''
+    blank_config['dec_filelist'] = ''
+    blank_config['cal_filelist'] = ''
     blank_config['uv_file'] = ''
     blank_config['pp_file'] = ''
     blank_config['pp_root_file'] = ''
@@ -109,10 +109,10 @@ def auto_generate_config(base_name):
         print 'Found Multiple BreastDAQ config files, input one: ', config_files
         config_file = input('Enter config: ')
     else:
-        config_name = config_files[0]
+        config_file = config_files[0]
 
     if type(base_name) is not str:
-        base_name = config_name.replace('_Config_', '_Calib_').replace('.json', '')
+        base_name = config_file.replace('_Config_', '_Calib_').replace('.json', '')
 
     # find the daq files
     daq_files_rx = re.compile('^DAQ_Data_[0-9]{10}_[L,R][0-9]_[0-9]{1,3}.dat$')
@@ -129,11 +129,11 @@ def auto_generate_config(base_name):
 
     new_config = dict()
     new_config['config_file'] = config_file
-    new_config['ped_file_list'] = base_name + '.filelist.ped.txt'
+    new_config['ped_filelist'] = base_name + '.filelist.ped.txt'
     new_config['ped_file'] = base_name + '.ped'
-    new_config['file_list'] = base_name + '.filelist.daq.txt'
-    new_config['dec_file_list'] = base_name + '.filelist.dec.txt'
-    new_config['cal_file_list'] = base_name + '.filelist.cal.txt'
+    new_config['filelist'] = base_name + '.filelist.daq.txt'
+    new_config['dec_filelist'] = base_name + '.filelist.dec.txt'
+    new_config['cal_filelist'] = base_name + '.filelist.cal.txt'
     new_config['uv_file'] = base_name + '.uv'
     new_config['pp_file'] = base_name + '.pp'
     new_config['pp_root_file'] = base_name + '.pp.root'
@@ -155,13 +155,13 @@ def auto_generate_config(base_name):
                   separators=(',', ': '))
         json_file.write('\n')
 
-    with open(new_config['ped_file_list'], 'w') as f:
+    with open(new_config['ped_filelist'], 'w') as f:
         f.write('\n'.join(ped_files) + '\n')
-    with open(new_config['file_list'], 'w') as f:
+    with open(new_config['filelist'], 'w') as f:
         f.write('\n'.join(daq_files) + '\n')
-    with open(new_config['dec_file_list'], 'w') as f:
+    with open(new_config['dec_filelist'], 'w') as f:
         f.write('\n'.join(dec_files) + '\n')
-    with open(new_config['cal_file_list'], 'w') as f:
+    with open(new_config['cal_filelist'], 'w') as f:
         f.write('\n'.join(cal_files) + '\n')
 
     print 'Check if the generated config (%s) and filelists look correct' % \
@@ -195,7 +195,7 @@ if args.decode:
     # If we are decoding the files, then we can safely assume this...
     args.assume_decoded = True
     popens = []
-    with open(cal_info['file_list']) as f:
+    with open(cal_info['filelist']) as f:
         daq_files = f.read().splitlines()
     for f in daq_files:
         decode_cmd = 'decode -c %s -p %s -f %s' % (
@@ -226,7 +226,7 @@ if args.all:
 if args.pedestals:
     ped_cmd = 'pedestals -v -c %s -l %s -o %s' % (
             cal_info['config_file'],
-            cal_info['ped_file_list'],
+            cal_info['ped_filelist'],
             cal_info['ped_file'])
     print ped_cmd
     if not args.simulate:
@@ -234,9 +234,9 @@ if args.pedestals:
         ped_popen.wait()
 
 if args.uv:
-    filelist = cal_info['file_list']
+    filelist = cal_info['filelist']
     if args.assume_decoded:
-        filelist = cal_info['dec_file_list']
+        filelist = cal_info['dec_filelist']
     uv_cmd = 'calc_uv -v -c %s -p %s -l %s -o %s' % (
             cal_info['config_file'],
             cal_info['ped_file'],
@@ -250,9 +250,9 @@ if args.uv:
         uv_popen.wait()
 
 if args.apd_photopeaks:
-    filelist = cal_info['file_list']
+    filelist = cal_info['filelist']
     if args.assume_decoded:
-        filelist = cal_info['dec_file_list']
+        filelist = cal_info['dec_filelist']
     apd_cmd = 'get_apd_photopeaks -v -c %s -p %s -l %s -o %s -ro %s' % (
             cal_info['config_file'],
             cal_info['ped_file'],
@@ -267,9 +267,9 @@ if args.apd_photopeaks:
         apd_popen.wait()
 
 if args.fill_floods:
-    filelist = cal_info['file_list']
+    filelist = cal_info['filelist']
     if args.assume_decoded:
-        filelist = cal_info['dec_file_list']
+        filelist = cal_info['dec_filelist']
     fill_cmd = 'fill_floods -v -c %s -p %s -l %s -pp %s -o %s' % (
             cal_info['config_file'],
             cal_info['ped_file'],
@@ -295,9 +295,9 @@ if args.fit_floods:
         fit_popen.wait()
 
 if args.crystal_photopeaks:
-    filelist = cal_info['file_list']
+    filelist = cal_info['filelist']
     if args.assume_decoded:
-        filelist = cal_info['dec_file_list']
+        filelist = cal_info['dec_filelist']
     cry_cmd = 'get_crystal_photopeaks -v -c %s -p %s -pp %s -x %s -l %s -o %s -ro %s' % (
             cal_info['config_file'],
             cal_info['ped_file'],

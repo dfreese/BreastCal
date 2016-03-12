@@ -13,6 +13,9 @@ def parse_args():
     parser.add_argument('-s', '--settings',
             help='Run from settings file',
             type=str)
+    parser.add_argument('--simulate',
+            help='Just print out the commands, but do not run them',
+            action='store_true')
     parser.add_argument('-c', '--cal_config',
             help='Calibration Config Json',
             type=str)
@@ -119,28 +122,39 @@ if (('config_file' not in coinc_info) or ('ped_file' not in coinc_info) or
 if 'left_filelist' not in coinc_info and 'right_filelist' not in coinc_info:
     # If not and the cal config has been specified, then generate filelists from that
     if args.cal_config:
-        with open(cal_info['file_list'], 'r') as f:
+        with open(cal_info['filelist'], 'r') as f:
             files = f.read().splitlines()
         left_files_rx = re.compile('_L0_')
         left_files = sorted(
                 [l for l in files for m in [left_files_rx.search(l)] if m])
-        left_filelist_name = cal_info['file_list'].replace('.txt','.left.txt')
+        left_filelist_name = cal_info['filelist'].replace('.txt','.left.txt')
         coinc_info['left_filelist'] = left_filelist_name
         with open(coinc_info['left_filelist'], 'w') as f:
-            f.write('\n'.join(left_files))
+            f.write('\n'.join(left_files) + '\n')
 
         right_files_rx = re.compile('_R0_')
         right_files = sorted(
                 [l for l in files for m in [right_files_rx.search(l)] if m])
-        right_filelist_name = cal_info['file_list'].replace('.txt','.right.txt')
+        right_filelist_name = cal_info['filelist'].replace('.txt','.right.txt')
         coinc_info['right_filelist'] = right_filelist_name
         with open(coinc_info['right_filelist'], 'w') as f:
-            f.write('\n'.join(right_files))
+            f.write('\n'.join(right_files) + '\n')
 
         overwrite_settings = True
     else:
         parser.print_help()
         quit()
+
+if 'coinc_filelist' not in coinc_info:
+    with open(coinc_info['left_filelist'], 'r') as f:
+        files = f.read().splitlines()
+    coinc_files = [f.replace('_L0_', '_') for f in files]
+    print coinc_files
+    coinc_info['coinc_filelist'] = coinc_info['left_filelist'].replace(
+            '.daq.left.txt', '.coinc.txt').replace('.left.txt', '.coinc.txt')
+    print coinc_info['coinc_filelist']
+    with open(coinc_info['coinc_filelist'], 'w') as f:
+        f.write('\n'.join(coinc_files) + '\n')
 
 # Overwrite loaded settings file if it was specified
 if args.settings is None or overwrite_settings:
@@ -156,6 +170,7 @@ if args.settings is None or overwrite_settings:
                   sort_keys=True,
                   indent=4,
                   separators=(',', ': '))
+        json_file.write('\n')
 
 # Now we have the full settings to begin constructing the sort_coinc command we'll use
 sort_coinc_cmd_base = 'sort_coinc -c %s -p %s -cal %s -uv %s' % (
@@ -179,6 +194,8 @@ with open(coinc_info['left_filelist'], 'r') as f:
     left_files = f.read().splitlines()
 with open(coinc_info['right_filelist'], 'r') as f:
     right_files = f.read().splitlines()
+with open(coinc_info['coinc_filelist'], 'r') as f:
+    coinc_files = f.read().splitlines()
 
 # And make sure we have the right ones
 if len(left_files) != len(right_files):
@@ -188,9 +205,7 @@ if len(left_files) != len(right_files):
 # Initialize a list to hold all of the processes
 popens = []
 
-for left_file, right_file in zip(left_files, right_files):
-    # Construct the output file name from the left side
-    out_file = left_file.replace('_L0_','_').replace('.dat', '.' + args.output)
+for left_file, right_file, out_file in zip(left_files, right_files, coinc_files):
 
     # And use that to generate the full sort_coinc command
     sort_coinc_cmd_full = sort_coinc_cmd_base
@@ -199,7 +214,8 @@ for left_file, right_file in zip(left_files, right_files):
     sort_coinc_cmd_full += ' -o %s' % (out_file)
     print sort_coinc_cmd_full
 
-    popens.append(subprocess.Popen([sort_coinc_cmd_full], shell=True))
+    if not args.simulate:
+        popens.append(subprocess.Popen([sort_coinc_cmd_full], shell=True))
 
     # If we have args.cores instances running, then wait until the first one
     # gets done before we continue
