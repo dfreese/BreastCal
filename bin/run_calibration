@@ -31,10 +31,13 @@ def parse_args():
             help='Just print out the commands, but do not run them',
             action='store_true')
     parser.add_argument('-d', '--decode',
-            help='Decode all of the data files first (saves time not space)',
+            help='Decode all of the data files',
+            action='store_true')
+    parser.add_argument('-cal', '--calibrate',
+            help='Decode all of the data files',
             action='store_true')
     parser.add_argument('-ad', '--assume_decoded',
-            help='Assume the files have been decoded for faster calibration',
+            help='Assume the files have been decoded for calibration',
             action='store_true')
     parser.add_argument('-a', '--all',
             help='Run all of the calibrations',
@@ -192,8 +195,6 @@ with open(args.config,'r') as json_file:
 
 
 if args.decode:
-    # If we are decoding the files, then we can safely assume this...
-    args.assume_decoded = True
     popens = []
     with open(cal_info['filelist']) as f:
         daq_files = f.read().splitlines()
@@ -204,6 +205,31 @@ if args.decode:
         print decode_cmd
         if not args.simulate:
             popens.append(subprocess.Popen([decode_cmd], shell=True))
+
+        # If we have args.cores instances running, then wait until the first one
+        # gets done before we continue
+        if len(popens) >= args.cores:
+            popens[0].wait()
+            popens.pop(0)
+
+    # Wait for the processes to finish up
+    for popen in popens:
+        popen.wait()
+
+
+if args.calibrate:
+    popens = []
+    with open(cal_info['filelist']) as f:
+        daq_files = f.read().splitlines()
+    for f in daq_files:
+        cal_cmd = 'decode -c %s -p %s -cal %s -uv %s -f %s' % (
+                cal_info['config_file'],
+                cal_info['ped_file'],
+                cal_info['cal_file'],
+                cal_info['uv_file'], f)
+        print cal_cmd
+        if not args.simulate:
+            popens.append(subprocess.Popen([cal_cmd], shell=True))
 
         # If we have args.cores instances running, then wait until the first one
         # gets done before we continue
