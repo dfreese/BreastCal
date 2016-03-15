@@ -7,6 +7,8 @@ CONFIG += debug
 TARGET = ../../bin/view_cal
 QMAKE_CXXFLAGS += -std=c++0x -Wall -Wextra -pedantic
 
+LIBS += -ljsoncpp
+
 LIBS += -L$$(LIBMIIL_DIR)/lib -lmiil_core
 LIBS += -L$$(LIBMIIL_DIR)/lib -lmiil_config
 LIBS += -L$$(LIBMIIL_DIR)/lib -lmiil_process

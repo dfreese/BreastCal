@@ -23,6 +23,8 @@ public:
     ~MainWindow();
 
 private slots:
+    void action_Open();
+
     void on_pushButton_select_config_clicked();
 
     void on_pushButton_select_ped_clicked();
@@ -62,6 +64,8 @@ private slots:
 private:
     Ui::MainWindow *ui;
     QString last_directory;
+
+    QString filepath_calibration_config;
     QString filepath_config;
     QString filepath_ped;
     QString filepath_pp;
@@ -71,6 +75,7 @@ private:
     QString filepath_flood;
     QString filepath_graph;
     QString filepath_crystal;
+    QString filename_calibration_config;
     QString filename_config;
     QString filename_ped;
     QString filename_pp;

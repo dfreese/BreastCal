@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include <sstream>
+#include <fstream>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QMessageBox>
@@ -8,6 +9,7 @@
 #include <TH1F.h>
 #include <TH2F.h>
 #include <TGraph.h>
+#include <jsoncpp/json/json.h>
 
 using namespace std;
 
@@ -19,6 +21,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
 
     connect(ui->actionQuit, SIGNAL(triggered()), qApp, SLOT(quit()));
+    connect(ui->actionOpen, SIGNAL(triggered()), this, SLOT(action_Open()));
 
     setButtonsEnabled(false);
 }
@@ -26,6 +29,101 @@ MainWindow::MainWindow(QWidget *parent) :
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+void MainWindow::action_Open()
+{
+    QString full_filename_config = QFileDialog::getOpenFileName(
+                this,
+                "Select Calibration Config File",
+                last_directory,
+                "Json File (*.json);; All Files (*)");
+
+
+    QFileInfo config_file_info(full_filename_config);
+    filename_calibration_config = config_file_info.completeBaseName();
+    filepath_calibration_config = config_file_info.dir().canonicalPath();
+
+    last_directory = filepath_calibration_config;
+
+
+
+    ifstream json_in(full_filename_config.toStdString().c_str());
+    Json::Value root;
+    Json::Reader reader;
+    bool parsingSuccessful = reader.parse(json_in, root);
+    json_in.close();
+    if (!parsingSuccessful) {
+        cerr << reader.getFormatedErrorMessages() << endl;
+        return;
+    }
+
+    if (!root["config_file"].isString()) {
+        return;
+    }
+
+    if (!root["ped_file"].isString()) {
+        return;
+    }
+
+    if (!root["pp_file"].isString()) {
+        return;
+    }
+
+    if (!root["loc_file"].isString()) {
+        return;
+    }
+
+    if (!root["cal_file"].isString()) {
+        return;
+    }
+
+    if (!root["pp_root_file"].isString()) {
+        return;
+    }
+
+    if (!root["flood_root_file"].isString()) {
+        return;
+    }
+
+    if (!root["graphs_root_file"].isString()) {
+        return;
+    }
+
+    if (!root["crystal_energy_root_file"].isString()) {
+        return;
+    }
+
+    filepath_config = filepath_calibration_config;
+    filepath_ped = filepath_calibration_config;
+    filepath_pp = filepath_calibration_config;
+    filepath_loc = filepath_calibration_config;
+    filepath_cal = filepath_calibration_config;
+    filepath_apd = filepath_calibration_config;
+    filepath_flood = filepath_calibration_config;
+    filepath_graph = filepath_calibration_config;
+    filepath_crystal = filepath_calibration_config;
+
+    filename_config = QString(root["config_file"].asCString());
+    filename_ped = QString(root["ped_file"].asCString());
+    filename_pp = QString(root["pp_file"].asCString());
+    filename_loc = QString(root["loc_file"].asCString());
+    filename_cal = QString(root["cal_file"].asCString());
+    filename_apd = QString(root["pp_root_file"].asCString());
+    filename_flood = QString(root["flood_root_file"].asCString());
+    filename_graph = QString(root["graphs_root_file"].asCString());
+    filename_crystal = QString(root["crystal_energy_root_file"].asCString());
+
+
+    ui->lineEdit_config->setText(filepath_config + "/" + filename_config);
+    ui->lineEdit_ped->setText(filepath_ped + "/" + filename_ped);
+    ui->lineEdit_pp->setText(filepath_pp + "/" + filename_pp);
+    ui->lineEdit_loc->setText(filepath_loc + "/" + filename_loc);
+    ui->lineEdit_cal->setText(filepath_cal + "/" + filename_cal);
+    ui->lineEdit_apd->setText(filepath_apd + "/" + filename_apd);
+    ui->lineEdit_flood->setText(filepath_flood + "/" + filename_flood);
+    ui->lineEdit_graph->setText(filepath_graph + "/" + filename_graph);
+    ui->lineEdit_crystal->setText(filepath_graph + "/" + filename_graph);
 }
 
 void MainWindow::setButtonsEnabled(bool val)
@@ -67,8 +165,8 @@ void MainWindow::on_pushButton_select_config_clicked()
 
 
     QFileInfo config_file_info(full_filename_config);
-    filename_config = config_file_info.fileName();
-    filepath_config = config_file_info.filePath();
+    filename_config = config_file_info.completeBaseName();
+    filepath_config = config_file_info.dir().canonicalPath();
 
     ui->lineEdit_config->setText(full_filename_config);
     last_directory = filepath_config;
@@ -84,8 +182,8 @@ void MainWindow::on_pushButton_select_ped_clicked()
 
 
     QFileInfo ped_file_info(full_filename_ped);
-    filename_ped = ped_file_info.fileName();
-    filepath_ped = ped_file_info.filePath();
+    filename_ped = ped_file_info.completeBaseName();
+    filepath_ped = ped_file_info.dir().canonicalPath();
 
     ui->lineEdit_ped->setText(full_filename_ped);
     last_directory = filepath_ped;
@@ -101,8 +199,8 @@ void MainWindow::on_pushButton_select_pp_clicked()
 
 
     QFileInfo pp_file_info(full_filename_pp);
-    filename_pp = pp_file_info.fileName();
-    filepath_pp = pp_file_info.filePath();
+    filename_pp = pp_file_info.completeBaseName();
+    filepath_pp = pp_file_info.dir().canonicalPath();
 
     ui->lineEdit_pp->setText(full_filename_pp);
     last_directory = filepath_pp;
@@ -118,8 +216,8 @@ void MainWindow::on_pushButton_select_loc_clicked()
 
 
     QFileInfo loc_file_info(full_filename_loc);
-    filename_loc = loc_file_info.fileName();
-    filepath_loc = loc_file_info.filePath();
+    filename_loc = loc_file_info.completeBaseName();
+    filepath_loc = loc_file_info.dir().canonicalPath();
 
     ui->lineEdit_loc->setText(full_filename_loc);
     last_directory = filepath_loc;
@@ -135,8 +233,8 @@ void MainWindow::on_pushButton_select_cal_clicked()
 
 
     QFileInfo cal_file_info(full_filename_cal);
-    filename_cal = cal_file_info.fileName();
-    filepath_cal = cal_file_info.filePath();
+    filename_cal = cal_file_info.completeBaseName();
+    filepath_cal = cal_file_info.dir().canonicalPath();
 
     ui->lineEdit_cal->setText(full_filename_cal);
     last_directory = filepath_cal;
@@ -152,8 +250,8 @@ void MainWindow::on_pushButton_select_apd_clicked()
 
 
     QFileInfo apd_file_info(full_filename_apd);
-    filename_apd = apd_file_info.fileName();
-    filepath_apd = apd_file_info.filePath();
+    filename_apd = apd_file_info.completeBaseName();
+    filepath_apd = apd_file_info.dir().canonicalPath();
 
     ui->lineEdit_apd->setText(full_filename_apd);
     last_directory = filepath_apd;
@@ -169,8 +267,8 @@ void MainWindow::on_pushButton_select_flood_clicked()
 
 
     QFileInfo flood_file_info(full_filename_flood);
-    filename_flood = flood_file_info.fileName();
-    filepath_flood = flood_file_info.filePath();
+    filename_flood = flood_file_info.completeBaseName();
+    filepath_flood = flood_file_info.dir().canonicalPath();
 
     ui->lineEdit_flood->setText(full_filename_flood);
     last_directory = filepath_flood;
@@ -187,8 +285,8 @@ void MainWindow::on_pushButton_select_graph_clicked()
 
 
     QFileInfo graph_file_info(full_filename_graph);
-    filename_graph = graph_file_info.fileName();
-    filepath_graph = graph_file_info.filePath();
+    filename_graph = graph_file_info.completeBaseName();
+    filepath_graph = graph_file_info.dir().canonicalPath();
 
     ui->lineEdit_graph->setText(full_filename_graph);
     last_directory = filepath_graph;
@@ -204,8 +302,8 @@ void MainWindow::on_pushButton_select_crystal_clicked()
 
 
     QFileInfo ped_file_info(full_filename_crystal);
-    filename_ped = ped_file_info.fileName();
-    filepath_ped = ped_file_info.filePath();
+    filename_ped = ped_file_info.completeBaseName();
+    filepath_ped = ped_file_info.dir().canonicalPath();
 
     ui->lineEdit_ped->setText(full_filename_crystal);
     last_directory = filepath_ped;
@@ -286,7 +384,7 @@ void MainWindow::on_pushButton_load_cal_clicked()
 
 void MainWindow::on_pushButton_load_apd_clicked()
 {
-    TFile input_file(ui->lineEdit_apd->text().toAscii());
+    TFile input_file(ui->lineEdit_apd->text().toStdString().c_str());
     if (input_file.IsZombie()) {
         QMessageBox::warning(this, "APD Load Failed",
                              "Failed to open apd file: " + filename_apd);
@@ -331,7 +429,7 @@ void MainWindow::on_pushButton_load_apd_clicked()
 
 void MainWindow::on_pushButton_load_flood_clicked()
 {
-    TFile input_file(ui->lineEdit_flood->text().toAscii());
+    TFile input_file(ui->lineEdit_flood->text().toStdString().c_str());
     if (input_file.IsZombie()) {
         QMessageBox::warning(this, "Flood Load Failed",
                              "Failed to open flood file: " + filename_flood);
@@ -364,7 +462,7 @@ void MainWindow::on_pushButton_load_flood_clicked()
 
 void MainWindow::on_pushButton_load_graph_clicked()
 {
-    TFile input_file(ui->lineEdit_flood->text().toAscii());
+    TFile input_file(ui->lineEdit_flood->text().toStdString().c_str());
     if (input_file.IsZombie()) {
         QMessageBox::warning(this, "Graph Load Failed",
                              "Failed to open graph file: " + filename_graph);
@@ -397,7 +495,7 @@ void MainWindow::on_pushButton_load_graph_clicked()
 
 void MainWindow::on_pushButton_load_crystal_clicked()
 {
-    TFile input_file(ui->lineEdit_apd->text().toAscii());
+    TFile input_file(ui->lineEdit_apd->text().toStdString().c_str());
     if (input_file.IsZombie()) {
         QMessageBox::warning(this, "APD Load Failed",
                              "Failed to open apd file: " + filename_apd);
