@@ -407,16 +407,14 @@ void MainWindow::on_pushButton_load_apd_clicked()
                         TH1F * hist_spat = (TH1F*) input_file.Get(
                                     name_spat.str().c_str());
                         if (hist_spat) {
-                            hists_apd_spat[p][c][f][m][a] =
-                                    (TH1F*) hist_spat->Clone(
-                                        name_spat.str().c_str());
+                            hists_apd_spat[p][c][f][m][a] = hist_spat;
+                            hist_spat->SetDirectory(0);
                         }
                         TH1F * hist_comm = (TH1F*) input_file.Get(
                                     name_comm.str().c_str());
-                        if (hist_spat) {
-                            hists_apd_comm[p][c][f][m][a] =
-                                    (TH1F*) hist_comm->Clone(
-                                        name_comm.str().c_str());
+                        if (hist_comm) {
+                            hists_apd_comm[p][c][f][m][a] = hist_comm;
+                            hist_comm->SetDirectory(0);
                         }
 
                     }
@@ -448,9 +446,8 @@ void MainWindow::on_pushButton_load_flood_clicked()
                         TH2F * flood = (TH2F*) input_file.Get(
                                     name_flood.str().c_str());
                         if (flood) {
-                            floods[p][c][f][m][a] =
-                                    (TH2F*) flood->Clone(
-                                        name_flood.str().c_str());
+                            floods[p][c][f][m][a] = flood;
+                            flood->SetDirectory(0);
                         }
                     }
                 }
@@ -481,9 +478,7 @@ void MainWindow::on_pushButton_load_graph_clicked()
                         TGraph * graph = (TGraph*) input_file.Get(
                                     name_graph.str().c_str());
                         if (graph) {
-                            graphs[p][c][f][m][a] =
-                                    (TGraph*) graph->Clone(
-                                        name_graph.str().c_str());
+                            graphs[p][c][f][m][a] = graph;
                         }
                     }
                 }
@@ -520,15 +515,14 @@ void MainWindow::on_pushButton_load_crystal_clicked()
                                         name_spat.str().c_str());
                             if (hist_spat) {
                                 hists_crystal_spat[p][c][f][m][a][x] =
-                                        (TH1F*) hist_spat->Clone(
-                                            name_spat.str().c_str());
+                                        hist_spat;
                             }
                             TH1F * hist_comm = (TH1F*) input_file.Get(
                                         name_comm.str().c_str());
-                            if (hist_spat) {
+                            if (hist_comm) {
                                 hists_crystal_comm[p][c][f][m][a][x] =
-                                        (TH1F*) hist_comm->Clone(
-                                            name_comm.str().c_str());
+                                        hist_comm;
+                                hist_comm->SetDirectory(0);
                             }
                         }
                     }
