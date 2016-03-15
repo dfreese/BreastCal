@@ -21,3 +21,5 @@ DOC/*log
 qmake/Makefile
 qmake/*/Makefile
 *.pro.user
+ui_*.h
+moc_*.cpp
