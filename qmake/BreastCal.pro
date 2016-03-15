@@ -11,4 +11,5 @@ SUBDIRS = \
     tcal_apd_offset \
     tcal_crystal_offset \
     tcal_edep_offset \
-    sort_coinc
+    sort_coinc \
+    view_cal
