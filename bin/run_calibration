@@ -107,10 +107,10 @@ def auto_generate_config(base_name):
     if len(config_files) == 0:
         print 'No BreastDAQ config file found.  Using system default: %s' % config_file
         if type(base_name) is not str:
-            base_name = input('Enter base name to use for calibration: ')
+            base_name = str(raw_input('Enter base name to use for calibration: '))
     elif len(config_files) > 1:
         print 'Found Multiple BreastDAQ config files, input one: ', config_files
-        config_file = input('Enter config: ')
+        config_file = str(raw_input('Enter config: '))
     else:
         config_file = config_files[0]
 
