@@ -333,10 +333,10 @@ void MainWindow::action_Open()
         on_pushButton_load_graph_clicked();
     }
 
-    QFile file_info_crystal(ui->lineEdit_crystal->text());
-    if (file_info_crystal.exists()) {
-        on_pushButton_load_crystal_clicked();
-    }
+//    QFile file_info_crystal(ui->lineEdit_crystal->text());
+//    if (file_info_crystal.exists()) {
+//        on_pushButton_load_crystal_clicked();
+//    }
 
     updatePlots();
 }
@@ -688,7 +688,7 @@ void MainWindow::on_pushButton_load_flood_clicked()
 
 void MainWindow::on_pushButton_load_graph_clicked()
 {
-    TFile input_file(ui->lineEdit_flood->text().toStdString().c_str());
+    TFile input_file(ui->lineEdit_graph->text().toStdString().c_str());
     if (input_file.IsZombie()) {
         QMessageBox::warning(this, "Graph Load Failed",
                              "Failed to open graph file: " + filename_graph);
