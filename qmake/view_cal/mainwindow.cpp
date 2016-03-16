@@ -136,23 +136,29 @@ void MainWindow::updatePlots()
     if (flood) {
         TCanvas * canvas = ui->widget_root_00->GetCanvas();
         canvas->cd();
+        ui->widget_root_00->GetCanvas()->SetEditable(true);
         gVirtualX->SetFillColor(1);
         flood->Draw("colz");
+        ui->widget_root_00->GetCanvas()->SetEditable(false);
         canvas->Update();
 
         canvas = ui->widget_root_10->GetCanvas();
         canvas->cd();
+        ui->widget_root_10->GetCanvas()->SetEditable(true);
         gVirtualX->SetFillColor(1);
         flood->Draw("colz");
+        ui->widget_root_10->GetCanvas()->SetEditable(false);
         canvas->Update();
     }
 
     if (graph) {
         TCanvas * canvas = ui->widget_root_10->GetCanvas();
         canvas->cd();
+        ui->widget_root_10->GetCanvas()->SetEditable(true);
         graph->SetMarkerStyle(24);
         graph->SetLineWidth(2);
         graph->Draw("PL");
+        ui->widget_root_10->GetCanvas()->SetEditable(false);
         canvas->Update();
     }
 
@@ -161,11 +167,14 @@ void MainWindow::updatePlots()
     if (hist_spat) {
         TCanvas * canvas = ui->widget_root_01->GetCanvas();
         canvas->cd();
+        ui->widget_root_01->GetCanvas()->SetEditable(true);
         gVirtualX->SetFillColor(1);
         hist_spat->Draw();
         canvas->Update();
         line_gain_spat->DrawLine(apd_config.gain_spat, 0,
                                  apd_config.gain_spat, canvas->GetUymax());
+
+        ui->widget_root_01->GetCanvas()->SetEditable(false);
         canvas->Update();
     }
 
@@ -175,11 +184,14 @@ void MainWindow::updatePlots()
     if (hist_comm) {
         TCanvas * canvas = ui->widget_root_11->GetCanvas();
         canvas->cd();
+        ui->widget_root_11->GetCanvas()->SetEditable(true);
         gVirtualX->SetFillColor(1);
         hist_comm->Draw();
         canvas->Update();
         line_gain_comm->DrawLine(apd_config.gain_comm, 0,
                                  apd_config.gain_comm, canvas->GetUymax());
+
+        ui->widget_root_11->GetCanvas()->SetEditable(false);
         canvas->Update();
     }
 }
