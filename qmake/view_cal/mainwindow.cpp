@@ -90,9 +90,12 @@ MainWindow::MainWindow(QWidget *parent) :
     line_gain_comm->SetLineWidth(2);
 
     ui->widget_root_00->EnableSignalEvents(kButton1Down);
-    ui->widget_root_01->EnableSignalEvents(kButton1Down);
+    ui->widget_root_01->EnableSignalEvents(kButton1Double);
+    ui->widget_root_11->EnableSignalEvents(kButton1Double);
     ui->widget_root_00->setCursor(0);
     ui->widget_root_01->setCursor(0);
+    ui->widget_root_10->setCursor(0);
+    ui->widget_root_11->setCursor(0);
 
     ui->pushButton_write_pp->setEnabled(false);
     ui->pushButton_write_loc->setEnabled(false);
@@ -103,6 +106,10 @@ MainWindow::MainWindow(QWidget *parent) :
             this,
             SLOT(canvasEvent(TObject*,uint,TCanvas*)));
     connect(ui->widget_root_01,
+            SIGNAL(RootEventProcessed(TObject*,uint,TCanvas*)),
+            this,
+            SLOT(canvasEvent(TObject*,uint,TCanvas*)));
+    connect(ui->widget_root_11,
             SIGNAL(RootEventProcessed(TObject*,uint,TCanvas*)),
             this,
             SLOT(canvasEvent(TObject*,uint,TCanvas*)));
@@ -231,10 +238,28 @@ void MainWindow::canvasEvent(TObject *obj, unsigned int event, TCanvas * c)
         float x = gPad->AbsPixeltoX(clicked->GetEventX());
         float y = gPad->AbsPixeltoY(clicked->GetEventY());
         cout << "flood: " << x << " " << y << endl;
-    } else if (clicked == ui->widget_root_01 && event == kButton1Down) {
+    } else if (clicked == ui->widget_root_01 && event == kButton1Double) {
+
+        // Set photopeak to wherever you double clicked
+        ModuleConfig & mod_config = config.module_configs[current_panel]
+                [current_cartridge][current_fin][current_module];
+        ApdConfig & apd_config = mod_config.apd_configs[current_apd];
         clicked->GetCanvas()->cd();
         float x = gPad->AbsPixeltoX(clicked->GetEventX());
-        cout << "hist : " << x << endl;
+        apd_config.gain_spat = x;
+        // Update the plots so the lines move
+        updatePlots();
+    } else if (clicked == ui->widget_root_11 && event == kButton1Double) {
+
+        // Set photopeak to wherever you double clicked
+        ModuleConfig & mod_config = config.module_configs[current_panel]
+                [current_cartridge][current_fin][current_module];
+        ApdConfig & apd_config = mod_config.apd_configs[current_apd];
+        clicked->GetCanvas()->cd();
+        float x = gPad->AbsPixeltoX(clicked->GetEventX());
+        apd_config.gain_comm = x;
+        // Update the plots so the lines move
+        updatePlots();
     }
 }
 
