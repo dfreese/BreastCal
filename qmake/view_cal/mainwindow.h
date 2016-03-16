@@ -89,6 +89,8 @@ private slots:
 
     void on_pushButton_seg_clicked();
 
+    void on_pushButton_undo_seg_clicked();
+
 private:
     Ui::MainWindow *ui;
     QString last_directory;
@@ -143,6 +145,7 @@ private:
 
     bool state_manual_seg;
     int manual_seg_idx;
+    std::vector<CrystalCalibration> manual_seg_cal_ref;
 
 };
 

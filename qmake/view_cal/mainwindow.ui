@@ -73,6 +73,16 @@
              </spacer>
             </item>
             <item>
+             <widget class="QSpinBox" name="spinBox_seg_idx"/>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButton_undo_seg">
+              <property name="text">
+               <string>Undo</string>
+              </property>
+             </widget>
+            </item>
+            <item>
              <widget class="QPushButton" name="pushButton_seg">
               <property name="text">
                <string>Manually Segment</string>

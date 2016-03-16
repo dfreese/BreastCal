@@ -86,6 +86,9 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->spinBox_apd->setMinimum(0);
     ui->spinBox_apd->setMaximum(0);
 
+    ui->spinBox_seg_idx->setMinimum(0);
+    ui->spinBox_seg_idx->setMaximum(0);
+
     line_gain_spat = new TLine;
     line_gain_comm = new TLine;
     line_gain_spat->SetLineColor(kGreen);
@@ -104,6 +107,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->pushButton_write_pp->setEnabled(false);
     ui->pushButton_write_loc->setEnabled(false);
     ui->pushButton_write_cal->setEnabled(false);
+
+    ui->pushButton_undo_seg->setVisible(false);
 
     connect(ui->widget_root_seg,
             SIGNAL(RootEventProcessed(TObject*,uint,TCanvas*)),
@@ -198,11 +203,20 @@ void MainWindow::updatePlots()
         text.SetTextSize(0.03);
         marker.SetMarkerStyle(24);
         marker.SetMarkerSize(1);
-        for (size_t ii = 0; (ii < crystal_cals.size()) && (ii < manual_seg_idx || !state_manual_seg); ii++) {
+        for (size_t ii = 0;
+             (ii < crystal_cals.size()) &&
+             (ii < manual_seg_idx || !state_manual_seg);
+             ii++)
+        {
             const CrystalCalibration & cal = crystal_cals[ii];
             stringstream ss;
             ss << ii;
             text.DrawText(cal.x_loc, cal.y_loc, ss.str().c_str());
+            if (cal.use) {
+                marker.SetMarkerColor(kBlack);
+            } else {
+                marker.SetMarkerColor(kRed);
+            }
             marker.DrawMarker(cal.x_loc, cal.y_loc);
         }
         ui->widget_root_seg->GetCanvas()->SetEditable(false);
@@ -265,6 +279,23 @@ void MainWindow::canvasEvent(TObject *obj, unsigned int event, TCanvas * c)
                 [current_fin][current_module][current_apd][manual_seg_idx++];
 
         clicked->GetCanvas()->cd();
+        cal.x_loc = gPad->AbsPixeltoX(clicked->GetEventX());
+        cal.y_loc = gPad->AbsPixeltoY(clicked->GetEventY());
+        if (manual_seg_idx >= config.crystals_per_apd) {
+            on_pushButton_seg_clicked();
+        }
+        updatePlots();
+    } else if (clicked == ui->widget_root_seg && event == kButton1Double) {
+        // If this is a double click, then we need to overwrite the previous
+        // single click
+        manual_seg_idx--;
+
+        CrystalCalibration & cal =
+                config.calibration[current_panel][current_cartridge]
+                [current_fin][current_module][current_apd][manual_seg_idx++];
+
+        clicked->GetCanvas()->cd();
+        cal.use = !cal.use;
         cal.x_loc = gPad->AbsPixeltoX(clicked->GetEventX());
         cal.y_loc = gPad->AbsPixeltoY(clicked->GetEventY());
         if (manual_seg_idx >= config.crystals_per_apd) {
@@ -656,6 +687,9 @@ void MainWindow::on_pushButton_load_config_clicked()
     ui->spinBox_apd->setMinimum(-1);
     ui->spinBox_apd->setMaximum(config.apds_per_module);
 
+    ui->spinBox_seg_idx->setMinimum(0);
+    ui->spinBox_seg_idx->setMaximum(config.crystals_per_apd - 1);
+
     // Now that the arrays have been resized, and the config loaded, let the
     // other buttons be clicked
     setButtonsEnabled(true);
@@ -1032,15 +1066,34 @@ void MainWindow::on_pushButton_write_cal_clicked()
 void MainWindow::on_pushButton_seg_clicked()
 {
     if (state_manual_seg) {
+        ui->pushButton_undo_seg->setVisible(false);
         ui->pushButton_seg->setText("Manually Segment");
-        manual_seg_idx = 0;
+        manual_seg_idx = ui->spinBox_seg_idx->value();
         ui->widget_root_seg->DisableSignalEvents(kButton1Down);
+        ui->widget_root_seg->DisableSignalEvents(kButton1Double);
         state_manual_seg = false;
     } else {
-        ui->pushButton_seg->setText("Cancel");
-        manual_seg_idx = 0;
+        ui->pushButton_undo_seg->setVisible(true);
+        ui->pushButton_seg->setText("Stop");
+        manual_seg_idx = ui->spinBox_seg_idx->value();
         ui->widget_root_seg->EnableSignalEvents(kButton1Down);
+        ui->widget_root_seg->EnableSignalEvents(kButton1Double);
         state_manual_seg = true;
+        manual_seg_cal_ref = config.calibration[current_panel]
+                [current_cartridge][current_fin][current_module][current_apd];
     }
     updatePlots();
+}
+
+void MainWindow::on_pushButton_undo_seg_clicked()
+{
+    if (state_manual_seg) {
+        if (manual_seg_idx > 0) {
+            manual_seg_idx--;
+            config.calibration[current_panel][current_cartridge][current_fin]
+                    [current_module][current_apd][manual_seg_idx] =
+                    manual_seg_cal_ref[manual_seg_idx];
+            updatePlots();
+        }
+    }
 }
