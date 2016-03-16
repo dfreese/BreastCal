@@ -15,6 +15,8 @@
 #include <TColor.h>
 #include <TStyle.h>
 #include <TLine.h>
+#include <TText.h>
+#include <TMarker.h>
 #include <jsoncpp/json/json.h>
 
 using namespace std;
@@ -89,19 +91,20 @@ MainWindow::MainWindow(QWidget *parent) :
     line_gain_spat->SetLineWidth(2);
     line_gain_comm->SetLineWidth(2);
 
-    ui->widget_root_00->EnableSignalEvents(kButton1Down);
+    ui->widget_root_seg->EnableSignalEvents(kButton1Down);
     ui->widget_root_01->EnableSignalEvents(kButton1Double);
     ui->widget_root_11->EnableSignalEvents(kButton1Double);
     ui->widget_root_00->setCursor(0);
     ui->widget_root_01->setCursor(0);
     ui->widget_root_10->setCursor(0);
     ui->widget_root_11->setCursor(0);
+    ui->widget_root_seg->setCursor(0);
 
     ui->pushButton_write_pp->setEnabled(false);
     ui->pushButton_write_loc->setEnabled(false);
     ui->pushButton_write_cal->setEnabled(false);
 
-    connect(ui->widget_root_00,
+    connect(ui->widget_root_seg,
             SIGNAL(RootEventProcessed(TObject*,uint,TCanvas*)),
             this,
             SLOT(canvasEvent(TObject*,uint,TCanvas*)));
@@ -182,6 +185,27 @@ void MainWindow::updatePlots()
         flood->Draw("colz");
         ui->widget_root_10->GetCanvas()->SetEditable(false);
         canvas->Update();
+
+
+        canvas = ui->widget_root_seg->GetCanvas();
+        canvas->cd();
+        ui->widget_root_seg->GetCanvas()->SetEditable(true);
+        gVirtualX->SetFillColor(1);
+        flood->Draw("colz");
+        TText text;
+        TMarker marker;
+        text.SetTextSize(0.03);
+        marker.SetMarkerStyle(24);
+        marker.SetMarkerSize(1);
+        for (size_t ii = 0; ii < crystal_cals.size(); ii++) {
+            const CrystalCalibration & cal = crystal_cals[ii];
+            stringstream ss;
+            ss << ii;
+            text.DrawText(cal.x_loc, cal.y_loc, ss.str().c_str());
+            marker.DrawMarker(cal.x_loc, cal.y_loc);
+        }
+        ui->widget_root_seg->GetCanvas()->SetEditable(false);
+        canvas->Update();
     }
 
     if (graph) {
@@ -233,7 +257,7 @@ void MainWindow::canvasEvent(TObject *obj, unsigned int event, TCanvas * c)
 {
     // Take from: ftp://root.cern.ch/root/doc/26ROOTandQt.pdf
     TQtWidget * clicked = (TQtWidget*) sender();
-    if (clicked == ui->widget_root_00 && event == kButton1Down) {
+    if (clicked == ui->widget_root_seg && event == kButton1Down) {
         clicked->GetCanvas()->cd();
         float x = gPad->AbsPixeltoX(clicked->GetEventX());
         float y = gPad->AbsPixeltoY(clicked->GetEventY());
@@ -994,4 +1018,9 @@ void MainWindow::on_pushButton_write_cal_clicked()
                              "Failed to write cal file: " + filename_cal);
         return;
     }
+}
+
+void MainWindow::on_pushButton_seg_clicked()
+{
+
 }

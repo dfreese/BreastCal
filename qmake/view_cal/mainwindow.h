@@ -87,6 +87,8 @@ private slots:
 
     void on_pushButton_write_cal_clicked();
 
+    void on_pushButton_seg_clicked();
+
 private:
     Ui::MainWindow *ui;
     QString last_directory;
