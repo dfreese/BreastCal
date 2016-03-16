@@ -109,6 +109,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->pushButton_write_cal->setEnabled(false);
 
     ui->pushButton_undo_seg->setVisible(false);
+    ui->pushButton_cancel_seg->setVisible(false);
 
     connect(ui->widget_root_seg,
             SIGNAL(RootEventProcessed(TObject*,uint,TCanvas*)),
@@ -498,6 +499,26 @@ void MainWindow::setButtonsEnabled(bool val)
     ui->pushButton_load_flood->setEnabled(val);
     ui->pushButton_load_graph->setEnabled(val);
     ui->pushButton_load_crystal->setEnabled(val);
+}
+
+void MainWindow::keyPressEvent(QKeyEvent *event)
+{
+    if (event->modifiers() & Qt::ControlModifier) {
+        if (event->key() == Qt::Key_O) {
+            action_Open();
+        } else if (event->key() == Qt::Key_Z) {
+            if (state_manual_seg) {
+                on_pushButton_undo_seg_clicked();
+                return;
+            }
+        }
+    }
+    if (event->key() == Qt::Key_Escape) {
+        if (state_manual_seg) {
+            on_pushButton_cancel_seg_clicked();
+            return;
+        }
+    }
 }
 
 void MainWindow::on_pushButton_select_config_clicked()
@@ -1068,6 +1089,7 @@ void MainWindow::on_pushButton_seg_clicked()
 {
     if (state_manual_seg) {
         ui->pushButton_undo_seg->setVisible(false);
+        ui->pushButton_cancel_seg->setVisible(false);
         ui->pushButton_seg->setText("Manually Segment");
         manual_seg_idx = ui->spinBox_seg_idx->value();
         ui->widget_root_seg->DisableSignalEvents(kButton1Down);
@@ -1075,6 +1097,7 @@ void MainWindow::on_pushButton_seg_clicked()
         state_manual_seg = false;
     } else {
         ui->pushButton_undo_seg->setVisible(true);
+        ui->pushButton_cancel_seg->setVisible(true);
         ui->pushButton_seg->setText("Stop");
         manual_seg_idx = ui->spinBox_seg_idx->value();
         ui->widget_root_seg->EnableSignalEvents(kButton1Down);
@@ -1096,5 +1119,15 @@ void MainWindow::on_pushButton_undo_seg_clicked()
                     manual_seg_cal_ref[manual_seg_idx];
             updatePlots();
         }
+    }
+}
+
+void MainWindow::on_pushButton_cancel_seg_clicked()
+{
+    if (state_manual_seg) {
+        config.calibration[current_panel][current_cartridge][current_fin]
+                [current_module][current_apd] = manual_seg_cal_ref;
+        on_pushButton_seg_clicked();
+        updatePlots();
     }
 }

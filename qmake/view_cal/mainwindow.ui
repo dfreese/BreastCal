@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>Calibration Viewer</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
@@ -73,7 +73,11 @@
              </spacer>
             </item>
             <item>
-             <widget class="QSpinBox" name="spinBox_seg_idx"/>
+             <widget class="QPushButton" name="pushButton_cancel_seg">
+              <property name="text">
+               <string>Cancel</string>
+              </property>
+             </widget>
             </item>
             <item>
              <widget class="QPushButton" name="pushButton_undo_seg">
@@ -88,6 +92,9 @@
                <string>Manually Segment</string>
               </property>
              </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="spinBox_seg_idx"/>
             </item>
            </layout>
           </item>
