@@ -292,21 +292,18 @@ int main(int argc, char ** argv) {
             for (int f = first_fin; f < last_fin; f++) {
                 for (int m = first_module; m < last_module; m++) {
                     for (int a = first_apd; a < last_apd; a++) {
+                        int valid_val = 0;
                         if (valid_fit[p][c][f][m][a]) {
-                            TGraph * peak_graph = peaks[p][c][f][m][a];
-                            Double_t * x_values = peak_graph->GetX();
-                            Double_t * y_values = peak_graph->GetY();
-                            for (int ii = 0; ii < config.crystals_per_apd; ii++)
-                            {
-                                float x = x_values[ii];
-                                float y = y_values[ii];
-                                output << 1 << " "  << x << " " << y << "\n";
-                            }
-                        } else {
-                            for (int ii = 0; ii < config.crystals_per_apd; ii++)
-                            {
-                                output << 0 << " " << 0 << " " << 0 << "\n";
-                            }
+                            valid_val = 1;
+                        }
+                        TGraph * peak_graph = peaks[p][c][f][m][a];
+                        Double_t * x_values = peak_graph->GetX();
+                        Double_t * y_values = peak_graph->GetY();
+                        for (int ii = 0; ii < config.crystals_per_apd; ii++)
+                        {
+                            float x = x_values[ii];
+                            float y = y_values[ii];
+                            output << valid_val << " " << x << " " << y << "\n";
                         }
                     }
                 }
