@@ -278,25 +278,19 @@ int main(int argc, char ** argv) {
         }
         for (size_t ii = 0; ii < raw_events.size(); ii++) {
             EventRaw & event = raw_events[ii];
-            int apd, module, fin;
-            float x, y, energy;
-            int calc_status = CalculateXYandEnergy(
-                        event, &config, x, y, energy, apd, module, fin);
+            EventCal event_cal;
+            int calc_status = CalculateXYandEnergy(event_cal, event, &config);
             if (calc_status < 0) {
                 continue;
             }
 
-            TH1F * spat_hist =
-                    spat_hists[event.panel][event.cartridge][fin][module][apd];
-            TH1F * comm_hist =
-                    comm_hists[event.panel][event.cartridge][fin][module][apd];
+            TH1F * spat_hist = spat_hists[event.panel][event.cartridge]
+                    [event_cal.fin][event_cal.module][event_cal.apd];
+            TH1F * comm_hist = comm_hists[event.panel][event.cartridge]
+                    [event_cal.fin][event_cal.module][event_cal.apd];
 
-            spat_hist->Fill(energy);
-            if (apd == 0) {
-                comm_hist->Fill(event.com0);
-            } else if (apd == 1) {
-                comm_hist->Fill(event.com1);
-            }
+            spat_hist->Fill(event_cal.spat_total);
+            comm_hist->Fill(event_cal.E);
         }
     }
 
