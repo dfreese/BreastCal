@@ -79,6 +79,8 @@ private slots:
 
     void on_spinBox_apd_valueChanged(int arg1);
 
+    void on_checkBox_apd_enable_toggled(bool checked);
+
 private:
     Ui::MainWindow *ui;
     QString last_directory;

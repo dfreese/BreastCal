@@ -118,9 +118,31 @@ void MainWindow::updatePlots()
         return;
     }
 
-    ModuleConfig & mod_config = config.module_configs[current_panel]
+    const ModuleConfig & mod_config = config.module_configs[current_panel]
             [current_cartridge][current_fin][current_module];
-    ApdConfig & apd_config = mod_config.apd_configs[current_apd];
+    const ApdConfig & apd_config = mod_config.apd_configs[current_apd];
+    const vector<CrystalCalibration> & crystal_cals =
+            config.calibration[current_panel][current_cartridge][current_fin]
+                              [current_module][current_apd];
+
+    // Check to see if every crystal is on or off and then put that status in
+    // the checkbox
+    bool all_off = true;
+    bool all_on  = true;
+    for (size_t ii = 0; ii < crystal_cals.size(); ii++) {
+        const CrystalCalibration & cal = crystal_cals[ii];
+        all_on &= cal.use;
+        all_off &= !cal.use;
+    }
+    if (all_on) {
+        ui->checkBox_apd_enable->setChecked(true);
+        ui->checkBox_apd_enable->setDisabled(false);
+    } else if (all_off){
+        ui->checkBox_apd_enable->setChecked(false);
+        ui->checkBox_apd_enable->setDisabled(false);
+    } else {
+        ui->checkBox_apd_enable->setDisabled(true);
+    }
 
     // (ROOT BUG) Plots need this to keep from overwriting themselves. For more
     // information, see:
@@ -892,4 +914,16 @@ void MainWindow::on_spinBox_apd_valueChanged(int arg1)
     current_apd = arg1;
     rollSpinBoxes(ui->spinBox_apd, ui->spinBox_module);
     updatePlots();
+}
+
+void MainWindow::on_checkBox_apd_enable_toggled(bool checked)
+{
+    vector<CrystalCalibration> & crystal_cals =
+            config.calibration[current_panel][current_cartridge][current_fin]
+                              [current_module][current_apd];
+
+    for (size_t ii = 0; ii < crystal_cals.size(); ii++) {
+        CrystalCalibration & cal = crystal_cals[ii];
+        cal.use = checked;
+    }
 }
