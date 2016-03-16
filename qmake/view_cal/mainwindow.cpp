@@ -94,6 +94,10 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->widget_root_00->setCursor(0);
     ui->widget_root_01->setCursor(0);
 
+    ui->pushButton_write_pp->setEnabled(false);
+    ui->pushButton_write_loc->setEnabled(false);
+    ui->pushButton_write_cal->setEnabled(false);
+
     connect(ui->widget_root_00,
             SIGNAL(RootEventProcessed(TObject*,uint,TCanvas*)),
             this,
@@ -611,18 +615,6 @@ void MainWindow::on_pushButton_load_ped_clicked()
     }
 }
 
-void MainWindow::on_pushButton_load_loc_clicked()
-{
-    int load_status = config.loadCrystalLocations(
-                ui->lineEdit_loc->text().toStdString());
-
-    if (load_status < 0) {
-        QMessageBox::warning(this, "Crystal Location Load Failed",
-                             "Failed to load loc file: " + filename_loc);
-        return;
-    }
-}
-
 void MainWindow::on_pushButton_load_pp_clicked()
 {
     int load_status = config.loadPhotopeakPositions(
@@ -633,6 +625,20 @@ void MainWindow::on_pushButton_load_pp_clicked()
                              "Failed to load pp file: " + filename_pp);
         return;
     }
+    ui->pushButton_write_pp->setEnabled(true);
+}
+
+void MainWindow::on_pushButton_load_loc_clicked()
+{
+    int load_status = config.loadCrystalLocations(
+                ui->lineEdit_loc->text().toStdString());
+
+    if (load_status < 0) {
+        QMessageBox::warning(this, "Crystal Location Load Failed",
+                             "Failed to load loc file: " + filename_loc);
+        return;
+    }
+    ui->pushButton_write_loc->setEnabled(true);
 }
 
 void MainWindow::on_pushButton_load_cal_clicked()
@@ -645,6 +651,7 @@ void MainWindow::on_pushButton_load_cal_clicked()
                              "Failed to load cal file: " + filename_cal);
         return;
     }
+    ui->pushButton_write_cal->setEnabled(true);
 }
 
 void MainWindow::on_pushButton_load_apd_clicked()
@@ -925,5 +932,41 @@ void MainWindow::on_checkBox_apd_enable_toggled(bool checked)
     for (size_t ii = 0; ii < crystal_cals.size(); ii++) {
         CrystalCalibration & cal = crystal_cals[ii];
         cal.use = checked;
+    }
+}
+
+void MainWindow::on_pushButton_write_pp_clicked()
+{
+    int write_status = config.writePhotopeakPositions(
+                ui->lineEdit_pp->text().toStdString());
+
+    if (write_status < 0) {
+        QMessageBox::warning(this, "Photopeak Position Write Failed",
+                             "Failed to write pp file: " + filename_pp);
+        return;
+    }
+}
+
+void MainWindow::on_pushButton_write_loc_clicked()
+{
+    int write_status = config.writeCrystalLocations(
+                ui->lineEdit_loc->text().toStdString());
+
+    if (write_status < 0) {
+        QMessageBox::warning(this, "Crystal Location Write Failed",
+                             "Failed to load write file: " + filename_loc);
+        return;
+    }
+}
+
+void MainWindow::on_pushButton_write_cal_clicked()
+{
+    int write_status = config.writeCalibration(
+                ui->lineEdit_cal->text().toStdString());
+
+    if (write_status < 0) {
+        QMessageBox::warning(this, "Cal Write Failed",
+                             "Failed to write cal file: " + filename_cal);
+        return;
     }
 }

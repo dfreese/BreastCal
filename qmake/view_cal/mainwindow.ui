@@ -69,101 +69,13 @@
         <string>Files</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_3">
-        <item row="5" column="0">
-         <widget class="QLineEdit" name="lineEdit_pp"/>
-        </item>
-        <item row="5" column="2">
-         <widget class="QPushButton" name="pushButton_load_pp">
-          <property name="text">
-           <string>Load</string>
-          </property>
-         </widget>
-        </item>
-        <item row="7" column="1">
-         <widget class="QPushButton" name="pushButton_select_loc">
-          <property name="text">
-           <string>Select</string>
-          </property>
-         </widget>
-        </item>
-        <item row="7" column="0">
-         <widget class="QLineEdit" name="lineEdit_loc"/>
-        </item>
-        <item row="19" column="1">
-         <widget class="QPushButton" name="pushButton_select_crystal">
-          <property name="text">
-           <string>Select</string>
-          </property>
-         </widget>
-        </item>
         <item row="1" column="0">
          <widget class="QLineEdit" name="lineEdit_config"/>
         </item>
-        <item row="0" column="0">
-         <widget class="QLabel" name="label_config">
-          <property name="text">
-           <string>System Config</string>
-          </property>
-         </widget>
-        </item>
-        <item row="19" column="2">
-         <widget class="QPushButton" name="pushButton_load_crystal">
+        <item row="7" column="2">
+         <widget class="QPushButton" name="pushButton_load_loc">
           <property name="text">
            <string>Load</string>
-          </property>
-         </widget>
-        </item>
-        <item row="18" column="0">
-         <widget class="QLabel" name="label_crystal">
-          <property name="text">
-           <string>Crystal Energy Histograms</string>
-          </property>
-         </widget>
-        </item>
-        <item row="19" column="0">
-         <widget class="QLineEdit" name="lineEdit_crystal"/>
-        </item>
-        <item row="13" column="0">
-         <widget class="QLineEdit" name="lineEdit_apd"/>
-        </item>
-        <item row="13" column="1">
-         <widget class="QPushButton" name="pushButton_select_apd">
-          <property name="text">
-           <string>Select</string>
-          </property>
-         </widget>
-        </item>
-        <item row="12" column="0">
-         <widget class="QLabel" name="label_apd">
-          <property name="text">
-           <string>APD Energy Histograms</string>
-          </property>
-         </widget>
-        </item>
-        <item row="14" column="0">
-         <widget class="QLabel" name="label_flood">
-          <property name="text">
-           <string>Floods</string>
-          </property>
-         </widget>
-        </item>
-        <item row="13" column="2">
-         <widget class="QPushButton" name="pushButton_load_apd">
-          <property name="text">
-           <string>Load</string>
-          </property>
-         </widget>
-        </item>
-        <item row="17" column="0">
-         <widget class="QLineEdit" name="lineEdit_graph"/>
-        </item>
-        <item row="15" column="0">
-         <widget class="QLineEdit" name="lineEdit_flood"/>
-        </item>
-        <item row="16" column="0">
-         <widget class="QLabel" name="label_graph">
-          <property name="text">
-           <string>Segmentations</string>
           </property>
          </widget>
         </item>
@@ -180,67 +92,15 @@
           </property>
          </spacer>
         </item>
-        <item row="15" column="1">
-         <widget class="QPushButton" name="pushButton_select_flood">
+        <item row="5" column="2">
+         <widget class="QPushButton" name="pushButton_load_pp">
           <property name="text">
-           <string>Select</string>
-          </property>
-         </widget>
-        </item>
-        <item row="17" column="1">
-         <widget class="QPushButton" name="pushButton_select_graph">
-          <property name="text">
-           <string>Select</string>
+           <string>Load</string>
           </property>
          </widget>
         </item>
         <item row="15" column="2">
          <widget class="QPushButton" name="pushButton_load_flood">
-          <property name="text">
-           <string>Load</string>
-          </property>
-         </widget>
-        </item>
-        <item row="17" column="2">
-         <widget class="QPushButton" name="pushButton_load_graph">
-          <property name="text">
-           <string>Load</string>
-          </property>
-         </widget>
-        </item>
-        <item row="8" column="0">
-         <widget class="QLabel" name="label_cal">
-          <property name="text">
-           <string>Calibration File</string>
-          </property>
-         </widget>
-        </item>
-        <item row="9" column="0">
-         <widget class="QLineEdit" name="lineEdit_cal"/>
-        </item>
-        <item row="1" column="1">
-         <widget class="QPushButton" name="pushButton_select_config">
-          <property name="text">
-           <string>Select</string>
-          </property>
-         </widget>
-        </item>
-        <item row="9" column="1">
-         <widget class="QPushButton" name="pushButton_select_cal">
-          <property name="text">
-           <string>Select</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="2">
-         <widget class="QPushButton" name="pushButton_load_config">
-          <property name="text">
-           <string>Load</string>
-          </property>
-         </widget>
-        </item>
-        <item row="9" column="2">
-         <widget class="QPushButton" name="pushButton_load_cal">
           <property name="text">
            <string>Load</string>
           </property>
@@ -253,10 +113,130 @@
           </property>
          </widget>
         </item>
+        <item row="7" column="1">
+         <widget class="QPushButton" name="pushButton_select_loc">
+          <property name="text">
+           <string>Select</string>
+          </property>
+         </widget>
+        </item>
+        <item row="15" column="0">
+         <widget class="QLineEdit" name="lineEdit_flood"/>
+        </item>
+        <item row="3" column="2">
+         <widget class="QPushButton" name="pushButton_load_ped">
+          <property name="text">
+           <string>Load</string>
+          </property>
+         </widget>
+        </item>
+        <item row="19" column="1">
+         <widget class="QPushButton" name="pushButton_select_crystal">
+          <property name="text">
+           <string>Select</string>
+          </property>
+         </widget>
+        </item>
         <item row="6" column="0">
          <widget class="QLabel" name="label_loc">
           <property name="text">
            <string>Crystal Position File</string>
+          </property>
+         </widget>
+        </item>
+        <item row="17" column="0">
+         <widget class="QLineEdit" name="lineEdit_graph"/>
+        </item>
+        <item row="9" column="1">
+         <widget class="QPushButton" name="pushButton_select_cal">
+          <property name="text">
+           <string>Select</string>
+          </property>
+         </widget>
+        </item>
+        <item row="16" column="0">
+         <widget class="QLabel" name="label_graph">
+          <property name="text">
+           <string>Segmentations</string>
+          </property>
+         </widget>
+        </item>
+        <item row="19" column="0">
+         <widget class="QLineEdit" name="lineEdit_crystal"/>
+        </item>
+        <item row="1" column="1">
+         <widget class="QPushButton" name="pushButton_select_config">
+          <property name="text">
+           <string>Select</string>
+          </property>
+         </widget>
+        </item>
+        <item row="9" column="2">
+         <widget class="QPushButton" name="pushButton_load_cal">
+          <property name="text">
+           <string>Load</string>
+          </property>
+         </widget>
+        </item>
+        <item row="13" column="2">
+         <widget class="QPushButton" name="pushButton_load_apd">
+          <property name="text">
+           <string>Load</string>
+          </property>
+         </widget>
+        </item>
+        <item row="15" column="1">
+         <widget class="QPushButton" name="pushButton_select_flood">
+          <property name="text">
+           <string>Select</string>
+          </property>
+         </widget>
+        </item>
+        <item row="9" column="0">
+         <widget class="QLineEdit" name="lineEdit_cal"/>
+        </item>
+        <item row="8" column="0">
+         <widget class="QLabel" name="label_cal">
+          <property name="text">
+           <string>Calibration File</string>
+          </property>
+         </widget>
+        </item>
+        <item row="7" column="0">
+         <widget class="QLineEdit" name="lineEdit_loc"/>
+        </item>
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_config">
+          <property name="text">
+           <string>System Config</string>
+          </property>
+         </widget>
+        </item>
+        <item row="18" column="0">
+         <widget class="QLabel" name="label_crystal">
+          <property name="text">
+           <string>Crystal Energy Histograms</string>
+          </property>
+         </widget>
+        </item>
+        <item row="13" column="1">
+         <widget class="QPushButton" name="pushButton_select_apd">
+          <property name="text">
+           <string>Select</string>
+          </property>
+         </widget>
+        </item>
+        <item row="12" column="0">
+         <widget class="QLabel" name="label_apd">
+          <property name="text">
+           <string>APD Energy Histograms</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="1">
+         <widget class="QPushButton" name="pushButton_select_ped">
+          <property name="text">
+           <string>Select</string>
           </property>
          </widget>
         </item>
@@ -267,6 +247,29 @@
           </property>
          </widget>
         </item>
+        <item row="13" column="0">
+         <widget class="QLineEdit" name="lineEdit_apd"/>
+        </item>
+        <item row="3" column="0">
+         <widget class="QLineEdit" name="lineEdit_ped"/>
+        </item>
+        <item row="19" column="2">
+         <widget class="QPushButton" name="pushButton_load_crystal">
+          <property name="text">
+           <string>Load</string>
+          </property>
+         </widget>
+        </item>
+        <item row="17" column="2">
+         <widget class="QPushButton" name="pushButton_load_graph">
+          <property name="text">
+           <string>Load</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="0">
+         <widget class="QLineEdit" name="lineEdit_pp"/>
+        </item>
         <item row="2" column="0">
          <widget class="QLabel" name="label_ped">
           <property name="text">
@@ -274,27 +277,45 @@
           </property>
          </widget>
         </item>
-        <item row="7" column="2">
-         <widget class="QPushButton" name="pushButton_load_loc">
+        <item row="14" column="0">
+         <widget class="QLabel" name="label_flood">
           <property name="text">
-           <string>Load</string>
+           <string>Floods</string>
           </property>
          </widget>
         </item>
-        <item row="3" column="0">
-         <widget class="QLineEdit" name="lineEdit_ped"/>
-        </item>
-        <item row="3" column="1">
-         <widget class="QPushButton" name="pushButton_select_ped">
+        <item row="17" column="1">
+         <widget class="QPushButton" name="pushButton_select_graph">
           <property name="text">
            <string>Select</string>
           </property>
          </widget>
         </item>
-        <item row="3" column="2">
-         <widget class="QPushButton" name="pushButton_load_ped">
+        <item row="1" column="2">
+         <widget class="QPushButton" name="pushButton_load_config">
           <property name="text">
            <string>Load</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="3">
+         <widget class="QPushButton" name="pushButton_write_pp">
+          <property name="text">
+           <string>Write</string>
+          </property>
+         </widget>
+        </item>
+        <item row="7" column="3">
+         <widget class="QPushButton" name="pushButton_write_loc">
+          <property name="text">
+           <string>Write</string>
+          </property>
+         </widget>
+        </item>
+        <item row="9" column="3">
+         <widget class="QPushButton" name="pushButton_write_cal">
+          <property name="text">
+           <string>Write</string>
           </property>
          </widget>
         </item>

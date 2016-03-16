@@ -57,9 +57,9 @@ private slots:
 
     void on_pushButton_load_ped_clicked();
 
-    void on_pushButton_load_loc_clicked();
-
     void on_pushButton_load_pp_clicked();
+
+    void on_pushButton_load_loc_clicked();
 
     void on_pushButton_load_apd_clicked();
 
@@ -80,6 +80,12 @@ private slots:
     void on_spinBox_apd_valueChanged(int arg1);
 
     void on_checkBox_apd_enable_toggled(bool checked);
+
+    void on_pushButton_write_pp_clicked();
+
+    void on_pushButton_write_loc_clicked();
+
+    void on_pushButton_write_cal_clicked();
 
 private:
     Ui::MainWindow *ui;
