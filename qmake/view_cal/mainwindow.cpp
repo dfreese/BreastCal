@@ -91,6 +91,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->widget_root_00->EnableSignalEvents(kButton1Down);
     ui->widget_root_01->EnableSignalEvents(kButton1Down);
+    ui->widget_root_00->setCursor(0);
+    ui->widget_root_01->setCursor(0);
 
     connect(ui->widget_root_00,
             SIGNAL(RootEventProcessed(TObject*,uint,TCanvas*)),
