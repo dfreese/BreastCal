@@ -49,7 +49,9 @@ MainWindow::MainWindow(QWidget *parent) :
     current_cartridge(0),
     current_fin(0),
     current_module(0),
-    current_apd(0)
+    current_apd(0),
+    state_manual_seg(false),
+    manual_seg_idx(0)
 {
     ui->setupUi(this);
 
@@ -91,7 +93,6 @@ MainWindow::MainWindow(QWidget *parent) :
     line_gain_spat->SetLineWidth(2);
     line_gain_comm->SetLineWidth(2);
 
-    ui->widget_root_seg->EnableSignalEvents(kButton1Down);
     ui->widget_root_01->EnableSignalEvents(kButton1Double);
     ui->widget_root_11->EnableSignalEvents(kButton1Double);
     ui->widget_root_00->setCursor(0);
@@ -197,7 +198,7 @@ void MainWindow::updatePlots()
         text.SetTextSize(0.03);
         marker.SetMarkerStyle(24);
         marker.SetMarkerSize(1);
-        for (size_t ii = 0; ii < crystal_cals.size(); ii++) {
+        for (size_t ii = 0; (ii < crystal_cals.size()) && (ii < manual_seg_idx || !state_manual_seg); ii++) {
             const CrystalCalibration & cal = crystal_cals[ii];
             stringstream ss;
             ss << ii;
@@ -258,10 +259,18 @@ void MainWindow::canvasEvent(TObject *obj, unsigned int event, TCanvas * c)
     // Take from: ftp://root.cern.ch/root/doc/26ROOTandQt.pdf
     TQtWidget * clicked = (TQtWidget*) sender();
     if (clicked == ui->widget_root_seg && event == kButton1Down) {
+
+        CrystalCalibration & cal =
+                config.calibration[current_panel][current_cartridge]
+                [current_fin][current_module][current_apd][manual_seg_idx++];
+
         clicked->GetCanvas()->cd();
-        float x = gPad->AbsPixeltoX(clicked->GetEventX());
-        float y = gPad->AbsPixeltoY(clicked->GetEventY());
-        cout << "flood: " << x << " " << y << endl;
+        cal.x_loc = gPad->AbsPixeltoX(clicked->GetEventX());
+        cal.y_loc = gPad->AbsPixeltoY(clicked->GetEventY());
+        if (manual_seg_idx >= config.crystals_per_apd) {
+            on_pushButton_seg_clicked();
+        }
+        updatePlots();
     } else if (clicked == ui->widget_root_01 && event == kButton1Double) {
 
         // Set photopeak to wherever you double clicked
@@ -1022,5 +1031,16 @@ void MainWindow::on_pushButton_write_cal_clicked()
 
 void MainWindow::on_pushButton_seg_clicked()
 {
-
+    if (state_manual_seg) {
+        ui->pushButton_seg->setText("Manually Segment");
+        manual_seg_idx = 0;
+        ui->widget_root_seg->DisableSignalEvents(kButton1Down);
+        state_manual_seg = false;
+    } else {
+        ui->pushButton_seg->setText("Cancel");
+        manual_seg_idx = 0;
+        ui->widget_root_seg->EnableSignalEvents(kButton1Down);
+        state_manual_seg = true;
+    }
+    updatePlots();
 }

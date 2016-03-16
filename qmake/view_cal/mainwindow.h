@@ -141,6 +141,9 @@ private:
     int current_module;
     int current_apd;
 
+    bool state_manual_seg;
+    int manual_seg_idx;
+
 };
 
 #endif // MAINWINDOW_H
