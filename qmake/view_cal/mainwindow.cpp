@@ -6,13 +6,9 @@
 #include <QFileInfo>
 #include <QMessageBox>
 #include <TFile.h>
-#include <TH1.h>
-#include <TH2.h>
 #include <TH1F.h>
 #include <TH2F.h>
 #include <TGraph.h>
-#include <TAxis.h>
-#include <TPolyMarker.h>
 #include <jsoncpp/json/json.h>
 
 using namespace std;
@@ -127,7 +123,7 @@ void MainWindow::action_Open()
     ui->lineEdit_apd->setText(filepath_apd + "/" + filename_apd);
     ui->lineEdit_flood->setText(filepath_flood + "/" + filename_flood);
     ui->lineEdit_graph->setText(filepath_graph + "/" + filename_graph);
-    ui->lineEdit_crystal->setText(filepath_graph + "/" + filename_graph);
+    ui->lineEdit_crystal->setText(filepath_crystal + "/" + filename_crystal);
 }
 
 void MainWindow::setButtonsEnabled(bool val)
