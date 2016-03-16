@@ -1,7 +1,5 @@
 TEMPLATE = app
 QT += core gui
-#CONFIG -= qt
-#CONFIG += console
 CONFIG += c++11
 CONFIG += debug
 TARGET = ../../bin/view_cal
@@ -15,7 +13,7 @@ LIBS += -L$$(LIBMIIL_DIR)/lib -lmiil_process
 INCLUDEPATH += $$(LIBMIIL_DIR)/include
 DEPENDPATH += $$(LIBMIIL_DIR)/include
 
-LIBS += -L$$(ROOTSYS)/lib -lHist -lSpectrum -lCore -lRIO -lGpad -lGQt
+LIBS += -L$$(ROOTSYS)/lib -lCore -lRIO -lHist -lSpectrum -lGpad -lGQt
 INCLUDEPATH += $$(ROOTSYS)/include
 DEPENDPATH += $$(ROOTSYS)/include
 

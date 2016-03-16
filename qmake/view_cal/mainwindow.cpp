@@ -6,9 +6,13 @@
 #include <QFileInfo>
 #include <QMessageBox>
 #include <TFile.h>
+#include <TH1.h>
+#include <TH2.h>
 #include <TH1F.h>
 #include <TH2F.h>
 #include <TGraph.h>
+#include <TAxis.h>
+#include <TPolyMarker.h>
 #include <jsoncpp/json/json.h>
 
 using namespace std;
@@ -149,6 +153,7 @@ void MainWindow::setButtonsEnabled(bool val)
     ui->pushButton_load_ped->setEnabled(val);
     ui->pushButton_load_pp->setEnabled(val);
     ui->pushButton_load_loc->setEnabled(val);
+    ui->pushButton_load_cal->setEnabled(val);
     ui->pushButton_load_apd->setEnabled(val);
     ui->pushButton_load_flood->setEnabled(val);
     ui->pushButton_load_graph->setEnabled(val);
@@ -384,8 +389,8 @@ void MainWindow::on_pushButton_load_cal_clicked()
 
 void MainWindow::on_pushButton_load_apd_clicked()
 {
-    TFile * input_file = new TFile(ui->lineEdit_apd->text().toStdString().c_str());
-    if (input_file->IsZombie()) {
+    TFile input_file(ui->lineEdit_apd->text().toStdString().c_str());
+    if (input_file.IsZombie()) {
         QMessageBox::warning(this, "APD Load Failed",
                              "Failed to open apd file: " + filename_apd);
         return;
@@ -404,31 +409,31 @@ void MainWindow::on_pushButton_load_apd_clicked()
                                   << c << "][" << f << "]["
                                   << m << "][" << a << "]";
 
-                        TH1F * hist_spat = (TH1F*) input_file->Get(
-                                    name_spat.str().c_str());
-                        if (hist_spat) {
-                            hists_apd_spat[p][c][f][m][a] = hist_spat;
-                            hist_spat->SetDirectory(0);
-                        }
-                        TH1F * hist_comm = (TH1F*) input_file->Get(
-                                    name_comm.str().c_str());
-                        if (hist_comm) {
-                            hists_apd_comm[p][c][f][m][a] = hist_comm;
-                            hist_comm->SetDirectory(0);
+                        input_file.GetObject(
+                                    name_spat.str().c_str(),
+                                    hists_apd_spat[p][c][f][m][a]);
+                        if (hists_apd_spat[p][c][f][m][a]) {
+                            hists_apd_spat[p][c][f][m][a]->SetDirectory(0);
                         }
 
+                        input_file.GetObject(
+                                    name_comm.str().c_str(),
+                                    hists_apd_comm[p][c][f][m][a]);
+                        if (hists_apd_comm[p][c][f][m][a]) {
+                            hists_apd_comm[p][c][f][m][a]->SetDirectory(0);
+                        }
                     }
                 }
             }
         }
     }
-    input_file->Close();
+    input_file.Close();
 }
 
 void MainWindow::on_pushButton_load_flood_clicked()
 {
-    TFile * input_file = new TFile(ui->lineEdit_flood->text().toStdString().c_str());
-    if (input_file->IsZombie()) {
+    TFile input_file(ui->lineEdit_flood->text().toStdString().c_str());
+    if (input_file.IsZombie()) {
         QMessageBox::warning(this, "Flood Load Failed",
                              "Failed to open flood file: " + filename_flood);
         return;
@@ -443,24 +448,24 @@ void MainWindow::on_pushButton_load_flood_clicked()
                                   << c << "][" << f << "]["
                                   << m << "][" << a << "]";
 
-                        TH2F * flood = (TH2F*) input_file->Get(
-                                    name_flood.str().c_str());
-                        if (flood) {
-                            floods[p][c][f][m][a] = flood;
-                            flood->SetDirectory(0);
+                        input_file.GetObject(
+                                    name_flood.str().c_str(),
+                                    floods[p][c][f][m][a]);
+                        if (floods[p][c][f][m][a]) {
+                            floods[p][c][f][m][a]->SetDirectory(0);
                         }
                     }
                 }
             }
         }
     }
-    input_file->Close();
+    input_file.Close();
 }
 
 void MainWindow::on_pushButton_load_graph_clicked()
 {
-    TFile * input_file = new TFile(ui->lineEdit_flood->text().toStdString().c_str());
-    if (input_file->IsZombie()) {
+    TFile input_file(ui->lineEdit_flood->text().toStdString().c_str());
+    if (input_file.IsZombie()) {
         QMessageBox::warning(this, "Graph Load Failed",
                              "Failed to open graph file: " + filename_graph);
         return;
@@ -474,24 +479,21 @@ void MainWindow::on_pushButton_load_graph_clicked()
                         name_graph << "peaks[" << p << "]["
                                   << c << "][" << f << "]["
                                   << m << "][" << a << "]";
-
-                        TGraph * graph = (TGraph*) input_file->Get(
-                                    name_graph.str().c_str());
-                        if (graph) {
-                            graphs[p][c][f][m][a] = graph;
-                        }
+                        input_file.GetObject(
+                                    name_graph.str().c_str(),
+                                    graphs[p][c][f][m][a]);
                     }
                 }
             }
         }
     }
-    input_file->Close();
+    input_file.Close();
 }
 
 void MainWindow::on_pushButton_load_crystal_clicked()
 {
-    TFile * input_file = new TFile(ui->lineEdit_apd->text().toStdString().c_str());
-    if (input_file->IsZombie()) {
+    TFile input_file(ui->lineEdit_apd->text().toStdString().c_str());
+    if (input_file.IsZombie()) {
         QMessageBox::warning(this, "APD Load Failed",
                              "Failed to open apd file: " + filename_apd);
         return;
@@ -511,18 +513,18 @@ void MainWindow::on_pushButton_load_crystal_clicked()
                                       << c << "][" << f << "]["
                                       << m << "][" << a << "][" << x << "]";
 
-                            TH1F * hist_spat = (TH1F*) input_file->Get(
-                                        name_spat.str().c_str());
-                            if (hist_spat) {
-                                hists_crystal_spat[p][c][f][m][a][x] =
-                                        hist_spat;
+                            input_file.GetObject(
+                                        name_spat.str().c_str(),
+                                        hists_crystal_spat[p][c][f][m][a][x]);
+                            if (hists_crystal_spat[p][c][f][m][a][x]) {
+                                hists_crystal_spat[p][c][f][m][a][x]->SetDirectory(0);
                             }
-                            TH1F * hist_comm = (TH1F*) input_file->Get(
-                                        name_comm.str().c_str());
-                            if (hist_comm) {
-                                hists_crystal_comm[p][c][f][m][a][x] =
-                                        hist_comm;
-                                hist_comm->SetDirectory(0);
+
+                            input_file.GetObject(
+                                        name_comm.str().c_str(),
+                                        hists_crystal_comm[p][c][f][m][a][x]);
+                            if (hists_crystal_comm[p][c][f][m][a][x]) {
+                                hists_crystal_comm[p][c][f][m][a][x]->SetDirectory(0);
                             }
                         }
                     }
@@ -530,5 +532,5 @@ void MainWindow::on_pushButton_load_crystal_clicked()
             }
         }
     }
-    input_file->Close();
+    input_file.Close();
 }
