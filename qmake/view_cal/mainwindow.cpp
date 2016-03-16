@@ -150,7 +150,9 @@ void MainWindow::updatePlots()
     if (graph) {
         TCanvas * canvas = ui->widget_root_10->GetCanvas();
         canvas->cd();
-        graph->Draw();
+        graph->SetMarkerStyle(24);
+        graph->SetLineWidth(2);
+        graph->Draw("PL");
         canvas->Update();
     }
 
