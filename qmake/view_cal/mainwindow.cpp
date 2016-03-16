@@ -9,6 +9,9 @@
 #include <TH1F.h>
 #include <TH2F.h>
 #include <TGraph.h>
+#include <TQtWidget.h>
+#include <TCanvas.h>
+#include <TColor.h>
 #include <jsoncpp/json/json.h>
 
 using namespace std;
@@ -24,6 +27,21 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionOpen, SIGNAL(triggered()), this, SLOT(action_Open()));
 
     setButtonsEnabled(false);
+
+
+    const Int_t NRGBs = 5;
+    const Int_t NCont = 255;
+
+    // Setup the color scale that we've come to expect from floods
+    Double_t stops_even[NRGBs] = {0.00, 0.25, 0.50, 0.75, 1.00};
+    Double_t inv_blue_green[NRGBs] = {1.00, 0.75, 0.56, 0.00, 0.00};
+    Double_t inv_blue_blue[NRGBs]  = {1.00, 1.00, 1.00, 0.80, 0.50};
+    Double_t inv_blue_red[NRGBs]   = {0.88, 0.00, 0.12, 0.00, 0.00};
+    TColor::CreateGradientColorTable(
+                NRGBs, stops_even,
+                inv_blue_red, inv_blue_green, inv_blue_blue,
+                NCont);
+
 }
 
 MainWindow::~MainWindow()
@@ -124,6 +142,52 @@ void MainWindow::action_Open()
     ui->lineEdit_flood->setText(filepath_flood + "/" + filename_flood);
     ui->lineEdit_graph->setText(filepath_graph + "/" + filename_graph);
     ui->lineEdit_crystal->setText(filepath_crystal + "/" + filename_crystal);
+
+    // Load all of the files that exist
+    QFile file_info_config(ui->lineEdit_config->text());
+    if (file_info_config.exists()) {
+        on_pushButton_load_config_clicked();
+    }
+
+    QFile file_info_ped(ui->lineEdit_ped->text());
+    if (file_info_ped.exists()) {
+        on_pushButton_load_ped_clicked();
+    }
+
+    QFile file_info_pp(ui->lineEdit_pp->text());
+    if (file_info_pp.exists()) {
+        on_pushButton_load_pp_clicked();
+    }
+
+    QFile file_info_loc(ui->lineEdit_loc->text());
+    if (file_info_loc.exists()) {
+        on_pushButton_load_loc_clicked();
+    }
+
+    QFile file_info_cal(ui->lineEdit_cal->text());
+    if (file_info_cal.exists()) {
+        on_pushButton_load_cal_clicked();
+    }
+
+    QFile file_info_apd(ui->lineEdit_apd->text());
+    if (file_info_apd.exists()) {
+        on_pushButton_load_apd_clicked();
+    }
+
+    QFile file_info_flood(ui->lineEdit_flood->text());
+    if (file_info_flood.exists()) {
+        on_pushButton_load_flood_clicked();
+    }
+
+    QFile file_info_graph(ui->lineEdit_graph->text());
+    if (file_info_graph.exists()) {
+        on_pushButton_load_graph_clicked();
+    }
+
+    QFile file_info_crystal(ui->lineEdit_crystal->text());
+    if (file_info_crystal.exists()) {
+        on_pushButton_load_crystal_clicked();
+    }
 }
 
 void MainWindow::setButtonsEnabled(bool val)
@@ -456,6 +520,12 @@ void MainWindow::on_pushButton_load_flood_clicked()
         }
     }
     input_file.Close();
+
+    TCanvas * canvas = ui->widget_root_00->GetCanvas();
+    canvas->cd();
+    canvas->Modified();
+    floods[0][0][0][0][0]->Draw("colz");
+    canvas->Update();
 }
 
 void MainWindow::on_pushButton_load_graph_clicked()

@@ -13,6 +13,7 @@ class MainWindow;
 class TH1F;
 class TH2F;
 class TGraph;
+class TQtWidget;
 
 class MainWindow : public QMainWindow
 {
@@ -103,6 +104,13 @@ private:
             std::vector<TH1F*> > > > > > hists_crystal_spat;
     std::vector<std::vector<std::vector<std::vector<std::vector<
             std::vector<TH1F*> > > > > > hists_crystal_comm;
+
+
+    TQtWidget *rootWidget00;
+    TQtWidget *rootWidget01;
+    TQtWidget *rootWidget10;
+    TQtWidget *rootWidget11;
+
 };
 
 #endif // MAINWINDOW_H
