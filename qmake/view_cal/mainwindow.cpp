@@ -12,13 +12,40 @@
 #include <TQtWidget.h>
 #include <TCanvas.h>
 #include <TColor.h>
+#include <TStyle.h>
 #include <jsoncpp/json/json.h>
 
 using namespace std;
 
+namespace {
+void rollSpinBoxes(QSpinBox *changed, QSpinBox *parent)
+{
+    if (changed->value() == changed->minimum()) {
+        if (parent->value() > parent->minimum()) {
+            parent->setValue(parent->value() - 1);
+            changed->setValue(changed->maximum() - 1);
+        } else {
+            changed->setValue(changed->value() + 1);
+        }
+    } else if (changed->value() == changed->maximum()) {
+        if (parent->value() < parent->maximum()) {
+            parent->setValue(parent->value() + 1);
+            changed->setValue(changed->minimum() + 1);
+        } else {
+            changed->setValue(changed->value() - 1);
+        }
+    }
+}
+}
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
-    ui(new Ui::MainWindow)
+    ui(new Ui::MainWindow),
+    current_panel(0),
+    current_cartridge(0),
+    current_fin(0),
+    current_module(0),
+    current_apd(0)
 {
     ui->setupUi(this);
 
@@ -42,11 +69,60 @@ MainWindow::MainWindow(QWidget *parent) :
                 inv_blue_red, inv_blue_green, inv_blue_blue,
                 NCont);
 
+    ui->spinBox_panel->setMinimum(0);
+    ui->spinBox_panel->setMaximum(0);
+    ui->spinBox_cartridge->setMinimum(0);
+    ui->spinBox_cartridge->setMaximum(0);
+    ui->spinBox_fin->setMinimum(0);
+    ui->spinBox_fin->setMaximum(0);
+    ui->spinBox_module->setMinimum(0);
+    ui->spinBox_module->setMaximum(0);
+    ui->spinBox_apd->setMinimum(0);
+    ui->spinBox_apd->setMaximum(0);
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+void MainWindow::updatePlots()
+{
+    bool in_bounds = config.inBoundsPCFMA(
+                current_panel, current_cartridge,
+                current_fin, current_module, current_apd);
+    if (!in_bounds) {
+        return;
+    }
+
+    // (ROOT BUG) Plots need this to keep from overwriting themselves. For more
+    // information, see:
+    // https://root.cern.ch/phpBB3/viewtopic.php?f=3&t=17518
+    gVirtualX->SetFillColor(1);
+
+    TH2F * flood = floods[current_panel][current_cartridge]
+                         [current_fin][current_module][current_apd];
+
+    TGraph * graph = graphs[current_panel][current_cartridge]
+                           [current_fin][current_module][current_apd];
+
+    if (flood) {
+        TCanvas * canvas = ui->widget_root_00->GetCanvas();
+        canvas->cd();
+        flood->Draw("colz");
+        canvas->Update();
+
+
+    }
+
+    TH1F * hist_spat = hists_apd_spat[current_panel][current_cartridge]
+                                     [current_fin][current_module][current_apd];
+    if (hist_spat) {
+        TCanvas * canvas = ui->widget_root_01->GetCanvas();
+        canvas->cd();
+        hist_spat->Draw();
+        canvas->Update();
+    }
 }
 
 void MainWindow::action_Open()
@@ -188,6 +264,8 @@ void MainWindow::action_Open()
     if (file_info_crystal.exists()) {
         on_pushButton_load_crystal_clicked();
     }
+
+    updatePlots();
 }
 
 void MainWindow::setButtonsEnabled(bool val)
@@ -394,6 +472,19 @@ void MainWindow::on_pushButton_load_config_clicked()
     config.resizeArrayPCFMA<TGraph*>(graphs, 0);
     config.resizeArrayPCFMAX<TH1F*>(hists_crystal_spat, 0);
     config.resizeArrayPCFMAX<TH1F*>(hists_crystal_comm, 0);
+
+
+    ui->spinBox_panel->setMinimum(0);
+    ui->spinBox_panel->setMaximum(config.panels_per_system - 1);
+    ui->spinBox_cartridge->setMinimum(-1);
+    ui->spinBox_cartridge->setMaximum(config.cartridges_per_panel);
+    ui->spinBox_fin->setMinimum(-1);
+    ui->spinBox_fin->setMaximum(config.fins_per_cartridge);
+    ui->spinBox_module->setMinimum(-1);
+    ui->spinBox_module->setMaximum(config.modules_per_fin);
+    ui->spinBox_apd->setMinimum(-1);
+    ui->spinBox_apd->setMaximum(config.apds_per_module);
+
     // Now that the arrays have been resized, and the config loaded, let the
     // other buttons be clicked
     setButtonsEnabled(true);
@@ -520,12 +611,6 @@ void MainWindow::on_pushButton_load_flood_clicked()
         }
     }
     input_file.Close();
-
-    TCanvas * canvas = ui->widget_root_00->GetCanvas();
-    canvas->cd();
-    canvas->Modified();
-    floods[0][0][0][0][0]->Draw("colz");
-    canvas->Update();
 }
 
 void MainWindow::on_pushButton_load_graph_clicked()
@@ -599,4 +684,125 @@ void MainWindow::on_pushButton_load_crystal_clicked()
         }
     }
     input_file.Close();
+}
+
+void MainWindow::on_spinBox_panel_valueChanged(int arg1)
+{
+    current_panel = arg1;
+    updatePlots();
+}
+
+void MainWindow::on_spinBox_cartridge_valueChanged(int arg1)
+{
+    // Check edge case where all boxes above this are minned out already
+    if (arg1 == ui->spinBox_cartridge->minimum()) {
+        if (ui->spinBox_panel->value() == 0) {
+            arg1 = 0;
+            ui->spinBox_cartridge->setValue(0);
+        }
+    }
+
+    // Check edge case where all boxes above this are maxed out already
+    if (arg1 == ui->spinBox_cartridge->maximum()) {
+        if (ui->spinBox_panel->value() == ui->spinBox_panel->maximum()) {
+            arg1 -= 1;
+            ui->spinBox_cartridge->setValue(arg1);
+        }
+    }
+
+    current_cartridge = arg1;
+    rollSpinBoxes(ui->spinBox_cartridge, ui->spinBox_panel);
+    updatePlots();
+}
+
+void MainWindow::on_spinBox_fin_valueChanged(int arg1)
+{
+    // Check edge case where all boxes above this are minned out already
+    if (arg1 == ui->spinBox_fin->minimum()) {
+        if (ui->spinBox_panel->value() == 0) {
+            if (ui->spinBox_cartridge->value() == 0) {
+                arg1 = 0;
+                ui->spinBox_fin->setValue(0);
+            }
+        }
+    }
+
+    // Check edge case where all boxes above this are maxed out already
+    if (arg1 == ui->spinBox_fin->maximum()) {
+        if (ui->spinBox_panel->value() == ui->spinBox_panel->maximum()) {
+            if (ui->spinBox_cartridge->value() == (ui->spinBox_cartridge->maximum() - 1)) {
+                arg1 -= 1;
+                ui->spinBox_fin->setValue(arg1);
+            }
+        }
+    }
+
+    current_fin = arg1;
+    rollSpinBoxes(ui->spinBox_fin, ui->spinBox_cartridge);
+    updatePlots();
+}
+
+void MainWindow::on_spinBox_module_valueChanged(int arg1)
+{
+    // Check edge case where all boxes above this are minned out already
+    if (arg1 == ui->spinBox_module->minimum()) {
+        if (ui->spinBox_panel->value() == 0) {
+            if (ui->spinBox_cartridge->value() == 0) {
+                if (ui->spinBox_fin->value() == 0) {
+                    ui->spinBox_module->setValue(0);
+                }
+            }
+        }
+    }
+
+    // Check edge case where all boxes above this are maxed out already
+    if (arg1 == ui->spinBox_module->maximum()) {
+        if (ui->spinBox_panel->value() == ui->spinBox_panel->maximum()) {
+            if (ui->spinBox_cartridge->value() == (ui->spinBox_cartridge->maximum() - 1)) {
+                if (ui->spinBox_fin->value() == (ui->spinBox_fin->maximum() - 1)) {
+                    arg1 -= 1;
+                    ui->spinBox_module->setValue(arg1);
+                }
+            }
+        }
+    }
+
+    current_module = arg1;
+    rollSpinBoxes(ui->spinBox_module, ui->spinBox_fin);
+    updatePlots();
+}
+
+void MainWindow::on_spinBox_apd_valueChanged(int arg1)
+{
+    // Check edge case where all boxes above this are minned out already
+    if (arg1 == ui->spinBox_apd->minimum()) {
+        if (ui->spinBox_panel->value() == ui->spinBox_panel->minimum()) {
+            if (ui->spinBox_cartridge->value() == (ui->spinBox_cartridge->minimum() + 1)) {
+                if (ui->spinBox_fin->value() == (ui->spinBox_fin->minimum() + 1)) {
+                    if (ui->spinBox_module->value() == (ui->spinBox_module->minimum() + 1)) {
+                        arg1 += 1;
+                        ui->spinBox_apd->setValue(arg1);
+                    }
+                }
+            }
+        }
+    }
+
+    // Check edge case where all boxes above this are maxed out already
+    if (arg1 == ui->spinBox_apd->maximum()) {
+        if (ui->spinBox_panel->value() == ui->spinBox_panel->maximum()) {
+            if (ui->spinBox_cartridge->value() == (ui->spinBox_cartridge->maximum() - 1)) {
+                if (ui->spinBox_fin->value() == (ui->spinBox_fin->maximum() - 1)) {
+                    if (ui->spinBox_module->value() == (ui->spinBox_module->maximum() - 1)) {
+                        arg1 -= 1;
+                        ui->spinBox_apd->setValue(arg1);
+                    }
+                }
+            }
+        }
+    }
+
+    current_apd = arg1;
+    rollSpinBoxes(ui->spinBox_apd, ui->spinBox_module);
+    updatePlots();
 }

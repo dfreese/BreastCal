@@ -24,6 +24,8 @@ public:
     ~MainWindow();
 
 private slots:
+    void updatePlots();
+
     void action_Open();
 
     void on_pushButton_select_config_clicked();
@@ -61,6 +63,16 @@ private slots:
     void on_pushButton_load_graph_clicked();
 
     void on_pushButton_load_crystal_clicked();
+
+    void on_spinBox_panel_valueChanged(int arg1);
+
+    void on_spinBox_cartridge_valueChanged(int arg1);
+
+    void on_spinBox_fin_valueChanged(int arg1);
+
+    void on_spinBox_module_valueChanged(int arg1);
+
+    void on_spinBox_apd_valueChanged(int arg1);
 
 private:
     Ui::MainWindow *ui;
@@ -110,6 +122,12 @@ private:
     TQtWidget *rootWidget01;
     TQtWidget *rootWidget10;
     TQtWidget *rootWidget11;
+
+    int current_panel;
+    int current_cartridge;
+    int current_fin;
+    int current_module;
+    int current_apd;
 
 };
 
