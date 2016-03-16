@@ -511,6 +511,8 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
                 on_pushButton_undo_seg_clicked();
                 return;
             }
+        } else if (event->key() == Qt::Key_Q) {
+            qApp->quit();
         }
     }
     if (event->key() == Qt::Key_Escape) {
