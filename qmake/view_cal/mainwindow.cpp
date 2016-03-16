@@ -1025,6 +1025,7 @@ void MainWindow::on_checkBox_apd_enable_toggled(bool checked)
         CrystalCalibration & cal = crystal_cals[ii];
         cal.use = checked;
     }
+    updatePlots();
 }
 
 void MainWindow::on_pushButton_write_pp_clicked()
