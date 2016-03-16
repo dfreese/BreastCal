@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include <iostream>
 #include <sstream>
 #include <fstream>
 #include <QFileDialog>
@@ -13,6 +14,7 @@
 #include <TCanvas.h>
 #include <TColor.h>
 #include <TStyle.h>
+#include <TLine.h>
 #include <jsoncpp/json/json.h>
 
 using namespace std;
@@ -79,6 +81,25 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->spinBox_module->setMaximum(0);
     ui->spinBox_apd->setMinimum(0);
     ui->spinBox_apd->setMaximum(0);
+
+    line_gain_spat = new TLine;
+    line_gain_comm = new TLine;
+    line_gain_spat->SetLineColor(kGreen);
+    line_gain_comm->SetLineColor(kGreen);
+    line_gain_spat->SetLineWidth(2);
+    line_gain_comm->SetLineWidth(2);
+
+    ui->widget_root_00->EnableSignalEvents(kButton1Down);
+    ui->widget_root_01->EnableSignalEvents(kButton1Down);
+
+    connect(ui->widget_root_00,
+            SIGNAL(RootEventProcessed(TObject*,uint,TCanvas*)),
+            this,
+            SLOT(canvasEvent(TObject*,uint,TCanvas*)));
+    connect(ui->widget_root_01,
+            SIGNAL(RootEventProcessed(TObject*,uint,TCanvas*)),
+            this,
+            SLOT(canvasEvent(TObject*,uint,TCanvas*)));
 }
 
 MainWindow::~MainWindow()
@@ -95,10 +116,14 @@ void MainWindow::updatePlots()
         return;
     }
 
+    ModuleConfig & mod_config = config.module_configs[current_panel]
+            [current_cartridge][current_fin][current_module];
+    ApdConfig & apd_config = mod_config.apd_configs[current_apd];
+
     // (ROOT BUG) Plots need this to keep from overwriting themselves. For more
     // information, see:
     // https://root.cern.ch/phpBB3/viewtopic.php?f=3&t=17518
-    gVirtualX->SetFillColor(1);
+    // gVirtualX->SetFillColor(1);
 
     TH2F * flood = floods[current_panel][current_cartridge]
                          [current_fin][current_module][current_apd];
@@ -109,10 +134,22 @@ void MainWindow::updatePlots()
     if (flood) {
         TCanvas * canvas = ui->widget_root_00->GetCanvas();
         canvas->cd();
+        gVirtualX->SetFillColor(1);
         flood->Draw("colz");
         canvas->Update();
 
+        canvas = ui->widget_root_10->GetCanvas();
+        canvas->cd();
+        gVirtualX->SetFillColor(1);
+        flood->Draw("colz");
+        canvas->Update();
+    }
 
+    if (graph) {
+        TCanvas * canvas = ui->widget_root_10->GetCanvas();
+        canvas->cd();
+        graph->Draw();
+        canvas->Update();
     }
 
     TH1F * hist_spat = hists_apd_spat[current_panel][current_cartridge]
@@ -120,8 +157,42 @@ void MainWindow::updatePlots()
     if (hist_spat) {
         TCanvas * canvas = ui->widget_root_01->GetCanvas();
         canvas->cd();
+        gVirtualX->SetFillColor(1);
         hist_spat->Draw();
         canvas->Update();
+        line_gain_spat->DrawLine(apd_config.gain_spat, 0,
+                                 apd_config.gain_spat, canvas->GetUymax());
+        canvas->Update();
+    }
+
+
+    TH1F * hist_comm = hists_apd_comm[current_panel][current_cartridge]
+                                     [current_fin][current_module][current_apd];
+    if (hist_comm) {
+        TCanvas * canvas = ui->widget_root_11->GetCanvas();
+        canvas->cd();
+        gVirtualX->SetFillColor(1);
+        hist_comm->Draw();
+        canvas->Update();
+        line_gain_comm->DrawLine(apd_config.gain_comm, 0,
+                                 apd_config.gain_comm, canvas->GetUymax());
+        canvas->Update();
+    }
+}
+
+void MainWindow::canvasEvent(TObject *obj, unsigned int event, TCanvas * c)
+{
+    // Take from: ftp://root.cern.ch/root/doc/26ROOTandQt.pdf
+    TQtWidget * clicked = (TQtWidget*) sender();
+    if (clicked == ui->widget_root_00 && event == kButton1Down) {
+        clicked->GetCanvas()->cd();
+        float x = gPad->AbsPixeltoX(clicked->GetEventX());
+        float y = gPad->AbsPixeltoY(clicked->GetEventY());
+        cout << "flood: " << x << " " << y << endl;
+    } else if (clicked == ui->widget_root_01 && event == kButton1Down) {
+        clicked->GetCanvas()->cd();
+        float x = gPad->AbsPixeltoX(clicked->GetEventX());
+        cout << "hist : " << x << endl;
     }
 }
 

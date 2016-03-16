@@ -13,7 +13,7 @@ LIBS += -L$$(LIBMIIL_DIR)/lib -lmiil_process
 INCLUDEPATH += $$(LIBMIIL_DIR)/include
 DEPENDPATH += $$(LIBMIIL_DIR)/include
 
-LIBS += -L$$(ROOTSYS)/lib -lCore -lRIO -lHist -lSpectrum -lGpad -lGQt
+LIBS += -L$$(ROOTSYS)/lib -lCore -lRIO -lHist -lSpectrum -lGpad -lGQt -lGraf
 INCLUDEPATH += $$(ROOTSYS)/include
 DEPENDPATH += $$(ROOTSYS)/include
 

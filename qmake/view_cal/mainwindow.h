@@ -14,6 +14,9 @@ class TH1F;
 class TH2F;
 class TGraph;
 class TQtWidget;
+class TObject;
+class TCanvas;
+class TLine;
 
 class MainWindow : public QMainWindow
 {
@@ -25,6 +28,8 @@ public:
 
 private slots:
     void updatePlots();
+
+    void canvasEvent(TObject *obj, unsigned int event, TCanvas * c);
 
     void action_Open();
 
@@ -117,11 +122,8 @@ private:
     std::vector<std::vector<std::vector<std::vector<std::vector<
             std::vector<TH1F*> > > > > > hists_crystal_comm;
 
-
-    TQtWidget *rootWidget00;
-    TQtWidget *rootWidget01;
-    TQtWidget *rootWidget10;
-    TQtWidget *rootWidget11;
+    TLine * line_gain_spat;
+    TLine * line_gain_comm;
 
     int current_panel;
     int current_cartridge;
