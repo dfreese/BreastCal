@@ -1,0 +1,90 @@
+#!/usr/bin/env python
+
+import numpy as np
+import argparse
+import miil
+import os
+import json
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+            description='Output Cuda File')
+    parser.add_argument('-s', '--settings',
+            help='Load coincidence config json file',
+            type=str)
+    parser.add_argument('-f', '--filename',
+            help='Coincidence filelist to load',
+            type=str)
+    parser.add_argument('-o', '--output',
+            help='Where to save the listmode file',
+            type=str)
+    parser.add_argument('-t', '--time_cal',
+            help='Time Calibration to Load',
+            type=str)
+    parser.add_argument('-c', '--config',
+            help='System Config to load',
+            type=str)
+    parser.add_argument('-w', '--window',
+            help='Time window to use on the events',
+            type=float,
+            default=40.0)
+    parser.add_argument('-p', '--panel_sep',
+            help='Panel Separation to use for the list mode data',
+            type=float,
+            default=64.262)
+    return parser
+
+
+parser = parse_args()
+args = parser.parse_args()
+
+settings = dict()
+if args.settings:
+    with open(args.settings) as json_file:
+        settings = json.load(json_file)
+
+if args.filename:
+    settings['coinc_filelist'] = args.filename
+
+if args.time_cal:
+    settings['time_edep_cal_file'] = args.time_cal
+
+if args.config:
+    settings['config_file'] = args.config
+
+if args.window:
+    settings['window'] = args.window
+
+if args.panel_sep:
+    settings['panel_sep'] = args.panel_sep
+
+if 'coinc_filelist' not in settings:
+    parser.print_help()
+    quit()
+
+settings['cuda_file'] = settings['coinc_filelist'].replace('filelist.coinc.txt', 'cuda')
+if args.output:
+    settings['cuda_file'] = args.output
+
+if args.settings:
+    cuda_filename = args.settings.replace('tcal.json', 'cuda.json').replace('coinc.json', 'cuda.json')
+    with open(cuda_filename, 'w') as json_file:
+        json.dump(settings,
+                  json_file,
+                  ensure_ascii=True,
+                  sort_keys=True,
+                  indent=4,
+                  separators=(',', ': '))
+        json_file.write('\n')
+
+
+data = miil.load_coinc_filelist(settings['coinc_filelist'])
+tcal = miil.load_time_calibration(settings['time_edep_cal_file'])
+
+cal_data = miil.tcal_coinc_events(data, tcal)
+windowed_data = cal_data[np.abs(cal_data['dtf']) < settings['window']]
+
+lm_data = miil.create_listmode_data(windowed_data, panel_sep=settings['panel_sep'])
+
+miil.save_binary(lm_data, settings['cuda_file'])
+

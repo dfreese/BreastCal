@@ -148,11 +148,9 @@ if 'left_filelist' not in coinc_info and 'right_filelist' not in coinc_info:
 if 'coinc_filelist' not in coinc_info:
     with open(coinc_info['left_filelist'], 'r') as f:
         files = f.read().splitlines()
-    coinc_files = [f.replace('_L0_', '_') for f in files]
-    print coinc_files
+    coinc_files = [f.replace('_L0_', '_').replace('.dat', '.' + args.output) for f in files]
     coinc_info['coinc_filelist'] = coinc_info['left_filelist'].replace(
             '.daq.left.txt', '.coinc.txt').replace('.left.txt', '.coinc.txt')
-    print coinc_info['coinc_filelist']
     with open(coinc_info['coinc_filelist'], 'w') as f:
         f.write('\n'.join(coinc_files) + '\n')
 

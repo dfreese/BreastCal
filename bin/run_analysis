@@ -1,0 +1,158 @@
+#!/usr/bin/env python
+
+import os
+import json
+import subprocess
+import argparse
+import re
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+            description='Run Analysis of Dataset')
+    parser.add_argument('--cores',
+            help='Number of simultaneous instances to run if necessary',
+            type=int,
+            default=4)
+    parser.add_argument('--simulate',
+            help='Just print out the commands, but do not run them',
+            action='store_true')
+    parser.add_argument('-a', '--all',
+            help='Run everything to output listmode data',
+            action='store_true')
+    parser.add_argument('-c', '--calibrate',
+            help='Calibrate the dataset',
+            action='store_true')
+    parser.add_argument('-g', '--segment',
+            help='Run the calibration through segmentation',
+            action='store_true')
+    parser.add_argument('-cal', '--crystal_cal',
+            help='Run the calibration after segmentation',
+            action='store_true')
+    parser.add_argument('-si', '--sort_initial',
+            help='Do an initial coincidence sort on a raw window',
+            action='store_true')
+    parser.add_argument('-t', '--time_cal',
+            help='Run time calibration on the initial sort',
+            action='store_true')
+    parser.add_argument('-sf', '--sort_final',
+            help='Do a coincidence sort using the new calibration',
+            action='store_true')
+    parser.add_argument('-l', '--listmode',
+            help='Create listmode data from the final coincidence sort',
+            action='store_true')
+    parser.add_argument('-wi', '--window_initial',
+            help='The window to use for the intital sorting and calibration',
+            type=float,
+            default=100.0)
+    parser.add_argument('-wf', '--window_final',
+            help='The window to use for the final sorting and listmode data',
+            type=float,
+            default=25.0)
+    parser.add_argument('-el', '--egate_low',
+            help='The low energy window to use for the coincidence sorting',
+            type=float,
+            default=400)
+    parser.add_argument('-eh', '--egate_high',
+            help='The high energy window to use for the coincidence sorting',
+            type=float,
+            default=700)
+    parser.add_argument('-p', '--panel_sep',
+            help='The panel separation to use for the list mode data',
+            type=float,
+            default=25.0)
+    return parser
+
+parser = parse_args()
+args = parser.parse_args()
+
+if args.all:
+    args.calibrate = True
+    args.segment = False
+    args.crystal_cal = False
+    args.sort_initial = True
+    args.time_cal = True
+    args.sort_final = True
+
+# Run generate if calibration or segmentaiton has been specified
+if args.calibrate or args.segment:
+    cmd = 'run_calibration -g'
+    if not args.simulate:
+        process = subprocess.Popen([cmd], shell=True)
+        process.wait()
+
+# find base config file that was created and exit if there was an error
+
+files = os.listdir('.')
+cal_config_files_rx = re.compile('^DAQ_Calib_[0-9]{10}.json$')
+cal_config_files = sorted([l for l in files for m in [cal_config_files_rx.search(l)] if m])
+# Pick the first one
+cal_config_file = cal_config_files[0]
+
+coinc_config_file = cal_config_file.replace('.json', '.coinc.json')
+tcal_config_file = cal_config_file.replace('.json', '.tcal.json')
+
+if len(cal_config_files) == 0:
+    print 'No run_calibration file found.  run --calibrate or --segment first'
+    quit()
+elif len(cal_config_files) > 1:
+    print 'Multiple run_calibration json files found.  picking the first: ' % cal_config_file 
+
+if args.segment:
+    cmd = 'run_calibration -s %s -p -u -app -fillf -fitf' % cal_config_file
+    if args.simulate:
+        cmd += ' --simulate'
+    print cmd
+    process = subprocess.Popen([cmd], shell=True)
+    process.wait()
+
+if args.crystal_cal:
+    cmd = 'run_calibration -s %s -cpp' % cal_config_file
+    if args.simulate:
+        cmd += ' --simulate'
+    print cmd
+    process = subprocess.Popen([cmd], shell=True)
+    process.wait()
+
+if args.calibrate:
+    cmd = 'run_calibration -s %s -a' % cal_config_file
+    if args.simulate:
+        cmd += ' --simulate'
+    print cmd
+    process = subprocess.Popen([cmd], shell=True)
+    process.wait()
+
+if args.sort_initial:
+    cmd = 'run_sort_coinc -c %s -w %0.1f -el %0.1f -eh %0.1f' % (
+            cal_config_file, args.window_initial, args.egate_low, args.egate_high)
+    if args.simulate:
+        cmd += ' --simulate'
+    print cmd
+    process = subprocess.Popen([cmd], shell=True)
+    process.wait()
+
+if args.time_cal:
+    cmd = 'run_tcal -c %s -a' % (coinc_config_file,)
+    if args.simulate:
+        cmd += ' --simulate'
+    print cmd
+    process = subprocess.Popen([cmd], shell=True)
+    process.wait()
+
+if args.sort_final:
+    cmd = 'run_sort_coinc -s %s -w %0.1f -el %0.1f -eh %0.1f' % (
+            tcal_config_file, args.window_final, args.egate_low, args.egate_high)
+    if args.simulate:
+        cmd += ' --simulate'
+    print cmd
+    process = subprocess.Popen([cmd], shell=True)
+    process.wait()
+
+if args.listmode:
+    cmd = 'create_listmode -s %s -p %0.3f -w %0.1f' % (
+            tcal_config_file, args.panel_sep, args.window_final)
+    print cmd
+    if not args.simulate:
+        process = subprocess.Popen([cmd], shell=True)
+        process.wait()
+
+

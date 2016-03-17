@@ -14,8 +14,8 @@ def parse_args():
             help='Number of simultaneous instances to run if necessary',
             type=int,
             default=4)
-    parser.add_argument('-c', '--config',
-            help='Calibration Config Json with breast_daq_config "config_file"',
+    parser.add_argument('-s', '--settings',
+            help='Calibration Settings Json from blank or generate',
             type=str)
     parser.add_argument('-b', '--blank',
             help='Generate a blank json config',
@@ -27,7 +27,7 @@ def parse_args():
             action='store',
             const=True,
             nargs='?')
-    parser.add_argument('-s', '--simulate',
+    parser.add_argument('--simulate',
             help='Just print out the commands, but do not run them',
             action='store_true')
     parser.add_argument('-d', '--decode',
@@ -185,12 +185,12 @@ if args.generate:
 
 
 # Then make sure they had specified a json config file
-if args.config is None:
+if args.settings is None:
     parser.print_help()
     quit()
 
 # And then load that config
-with open(args.config,'r') as json_file:
+with open(args.settings, 'r') as json_file:
     cal_info = json.load(json_file)
 
 
