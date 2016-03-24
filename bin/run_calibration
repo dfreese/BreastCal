@@ -118,6 +118,10 @@ def auto_generate_config(base_name):
     ped_files = sorted(
             [l for l in files for m in [ped_files_rx.search(l)] if m])
 
+    if len(daq_files) == 0 and len(ped_files) == 0:
+        print 'No daq or ped files found. Exiting'
+        quit(1)
+
     # Look in all of the files found for something matching the beginning of
     # what we would expect for a data file and return the first match
     beginning_rx = re.compile('^DAQ_Data_[0-9]{10}')
@@ -129,10 +133,10 @@ def auto_generate_config(base_name):
     # with the 'DAQ_Config_' type name.
     if len(data_base_files) > 0:
         non_standard_base_name = data_base_files[0].replace('_Data_', '_Calib_')
-    elif len(data_base_files) > 0:
+    elif len(ped_base_files) > 0:
         non_standard_base_name = ped_base_files[0].replace('_Data_', '_Calib_')
     else:
-        print 'No daq or ped files found. Exiting'
+        print 'Something weird happened.  Should have exited earlier'
         quit(1)
 
     # start with the default file as the system default file and change it if
