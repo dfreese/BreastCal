@@ -218,6 +218,7 @@ void MainWindow::updatePlots()
             } else {
                 marker.SetMarkerColor(kRed);
             }
+            marker.SetMarkerSize(1.5);
             marker.DrawMarker(cal.x_loc, cal.y_loc);
         }
         ui->widget_root_seg->GetCanvas()->SetEditable(false);
