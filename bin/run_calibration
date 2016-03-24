@@ -310,7 +310,7 @@ if args.pedestals:
     if not args.simulate:
         ped_status = subprocess.call([ped_cmd], shell=True)
         if ped_status != 0:
-            print 'Failed while running pedestals'
+            print 'Failed to run: %s' % (ped_cmd,)
             quit(ped_status)
 
 if args.uv:
@@ -328,7 +328,7 @@ if args.uv:
     if not args.simulate:
         uv_status = subprocess.call([uv_cmd], shell=True)
         if uv_status != 0:
-            print 'Failed while running uv_calc'
+            print 'Failed to run: %s' % (uv_cmd,)
             quit(uv_status)
 
 if args.apd_photopeaks:
@@ -347,7 +347,7 @@ if args.apd_photopeaks:
     if not args.simulate:
         apd_status = subprocess.call([apd_cmd], shell=True)
         if apd_status != 0:
-            print 'Failed while running get_apd_photopeaks'
+            print 'Failed to run: %s' % (apd_cmd,)
             quit(apd_status)
 
 if args.fill_floods:
@@ -366,7 +366,7 @@ if args.fill_floods:
     if not args.simulate:
         fill_status = subprocess.call([fill_cmd], shell=True)
         if fill_status != 0:
-            print 'Failed while running fill_floods'
+            print 'Failed to run: %s' % (fill_cmd,)
             quit(fill_status)
 
 if args.fit_floods:
@@ -379,7 +379,7 @@ if args.fit_floods:
     if not args.simulate:
         fit_status = subprocess.call([fit_cmd], shell=True)
         if fit_status != 0:
-            print 'Failed while running fit_floods'
+            print 'Failed to run: %s' % (fit_cmd,)
             quit(fit_status)
 
 if args.crystal_photopeaks:
@@ -400,5 +400,5 @@ if args.crystal_photopeaks:
     if not args.simulate:
         cry_status = subprocess.call([cry_cmd], shell=True)
         if cry_status != 0:
-            print 'Failed while running get_crystal_photopeaks'
+            print 'Failed to run: %s' % (cry_cmd,)
             quit(cry_status)
