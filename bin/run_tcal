@@ -167,22 +167,27 @@ if args.apd_cal:
         apd_cal_cmd += ' -i %s' % tcal_info['input_cal_file']
     print apd_cal_cmd
     if not args.simulate:
-        popen = subprocess.Popen([apd_cal_cmd], shell=True)
-        popen.wait()
+        status = subprocess.call([apd_cal_cmd], shell=True)
+        if status != 0:
+            print 'Failed to run tcal_apd_offset'
+            quit(status)
 
 if args.crystal_cal:
     crystal_cal_cmd = 'tcal_crystal_offset %s -i %s -o %s' % (
             tcal_options, tcal_info['apd_output'], tcal_info['crystal_output'])
     print crystal_cal_cmd
     if not args.simulate:
-        popen = subprocess.Popen([crystal_cal_cmd], shell=True)
-        popen.wait()
+        status = subprocess.call([crystal_cal_cmd], shell=True)
+        if status != 0:
+            print 'Failed to run tcal_crystal_offset'
+            quit(status)
 
 if args.edep_cal:
     edep_cal_cmd = 'tcal_edep_offset %s -i %s -o %s' % (
             tcal_options, tcal_info['crystal_output'], tcal_info['edep_output'])
     print edep_cal_cmd
     if not args.simulate:
-        popen = subprocess.Popen([edep_cal_cmd], shell=True)
-        popen.wait()
-
+        status = subprocess.call([edep_cal_cmd], shell=True)
+        if status != 0:
+            print 'Failed to run tcal_edep_offset'
+            quit(status)

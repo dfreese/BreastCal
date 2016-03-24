@@ -5,6 +5,7 @@ import json
 import subprocess
 import argparse
 import re
+import shutil
 
 def parse_args():
     # see https://docs.python.org/2/library/argparse.html for reference
@@ -103,24 +104,11 @@ def auto_generate_config(base_name):
     config_files = sorted(
             [l for l in files for m in [config_files_rx.search(l)] if m])
 
-    config_file = '/home/miil/FINDATA/nfo/breast_daq_config.json'
-    if len(config_files) == 0:
-        print 'No BreastDAQ config file found.  Using system default: %s' % config_file
-        if type(base_name) is not str:
-            base_name = str(raw_input('Enter base name to use for calibration: '))
-    elif len(config_files) > 1:
-        print 'Found Multiple BreastDAQ config files, input one: ', config_files
-        config_file = str(raw_input('Enter config: '))
-    else:
-        config_file = config_files[0]
-
-    if type(base_name) is not str:
-        base_name = config_file.replace('_Config_', '_Calib_').replace('.json', '')
-
     # find the daq files
     daq_files_rx = re.compile('^DAQ_Data_[0-9]{10}_[L,R][0-9]_[0-9]{1,3}.dat$')
     daq_files = sorted(
             [l for l in files for m in [daq_files_rx.search(l)] if m])
+
 
     dec_files = [s.replace('.dat','.dat.dec') for s in daq_files]
     cal_files = [s.replace('.dat','.dat.cal') for s in daq_files]
@@ -129,6 +117,66 @@ def auto_generate_config(base_name):
     ped_files_rx = re.compile('^PED_Data_[0-9]{10}_[L,R][0-9]_[0-9]{1,3}.dat$')
     ped_files = sorted(
             [l for l in files for m in [ped_files_rx.search(l)] if m])
+
+    # Look in all of the files found for something matching the beginning of
+    # what we would expect for a data file and return the first match
+    beginning_rx = re.compile('^DAQ_Data_[0-9]{10}')
+    data_base_files = [m.group(0) for l in files for m in [beginning_rx.search(l)] if m]
+    beginning_rx = re.compile('^PED_Data_[0-9]{10}')
+    ped_base_files = [m.group(0) for l in files for m in [beginning_rx.search(l)] if m]
+
+    # Use this to create a base name in the event that no config file is found
+    # with the 'DAQ_Config_' type name.
+    if len(data_base_files) > 0:
+        non_standard_base_name = data_base_files[0].replace('_Data_', '_Calib_')
+    elif len(data_base_files) > 0:
+        non_standard_base_name = ped_base_files[0].replace('_Data_', '_Calib_')
+    else:
+        print 'No daq or ped files found. Exiting'
+        quit(1)
+
+    # start with the default file as the system default file and change it if
+    # an appropriate file in the directory is found
+    system_config_file = '/home/miil/FINDATA/nfo/breast_daq_config.json'
+    if len(config_files) == 0:
+        # We didn't find a config file with the standard breastdaq convention,
+        # so let's see if it was copied into the directory
+        config_files_rx = re.compile('^breast_daq_config.json$')
+        config_files = [l for l in files for m in [config_files_rx.search(l)] if m]
+        if len(config_files) == 1:
+            config_file = config_file = config_files[0]
+        else:
+            print 'No BreastDAQ config file found.'
+            config_file = non_standard_base_name.replace('_Calib_', '_Config_') + '.json'
+            print 'Copying system default config to current directory as: %s' % config_file
+            shutil.copy(system_config_file, config_file)
+
+        # Either way, we now have a non-standard config file that we can't
+        # simply replace the strings on to get a base name, so we set it to the
+        # non-standard one, if it has not been set already.
+        if type(base_name) is not str:
+            base_name = non_standard_base_name
+    elif len(config_files) > 1:
+        print 'Found Multiple BreastDAQ config files'
+        for ii in range(len(config_files)):
+            print '    %d: %s' % (ii, config_files[ii])
+        try:
+            config_file_idx = int(raw_input('Enter number of config to use: '))
+        except ValueError:
+            print 'Invalid value, selecting the first file'
+            config_file_idx = 0
+
+        if (config_file_idx >= 0) and (config_file_idx < len(config_files)):
+            config_file = config_files[config_file_idx]
+        else:
+            print 'Invalid input of config file, picking the first one'
+            config_file = config_files[0]
+    else:
+        # Found only one breast daq formatted file, pick it and continue
+        config_file = config_files[0]
+
+    if type(base_name) is not str:
+        base_name = config_file.replace('_Config_', '_Calib_').replace('.json', '')
 
     new_config = dict()
     new_config['config_file'] = config_file
@@ -169,7 +217,7 @@ def auto_generate_config(base_name):
 
     print 'Check if the generated config (%s) and filelists look correct' % \
             cal_json_name
-    print 'Then execute "run_calibration -c %s [-a -ff ...]"' % cal_json_name
+    print 'Then execute "run_calibration -s %s [-a -ff ...]"' % cal_json_name
     quit()
 
 parser = parse_args()
@@ -256,8 +304,10 @@ if args.pedestals:
             cal_info['ped_file'])
     print ped_cmd
     if not args.simulate:
-        ped_popen = subprocess.Popen([ped_cmd], shell=True)
-        ped_popen.wait()
+        ped_status = subprocess.call([ped_cmd], shell=True)
+        if ped_status != 0:
+            print 'Failed while running pedestals'
+            quit(ped_status)
 
 if args.uv:
     filelist = cal_info['filelist']
@@ -272,8 +322,10 @@ if args.uv:
         uv_cmd += ' -ad'
     print uv_cmd
     if not args.simulate:
-        uv_popen = subprocess.Popen([uv_cmd], shell=True)
-        uv_popen.wait()
+        uv_status = subprocess.call([uv_cmd], shell=True)
+        if uv_status != 0:
+            print 'Failed while running uv_calc'
+            quit(uv_status)
 
 if args.apd_photopeaks:
     filelist = cal_info['filelist']
@@ -289,8 +341,10 @@ if args.apd_photopeaks:
         apd_cmd += ' -ad'
     print apd_cmd
     if not args.simulate:
-        apd_popen = subprocess.Popen([apd_cmd], shell=True)
-        apd_popen.wait()
+        apd_status = subprocess.call([apd_cmd], shell=True)
+        if apd_status != 0:
+            print 'Failed while running get_apd_photopeaks'
+            quit(apd_status)
 
 if args.fill_floods:
     filelist = cal_info['filelist']
@@ -306,8 +360,10 @@ if args.fill_floods:
         fill_cmd += ' -ad'
     print fill_cmd
     if not args.simulate:
-        fill_popen = subprocess.Popen([fill_cmd], shell=True)
-        fill_popen.wait()
+        fill_status = subprocess.call([fill_cmd], shell=True)
+        if fill_status != 0:
+            print 'Failed while running fill_floods'
+            quit(fill_status)
 
 if args.fit_floods:
     fit_cmd = 'fit_floods -v -c %s -f %s -o %s -ro %s' % (
@@ -317,8 +373,10 @@ if args.fit_floods:
             cal_info['graphs_root_file'])
     print fit_cmd
     if not args.simulate:
-        fit_popen = subprocess.Popen([fit_cmd], shell=True)
-        fit_popen.wait()
+        fit_status = subprocess.call([fit_cmd], shell=True)
+        if fit_status != 0:
+            print 'Failed while running fit_floods'
+            quit(fit_status)
 
 if args.crystal_photopeaks:
     filelist = cal_info['filelist']
@@ -336,5 +394,7 @@ if args.crystal_photopeaks:
         cry_cmd += ' -ad'
     print cry_cmd
     if not args.simulate:
-        cry_popen = subprocess.Popen([cry_cmd], shell=True)
-        cry_popen.wait()
+        cry_status = subprocess.call([cry_cmd], shell=True)
+        if cry_status != 0:
+            print 'Failed while running get_crystal_photopeaks'
+            quit(cry_status)
