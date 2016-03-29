@@ -10,7 +10,7 @@ def parse_args():
     parser = argparse.ArgumentParser(
             description='Output Cuda File')
     parser.add_argument('-s', '--settings',
-            help='Load coincidence config json file',
+            help='Load a settings json file to start with',
             type=str)
     parser.add_argument('-f', '--filename',
             help='Coincidence filelist to load',
@@ -26,12 +26,18 @@ def parse_args():
             type=str)
     parser.add_argument('-w', '--window',
             help='Time window to use on the events',
-            type=float,
-            default=40.0)
+            type=float)
     parser.add_argument('-p', '--panel_sep',
             help='Panel Separation to use for the list mode data',
             type=float,
             default=64.262)
+    parser.add_argument('-m', '--max_time',
+            help='The maximum amount of data to write out in minutes',
+            type=float)
+    parser.add_argument('-n', '--no_events',
+            help=('The maximum number of events to write out.'
+                  '  Overrules max_time if necessary'),
+            type=int)
     return parser
 
 
@@ -55,14 +61,31 @@ if args.config:
 if args.window:
     settings['window'] = args.window
 
+if 'window' not in settings:
+    settings['window'] = 40.0
+print 'Using time window of %0.1f' % settings['window']
+
 if args.panel_sep:
     settings['panel_sep'] = args.panel_sep
+
+if 'panel_sep' not in settings:
+    settings['panel_sep'] = 64.262
+print 'Using panel separation of %0.3f' % settings['panel_sep']
+
+if args.max_time:
+    settings['max_time'] = args.max_time
+
+if args.no_events:
+    settings['no_events'] = args.no_events
 
 if 'coinc_filelist' not in settings:
     parser.print_help()
     quit()
 
-settings['cuda_file'] = settings['coinc_filelist'].replace('filelist.coinc.txt', 'cuda')
+if 'cuda_file' not in settings:
+    settings['cuda_file'] = \
+            settings['coinc_filelist'].replace('filelist.coinc.txt', 'cuda')
+
 if args.output:
     settings['cuda_file'] = args.output
 
@@ -84,7 +107,34 @@ tcal = miil.load_time_calibration(settings['time_edep_cal_file'])
 cal_data = miil.tcal_coinc_events(data, tcal)
 windowed_data = cal_data[np.abs(cal_data['dtf']) < settings['window']]
 
-lm_data = miil.create_listmode_data(windowed_data, panel_sep=settings['panel_sep'])
+
+# assume a 12MHz clock for the coarse timestamp, unless we can verify the value
+# listed in the breastdaq json config file.
+ct_frequency = 12.0e6
+if 'config_file' in settings:
+    with open(settings['config_file'], 'r') as json_file:
+        breast_daq_config = json.load(json_file)
+        if 'ct_frequency' in breast_daq_config:
+            ct_frequency = breast_daq_config['ct_frequency']
+
+
+if 'max_time' in settings:
+    max_time_ct_ticks = 60.0 * settings['max_time'] * ct_frequency
+    last_ct_value = windowed_data['ct0'][0] + max_time_ct_ticks
+    windowed_data = windowed_data[windowed_data['ct0'] < last_ct_value]
+
+if 'no_events' in settings:
+    windowed_data = windowed_data[0:np.min((settings['no_events'],
+                                            len(windowed_data)))]
+
+writing_no_events = len(windowed_data)
+writing_no_minutes = (windowed_data['ct0'][-1] - windowed_data['ct0'][0]) / \
+                     ct_frequency / 60.0
+
+print 'Writing %d events from %0.2f minutes' % (
+        writing_no_events, writing_no_minutes)
+
+lm_data = miil.create_listmode_data(windowed_data,
+                                    panel_sep=settings['panel_sep'])
 
 miil.save_binary(lm_data, settings['cuda_file'])
-

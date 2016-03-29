@@ -60,6 +60,13 @@ def parse_args():
             help='The panel separation to use for the list mode data',
             type=float,
             default=64.262)
+    parser.add_argument('-m', '--max_time',
+            help='The maximum amount of list mode data to write out in minutes',
+            type=float)
+    parser.add_argument('-n', '--no_events',
+            help=('The maximum number of events to write out in list mode.'
+                  '  Overrules max_time if necessary'),
+            type=int)
     return parser
 
 parser = parse_args()
@@ -195,6 +202,10 @@ if args.listmode:
     print '--- Generating Listmode Data'
     cmd = 'create_listmode -s %s -p %0.3f -w %0.1f' % (
             tcal_config_file, args.panel_sep, args.window_final)
+    if args.max_time:
+        cmd += ' -m %0.2f' % args.max_time
+    if args.no_events:
+        cmd += ' -n %d' % args.no_events
     print cmd
     if not args.simulate:
         status = subprocess.call([cmd], shell=True)
