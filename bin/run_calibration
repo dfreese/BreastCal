@@ -35,7 +35,7 @@ def parse_args():
             help='Decode all of the data files',
             action='store_true')
     parser.add_argument('-cal', '--calibrate',
-            help='Decode all of the data files',
+            help='Calibrate all of the data files',
             action='store_true')
     parser.add_argument('-ad', '--assume_decoded',
             help='Assume the files have been decoded for calibration',
@@ -274,7 +274,7 @@ if args.calibrate:
     with open(cal_info['filelist']) as f:
         daq_files = f.read().splitlines()
     for f in daq_files:
-        cal_cmd = 'decode -c %s -p %s -cal %s -uv %s -f %s' % (
+        cal_cmd = 'calibrate -c %s -p %s -cal %s -uv %s -f %s' % (
                 cal_info['config_file'],
                 cal_info['ped_file'],
                 cal_info['cal_file'],
