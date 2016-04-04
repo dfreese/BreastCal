@@ -1,0 +1,70 @@
+#!/usr/bin/env python
+
+import numpy as np
+import matplotlib.pyplot as plt
+import miil
+import sys
+import argparse
+
+parser = argparse.ArgumentParser(
+        description='Plot time resolution before and after calibration')
+parser.add_argument('-f', '--filename',
+        help='The coinc filelist to load',
+        type=str)
+parser.add_argument('-o', '--output',
+        help='where to print the pdf',
+        type=str)
+parser.add_argument('-t', '--tcal',
+        help='The time calibration to use',
+        type=str)
+parser.add_argument('-w', '--window',
+        help='The window to use for the histogram',
+        type=float,
+        default=100.0)
+parser.add_argument('-b', '--bin_size',
+        help='The bin size to use for the histogram',
+        type=float,
+        default=1.0)
+
+args = parser.parse_args()
+
+if args.filename is None:
+    parser.print_help()
+    quit()
+
+if args.output is None:
+    # if the filename is what we expect, then replace it to get the output name
+    # but don't try too hard.
+    if args.filename.find('filelist.coinc.txt') >= 0:
+        args.output = args.filename.replace('filelist.coinc.txt', 'tres.pdf')
+    else:
+        print 'Specify output filename'
+        quit(1)
+
+data = miil.load_coinc_filelist(args.filename)
+
+if args.tcal is not None:
+    tcal = miil.load_time_calibration(args.tcal)
+    data = miil.tcal_coinc_events(data, tcal)
+
+no_bins = 2 * args.window / args.bin_size + 1
+bins = np.linspace(-args.window, args.window, no_bins)
+bin_centers = (bins[:-1] + bins[1:]) / 2.0
+
+plt.figure(figsize=(9,7))
+n_raw, _, _, = plt.hist(data['dtf'], bins, histtype='step', label='Time Resolution')
+
+max_idx_raw = np.argmax(n_raw)
+n_max_raw = n_raw[max_idx_raw]
+x_max_raw = bin_centers[max_idx_raw]
+half_right_raw = np.interp(n_max_raw / 2.0, n_raw[-1:max_idx_raw:-1], bin_centers[-1:max_idx_raw:-1])
+half_left_raw = np.interp(n_max_raw / 2.0, n_raw[0:max_idx_raw], bin_centers[0:max_idx_raw])
+
+legend = plt.legend()
+
+legend.texts[0].set_text('%s %0.1fns FWHM' % (legend.texts[0].get_text(), half_right_raw - half_left_raw))
+
+plt.xlabel('Time Difference (ns)')
+plt.ylabel('Counts')
+plt.savefig(args.output)
+

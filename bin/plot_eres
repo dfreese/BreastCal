@@ -1,0 +1,61 @@
+#!/usr/bin/env python
+
+import numpy as np
+import matplotlib.pyplot as plt
+import miil
+import argparse
+
+parser = argparse.ArgumentParser(
+        description='Plot energy resolution from filelist')
+parser.add_argument('-f', '--filename',
+        help='The coinc filelist to load',
+        type=str)
+parser.add_argument('-o', '--output',
+        help='where to print the pdf',
+        type=str)
+parser.add_argument('-m', '--max_energy',
+        help='The maximum energy to use for the histogram',
+        type=float,
+        default=700.0)
+parser.add_argument('-b', '--bin_size',
+        help='The bin size to use for the histogram',
+        type=float,
+        default=1.0)
+
+args = parser.parse_args()
+
+if args.filename is None:
+    parser.print_help()
+    quit()
+
+if args.output is None:
+    # if the filename is what we expect, then replace it to get the output name
+    # but don't try too hard.
+    if args.filename.find('filelist.cal.txt') >= 0:
+        args.output = args.filename.replace('filelist.cal.txt', 'eres.pdf')
+    else:
+        print 'Specify output filename'
+        quit(1)
+
+data = miil.load_calib_filelist(args.filename)
+
+no_bins = args.max_energy / args.bin_size + 1
+bins = np.linspace(0.0, args.max_energy, no_bins)
+bin_centers = (bins[:-1] + bins[1:]) / 2.0
+
+plt.figure(figsize=(9,7))
+n, _, _, = plt.hist(data['E'], bins, histtype='step', label='Energy Resolution')
+
+e_window = (bin_centers > 400) & (bin_centers < 600)
+
+max_idx = np.argmax(n[e_window])
+n_max = n[e_window][max_idx]
+x_max = bin_centers[e_window][max_idx]
+half_right = np.interp(n_max / 2.0, n[e_window][-1:max_idx:-1], bin_centers[e_window][-1:max_idx:-1])
+legend = plt.legend()
+legend.texts[0].set_text('%s %0.1f%% FWHM' % (legend.texts[0].get_text(), (half_right - x_max)  * 2 / x_max * 100))
+
+plt.xlabel('Energy (keV)')
+plt.ylabel('Counts')
+plt.savefig(args.output)
+
