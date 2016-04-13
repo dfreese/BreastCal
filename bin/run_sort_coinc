@@ -60,6 +60,13 @@ def parse_args():
             help='The extension that .dat is replaced with',
             type=str,
             default='coinc')
+    parser.add_argument('-d', '--delay',
+            help='Delayed in Right Coincidence Window (ns)',
+            nargs='?',
+            action='append',
+            default=None,
+            const=1000,
+            type=float)
     return parser
 
 
@@ -111,6 +118,8 @@ if args.cal_file:
     coinc_info['cal_file'] = args.cal_file
 if args.uv_file:
     coinc_info['uv_file'] = args.uv_file
+if args.delay:
+    coinc_info['delay'] = args.delay
 
 # Check that all of the required information has been specified so far
 if (('config_file' not in coinc_info) or ('ped_file' not in coinc_info) or
@@ -185,6 +194,9 @@ if 'time_cal_file' in coinc_info:
     sort_coinc_cmd_base += ' -t %s' % coinc_info['time_cal_file']
 if 'time_edep_cal_file' in coinc_info:
     sort_coinc_cmd_base += ' -te %s' % coinc_info['time_edep_cal_file']
+if 'delay' in coinc_info:
+    for delay in coinc_info['delay']:
+        sort_coinc_cmd_base += ' -d %d' % delay
 
 
 # Load in the names of the data files

@@ -13,6 +13,9 @@ def parse_args():
             help='Number of simultaneous instances to run if necessary',
             type=int,
             default=4)
+    parser.add_argument('-s', '--settings',
+            help='The run_calibration json setting file to use as a basis',
+            type=str)
     parser.add_argument('--simulate',
             help='Just print out the commands, but do not run them',
             action='store_true')
@@ -81,44 +84,47 @@ if args.all:
     args.sort_final = True
     args.listmode = True
 
-# Run generate if calibration or segmentation has been specified
-if args.calibrate or args.segment:
-    print
-    print '--- Generating Configuration File'
-    cmd = 'run_calibration -g'
-    print cmd
-    # Always run this command, as others depend on it, even if we're simulating
-    # the analysis
-    status = subprocess.call([cmd], shell=True)
-    if status != 0:
-        print 'Failed to run: %s' % (cmd,)
-        quit(status)
-
-# Look for config files that are typically generate by run_calibration
-files = os.listdir('.')
-cal_config_files_rx = re.compile('^DAQ_Calib_[0-9]{10}.json$')
-cal_config_files = sorted([l for l in files for m in [cal_config_files_rx.search(l)] if m])
-
-# we've searched the directory for calibration files that were created by
-# run_calibration.  If we can't find any or find too many, we handle that here
-if len(cal_config_files) == 0:
-    print 'No standard run_calibration file found.'
-    cal_config_file = str(raw_input('Enter calibration config to use: '))
-    if cal_config_file not in files:
-        print 'specified file not found in local directory'
-        quit(1)
-elif len(cal_config_files) > 1:
-    print 'Multiple run_calibration json files found:'
-    for ii in range(len(cal_config_files)):
-        print '    %d: %s' % (ii, cal_config_files[ii])
-    try:
-        cal_config_file_idx = int(raw_input('Enter number of config to use: '))
-    except ValueError:
-        print 'Invalid value, selecting the first file'
-        cal_config_file_idx = 0
-    cal_config_file = cal_config_files[cal_config_file_idx]
+if args.settings:
+    cal_config_file = args.settings
 else:
-    cal_config_file = cal_config_files[0]
+    # Run generate if calibration or segmentation has been specified
+    if args.calibrate or args.segment:
+        print
+        print '--- Generating Configuration File'
+        cmd = 'run_calibration -g'
+        print cmd
+        # Always run this command, as others depend on it, even if we're simulating
+        # the analysis
+        status = subprocess.call([cmd], shell=True)
+        if status != 0:
+            print 'Failed to run: %s' % (cmd,)
+            quit(status)
+
+    # Look for config files that are typically generate by run_calibration
+    files = os.listdir('.')
+    cal_config_files_rx = re.compile('^DAQ_Calib_[0-9]{10}.json$')
+    cal_config_files = sorted([l for l in files for m in [cal_config_files_rx.search(l)] if m])
+
+    # we've searched the directory for calibration files that were created by
+    # run_calibration.  If we can't find any or find too many, we handle that here
+    if len(cal_config_files) == 0:
+        print 'No standard run_calibration file found.'
+        cal_config_file = str(raw_input('Enter calibration config to use: '))
+        if cal_config_file not in files:
+            print 'specified file not found in local directory'
+            quit(1)
+    elif len(cal_config_files) > 1:
+        print 'Multiple run_calibration json files found:'
+        for ii in range(len(cal_config_files)):
+            print '    %d: %s' % (ii, cal_config_files[ii])
+        try:
+            cal_config_file_idx = int(raw_input('Enter number of config to use: '))
+        except ValueError:
+            print 'Invalid value, selecting the first file'
+            cal_config_file_idx = 0
+        cal_config_file = cal_config_files[cal_config_file_idx]
+    else:
+        cal_config_file = cal_config_files[0]
 
 coinc_config_file = cal_config_file.replace('.json', '.coinc.json')
 tcal_config_file = cal_config_file.replace('.json', '.tcal.json')
