@@ -137,4 +137,4 @@ print 'Writing %d events from %0.2f minutes' % (
 lm_data = miil.create_listmode_data(windowed_data,
                                     panel_sep=settings['panel_sep'])
 
-miil.save_binary(lm_data, settings['cuda_file'])
+lm_data.tofile(settings['cuda_file'])
