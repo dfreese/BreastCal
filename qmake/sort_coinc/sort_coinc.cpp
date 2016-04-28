@@ -235,8 +235,8 @@ int main(int argc, char ** argv) {
     }
     int cal_load_status = config.loadCalibration(filename_cal);
     if (cal_load_status < 0) {
-        cerr << "SystemConfiguration.loadPedestals() failed with status: "
-             << ped_load_status
+        cerr << "SystemConfiguration.loadCalibration() failed with status: "
+             << cal_load_status
              << endl;
         return(-4);
     }
