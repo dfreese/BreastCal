@@ -168,25 +168,37 @@ int main(int argc, char ** argv) {
         }
         for (size_t ii = 0; ii < raw_events.size(); ii++) {
             EventRaw & event = raw_events[ii];
+            EventCal cal_event;
+            // Check for a double trigger based on configuration
+            if (CalculateXYandEnergy(
+                        cal_event, event, &config, true, true) < 0)
+            {
+                continue;
+            }
+            PedestalCorrectEventRaw(event, &config, false);
             int apd = 0;
             float u = event.u0h;
             float v = event.v0h;
+            int comh = event.com0h;
             if (event.com1h < event.com0h) {
                 apd = 1;
                 u = event.u1h;
                 v = event.v1h;
+                comh = event.com1h;
             }
 
-            float & u_center = u_centers[event.panel][event.cartridge]
-                    [event.daq][event.rena][event.module][apd];
-            float & v_center = v_centers[event.panel][event.cartridge]
-                    [event.daq][event.rena][event.module][apd];
-            int & entries = uv_entries[event.panel][event.cartridge]
-                    [event.daq][event.rena][event.module][apd];
+            if (comh < uv_threshold) {
+                float & u_center = u_centers[event.panel][event.cartridge]
+                        [event.daq][event.rena][event.module][apd];
+                float & v_center = v_centers[event.panel][event.cartridge]
+                        [event.daq][event.rena][event.module][apd];
+                int & entries = uv_entries[event.panel][event.cartridge]
+                        [event.daq][event.rena][event.module][apd];
 
-            entries++;
-            u_center += (u - u_center) / entries;
-            v_center += (v - v_center) / entries;
+                entries++;
+                u_center += (u - u_center) / entries;
+                v_center += (v - v_center) / entries;
+            }
         }
     }
 
