@@ -93,6 +93,8 @@ private slots:
 
     void on_pushButton_cancel_seg_clicked();
 
+    void on_pushButton_deform_clicked();
+
 private:
     Ui::MainWindow *ui;
     QString last_directory;
@@ -146,7 +148,11 @@ private:
     int current_apd;
 
     bool state_manual_seg;
+    bool state_deform;
     int manual_seg_idx;
+    int deform_idx;
+    float deform_center_x;
+    float deform_center_y;
     std::vector<CrystalCalibration> manual_seg_cal_ref;
 
     void keyPressEvent(QKeyEvent * event);

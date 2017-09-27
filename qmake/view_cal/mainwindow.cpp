@@ -22,7 +22,7 @@
 using namespace std;
 
 namespace {
-void rollSpinBoxes(QSpinBox *changed, QSpinBox *parent)
+bool rollSpinBoxes(QSpinBox *changed, QSpinBox *parent)
 {
     if (changed->value() == changed->minimum()) {
         if (parent->value() > parent->minimum()) {
@@ -31,6 +31,7 @@ void rollSpinBoxes(QSpinBox *changed, QSpinBox *parent)
         } else {
             changed->setValue(changed->value() + 1);
         }
+        return (false);
     } else if (changed->value() == changed->maximum()) {
         if (parent->value() < parent->maximum()) {
             parent->setValue(parent->value() + 1);
@@ -38,6 +39,9 @@ void rollSpinBoxes(QSpinBox *changed, QSpinBox *parent)
         } else {
             changed->setValue(changed->value() - 1);
         }
+        return (false);
+    } else {
+        return (true);
     }
 }
 }
@@ -51,6 +55,7 @@ MainWindow::MainWindow(QWidget *parent) :
     current_module(0),
     current_apd(0),
     state_manual_seg(false),
+    state_deform(false),
     manual_seg_idx(0)
 {
     ui->setupUi(this);
@@ -275,35 +280,80 @@ void MainWindow::canvasEvent(TObject *obj, unsigned int event, TCanvas * c)
     // Take from: ftp://root.cern.ch/root/doc/26ROOTandQt.pdf
     TQtWidget * clicked = (TQtWidget*) sender();
     if (clicked == ui->widget_root_seg && event == kButton1Down) {
+        if (state_manual_seg) {
+            CrystalCalibration & cal =
+                    config.calibration[current_panel][current_cartridge]
+                    [current_fin][current_module][current_apd][manual_seg_idx++];
 
-        CrystalCalibration & cal =
-                config.calibration[current_panel][current_cartridge]
-                [current_fin][current_module][current_apd][manual_seg_idx++];
+            clicked->GetCanvas()->cd();
+            cal.x_loc = gPad->AbsPixeltoX(clicked->GetEventX());
+            cal.y_loc = gPad->AbsPixeltoY(clicked->GetEventY());
+            if (manual_seg_idx >= config.crystals_per_apd) {
+                on_pushButton_seg_clicked();
+                if (ui->checkBox_next_on_done) {
+                    ui->spinBox_apd->setValue(ui->spinBox_apd->value() + 1);
+                }
+            }
+            updatePlots();
+        } else if (state_deform) {
+            // Find where we clicked
+            clicked->GetCanvas()->cd();
+            const float x_clicked = gPad->AbsPixeltoX(clicked->GetEventX());
+            const float y_clicked = gPad->AbsPixeltoY(clicked->GetEventY());
+            // And the corner we were trying to get for this deform_idx
+            const int corner_idxs[4] = {0, 7, 56, 63};
+            const int corner_idx = corner_idxs[deform_idx];
+            const float x_corner = manual_seg_cal_ref[corner_idx].x_loc;
+            const float y_corner = manual_seg_cal_ref[corner_idx].y_loc;
+            // Then calculate how to scale all of the points in that quadrant.
+            const float x_deform = (x_clicked - deform_center_x) / (x_corner - deform_center_x);
+            const float y_deform = (y_clicked - deform_center_y) / (y_corner - deform_center_y);
+            const int row_offset = (deform_idx / 2) ? 4:0;
+            const int col_offset = (deform_idx % 2) ? 4:0;
+            for (int ii = row_offset; ii < (row_offset + 4); ii++) {
+                for (int jj = col_offset; jj < (col_offset + 4); jj++) {
+                    const int stride = ii * 8 + jj;
+                    CrystalCalibration & cal = config.calibration[current_panel][current_cartridge][current_fin]
+                            [current_module][current_apd][stride];
+                    cal.x_loc *= x_deform;
+                    cal.y_loc *= y_deform;
+                }
+            }
+            // Advance the deform index for the next corner
+            ++deform_idx;
 
-        clicked->GetCanvas()->cd();
-        cal.x_loc = gPad->AbsPixeltoX(clicked->GetEventX());
-        cal.y_loc = gPad->AbsPixeltoY(clicked->GetEventY());
-        if (manual_seg_idx >= config.crystals_per_apd) {
-            on_pushButton_seg_clicked();
+            if (deform_idx >= 4) {
+                on_pushButton_deform_clicked();
+                if (ui->checkBox_next_on_done) {
+                    ui->spinBox_apd->setValue(ui->spinBox_apd->value() + 1);
+                }
+            }
+            updatePlots();
         }
-        updatePlots();
     } else if (clicked == ui->widget_root_seg && event == kButton1Double) {
-        // If this is a double click, then we need to overwrite the previous
-        // single click
-        manual_seg_idx--;
+        if (state_manual_seg) {
+            // If this is a double click, then we need to overwrite the previous
+            // single click
+            manual_seg_idx--;
 
-        CrystalCalibration & cal =
-                config.calibration[current_panel][current_cartridge]
-                [current_fin][current_module][current_apd][manual_seg_idx++];
+            CrystalCalibration & cal =
+                    config.calibration[current_panel][current_cartridge]
+                    [current_fin][current_module][current_apd][manual_seg_idx++];
 
-        clicked->GetCanvas()->cd();
-        cal.use = !cal.use;
-        cal.x_loc = gPad->AbsPixeltoX(clicked->GetEventX());
-        cal.y_loc = gPad->AbsPixeltoY(clicked->GetEventY());
-        if (manual_seg_idx >= config.crystals_per_apd) {
-            on_pushButton_seg_clicked();
+            clicked->GetCanvas()->cd();
+            cal.use = !cal.use;
+            cal.x_loc = gPad->AbsPixeltoX(clicked->GetEventX());
+            cal.y_loc = gPad->AbsPixeltoY(clicked->GetEventY());
+            if (manual_seg_idx >= config.crystals_per_apd) {
+                on_pushButton_seg_clicked();
+                if (ui->checkBox_next_on_done) {
+                    ui->spinBox_apd->setValue(ui->spinBox_apd->value() + 1);
+                }
+            }
+            updatePlots();
+        } else if (state_deform) {
+            // If this is a double click, just ignore for deformations
         }
-        updatePlots();
     } else if (clicked == ui->widget_root_01 && event == kButton1Double) {
 
         // Set photopeak to wherever you double clicked
@@ -1035,7 +1085,12 @@ void MainWindow::on_spinBox_apd_valueChanged(int arg1)
     }
 
     current_apd = arg1;
-    rollSpinBoxes(ui->spinBox_apd, ui->spinBox_module);
+    if (rollSpinBoxes(ui->spinBox_apd, ui->spinBox_module)) {
+        // If we didn't need to change the value of the apd again, call the auto start
+        if (ui->checkBox_deform_autostart) {
+            on_pushButton_deform_clicked();
+        }
+    }
     updatePlots();
 }
 
@@ -1122,6 +1177,21 @@ void MainWindow::on_pushButton_undo_seg_clicked()
                     manual_seg_cal_ref[manual_seg_idx];
             updatePlots();
         }
+    } else if (state_deform) {
+        if (deform_idx > 0) {
+            deform_idx--;
+            const int row_offset = (deform_idx / 2) ? 4:0;
+            const int col_offset = (deform_idx % 2) ? 4:0;
+            for (int ii = row_offset; ii < (row_offset + 4); ii++) {
+                for (int jj = col_offset; jj < (col_offset + 4); jj++) {
+                    const int stride = ii * 8 + jj;
+                    config.calibration[current_panel][current_cartridge][current_fin]
+                            [current_module][current_apd][stride] =
+                            manual_seg_cal_ref[stride];
+                }
+            }
+            updatePlots();
+        }
     }
 }
 
@@ -1132,5 +1202,40 @@ void MainWindow::on_pushButton_cancel_seg_clicked()
                 [current_module][current_apd] = manual_seg_cal_ref;
         on_pushButton_seg_clicked();
         updatePlots();
+    } else if (state_deform) {
+        config.calibration[current_panel][current_cartridge][current_fin]
+                [current_module][current_apd] = manual_seg_cal_ref;
+        on_pushButton_deform_clicked();
+        updatePlots();
     }
+}
+
+void MainWindow::on_pushButton_deform_clicked()
+{
+    if (state_deform) {
+        ui->pushButton_undo_seg->setVisible(false);
+        ui->pushButton_cancel_seg->setVisible(false);
+        ui->pushButton_deform->setText("Deform");
+        deform_idx = ui->spinBox_seg_idx->value();
+        ui->widget_root_seg->DisableSignalEvents(kButton1Down);
+        ui->widget_root_seg->DisableSignalEvents(kButton1Double);
+        state_deform = false;
+    } else {
+        ui->pushButton_undo_seg->setVisible(true);
+        ui->pushButton_cancel_seg->setVisible(true);
+        ui->pushButton_deform->setText("Stop");
+        deform_idx = ui->spinBox_seg_idx->value();
+        ui->widget_root_seg->EnableSignalEvents(kButton1Down);
+        ui->widget_root_seg->EnableSignalEvents(kButton1Double);
+        state_deform = true;
+        manual_seg_cal_ref = config.calibration[current_panel]
+                [current_cartridge][current_fin][current_module][current_apd];
+
+        deform_center_x = (manual_seg_cal_ref[27].x_loc + manual_seg_cal_ref[28].x_loc +
+                           manual_seg_cal_ref[35].x_loc + manual_seg_cal_ref[36].x_loc) / 4.0;
+
+        deform_center_y = (manual_seg_cal_ref[27].y_loc + manual_seg_cal_ref[28].y_loc +
+                           manual_seg_cal_ref[35].y_loc + manual_seg_cal_ref[36].y_loc) / 4.0;
+    }
+    updatePlots();
 }

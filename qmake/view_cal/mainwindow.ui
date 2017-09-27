@@ -18,7 +18,7 @@
     <item row="1" column="0">
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="tab_data">
        <attribute name="title">
@@ -60,6 +60,20 @@
           <item row="0" column="0">
            <layout class="QHBoxLayout" name="horizontalLayout">
             <item>
+             <widget class="QCheckBox" name="checkBox_deform_autostart">
+              <property name="text">
+               <string>Auto Start Deform</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="checkBox_next_on_done">
+              <property name="text">
+               <string>Next When Done</string>
+              </property>
+             </widget>
+            </item>
+            <item>
              <spacer name="horizontalSpacer_2">
               <property name="orientation">
                <enum>Qt::Horizontal</enum>
@@ -83,6 +97,13 @@
              <widget class="QPushButton" name="pushButton_undo_seg">
               <property name="text">
                <string>Undo</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButton_deform">
+              <property name="text">
+               <string>Deform</string>
               </property>
              </widget>
             </item>
